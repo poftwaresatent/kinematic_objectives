@@ -39,6 +39,8 @@
 #include <Eigen/StdVector>
 //#include <vector>
 
+#include <iostream>
+
 #include <err.h>
 
 
@@ -162,7 +164,7 @@ namespace pbmockup {
       
       Vector dx = tasklist[ii].desired - tasklist[ii].current;
       double const d_damp(dx.norm() / tasklist[ii].b_max);
-      dx /= d_damp;		// this is never explicitly stated in [Baerlocher, 2001]
+      ////dx /= d_damp;		// this is never explicitly stated in [Baerlocher, 2001]
       Vector dx_comp = dx - tasklist[ii].Jacobian * delta_q;
       
       Matrix Jtilda = tasklist[ii].Jacobian * projector;
@@ -175,12 +177,12 @@ namespace pbmockup {
       projector = projector - delta_projector;
     }
     
-    // add joint-space "criterion minimization term" (i.e. posture)
+    // // add joint-space "criterion minimization term" (i.e. posture)
     
-    double const xi(-1.0e-4);	// must be negative
-    Vector const & posture_gradient(system.state); // Vector::Ones(ndof)); // some bias...
+    // double const xi(-1.0e-4);	// must be negative
+    // Vector const & posture_gradient(system.state); // Vector::Ones(ndof)); // some bias...
     
-    delta_q = delta_q + projector * xi * posture_gradient;
+    // delta_q = delta_q + projector * xi * posture_gradient;
     
     return delta_q;
   }
@@ -191,10 +193,66 @@ namespace pbmockup {
 using namespace pbmockup;
 
 
+void dump (system_s const & system,
+	   tasklist_t const & tasklist,
+	   Vector const & dq)
+{
+  for (size_t ii(0); ii < system.ndof; ++ii) {
+    cout << system.state[ii] << "  ";
+  }
+  for (size_t ii(0); ii < tasklist.size(); ++ii) {
+    cout << "  ";
+    for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+      cout << tasklist[ii].current[jj] << "  ";
+    }
+  }
+  cout << "  ";
+  for (size_t ii(0); ii < system.ndof; ++ii) {
+    cout << dq[ii] << "  ";
+  }
+  cout << "\n";
+}
+
+
+void dbg (system_s const & system,
+	  tasklist_t const & tasklist,
+	  Vector const & dq)
+{
+  cout << "==================================================\n"
+       << "state:";
+  for (size_t ii(0); ii < system.ndof; ++ii) {
+    cout << "\t" << system.state[ii];
+  }
+  for (size_t ii(0); ii < tasklist.size(); ++ii) {
+    cout << "\ntask " << ii << "\n";
+    cout << "  current:";
+    for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+      cout << "\t" << tasklist[ii].current[jj];
+    }
+    cout << "\n  desired:";
+    for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+      cout << "\t" << tasklist[ii].desired[jj];
+    }
+    cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
+    for (size_t jj(0); jj < system.ndof; ++jj) {
+      cout << "\t" << tasklist[ii].Jacobian(0, jj);
+    }
+  }
+  cout << "\ndelta_q:";
+  for (size_t ii(0); ii < system.ndof; ++ii) {
+    cout << "\t" << dq[ii];
+  }
+  cout << "\n";
+}
+
+
 int main (int argc, char ** argv)
 {
   size_t const ndof(2);
+  
   system_s system(ndof);
+  system.state << 0.3, -0.2;
+  
   tasklist_t tasklist;
   tasklist.push_back(task_s(ndof, 1, 1.0e-3));
   tasklist.push_back(task_s(ndof, 1, 1.0e-2 * M_PI / 180.0));
@@ -204,7 +262,7 @@ int main (int argc, char ** argv)
   
   tasklist[1].Jacobian << 0.0, 1.0; // constant in this case
   
-  for (size_t ii(0); ii < 1000; ++ii) {
+  for (;;) { ////size_t ii(0); ii < 10000; ++ii) {
     double const q0(system.state.coeff(0));
     double const q1(system.state.coeff(1));
     
@@ -214,10 +272,13 @@ int main (int argc, char ** argv)
       -sin(q0) - sin(q0 + q1),
       -sin(q0 + q1);
     
-    tasklist[0].current <<
+    tasklist[1].current <<
       q1;
     
     Vector dq = recursive_task_priority_algorithm (system, tasklist);
+    
+    dump(system, tasklist, dq);
+    
     system.state += dq;
     
   }
