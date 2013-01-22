@@ -34,64 +34,38 @@
 
 /* Author: Roland Philippsen */
 
-#include <Eigen/Core>
+#include "pbmockup.hpp"
 #include <Eigen/SVD>
-#include <Eigen/StdVector>
-//#include <vector>
 
 #include <iostream>
-
-#include <err.h>
 
 
 namespace pbmockup {
   
-  typedef Eigen::VectorXd Vector;
-  typedef Eigen::MatrixXd Matrix;
   
-  using namespace std;
-  
-  
-  struct task_s {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    task_s(size_t ndof, size_t ndim_, double b_max_)
-      : b_max(b_max_),
-	ndim(ndim_)
-    {
-      current = Vector::Zero(ndim_);
-      desired = Vector::Zero(ndim_);
-      Jacobian = Matrix::Zero(ndim_, ndof);
-    }
-    
-    Vector current;
-    Vector desired;
-    Matrix Jacobian;
-    double b_max;
-    size_t ndim;
-  };
-  
-  typedef vector<task_s> tasklist_t;
+  task_s::
+  task_s(size_t ndof, size_t ndim_, double b_max_)
+    : b_max(b_max_),
+      ndim(ndim_)
+  {
+    current = Vector::Zero(ndim_);
+    desired = Vector::Zero(ndim_);
+    Jacobian = Matrix::Zero(ndim_, ndof);
+  }
   
   
-  struct system_s {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    system_s (size_t ndof_)
-      : ndof(ndof_)
-    {
-      state = Vector::Zero(ndof_);
-    }
-    
-    Vector state;
-    size_t ndof;
-  };
+  system_s::
+  system_s (size_t ndof_)
+    : ndof(ndof_)
+  {
+    state = Vector::Zero(ndof_);
+  }
   
   
-  void compute_svd_stuff(Matrix const & Jt,
-			 double d_damp,
-			 Matrix & Jt_inv_damped,
-			 Matrix & delta_projector)
+  static void compute_svd_stuff(Matrix const & Jt,
+				double d_damp,
+				Matrix & Jt_inv_damped,
+				Matrix & delta_projector)
   {
     Eigen::JacobiSVD<Matrix> svd(Jt, Eigen::ComputeFullU | Eigen::ComputeFullV);
     if (0 == svd.nonzeroSingularValues()) {
@@ -187,108 +161,57 @@ namespace pbmockup {
     return delta_q;
   }
   
-}
-
-
-using namespace pbmockup;
-
-
-void dump (system_s const & system,
-	   tasklist_t const & tasklist,
-	   Vector const & dq)
-{
-  for (size_t ii(0); ii < system.ndof; ++ii) {
-    cout << system.state[ii] << "  ";
-  }
-  for (size_t ii(0); ii < tasklist.size(); ++ii) {
+  
+  void dump (system_s const & system,
+	     tasklist_t const & tasklist,
+	     Vector const & dq)
+  {
+    for (size_t ii(0); ii < system.ndof; ++ii) {
+      cout << system.state[ii] << "  ";
+    }
+    for (size_t ii(0); ii < tasklist.size(); ++ii) {
+      cout << "  ";
+      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+	cout << tasklist[ii].current[jj] << "  ";
+      }
+    }
     cout << "  ";
-    for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-      cout << tasklist[ii].current[jj] << "  ";
+    for (size_t ii(0); ii < system.ndof; ++ii) {
+      cout << dq[ii] << "  ";
     }
-  }
-  cout << "  ";
-  for (size_t ii(0); ii < system.ndof; ++ii) {
-    cout << dq[ii] << "  ";
-  }
-  cout << "\n";
-}
-
-
-void dbg (system_s const & system,
-	  tasklist_t const & tasklist,
-	  Vector const & dq)
-{
-  cout << "==================================================\n"
-       << "state:";
-  for (size_t ii(0); ii < system.ndof; ++ii) {
-    cout << "\t" << system.state[ii];
-  }
-  for (size_t ii(0); ii < tasklist.size(); ++ii) {
-    cout << "\ntask " << ii << "\n";
-    cout << "  current:";
-    for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-      cout << "\t" << tasklist[ii].current[jj];
-    }
-    cout << "\n  desired:";
-    for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-      cout << "\t" << tasklist[ii].desired[jj];
-    }
-    cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
-    for (size_t jj(0); jj < system.ndof; ++jj) {
-      cout << "\t" << tasklist[ii].Jacobian(0, jj);
-    }
-  }
-  cout << "\ndelta_q:";
-  for (size_t ii(0); ii < system.ndof; ++ii) {
-    cout << "\t" << dq[ii];
-  }
-  cout << "\n";
-}
-
-
-int main (int argc, char ** argv)
-{
-  size_t const ndof(2);
-  
-  for (double bm(1.0e-3); bm <= 1.0; bm *= 1.2) {
-    
-    cout << "# bm: " << bm << "\n";
-    
-    system_s system(ndof);
-    system.state << 0.3, -0.2;
-    
-    tasklist_t tasklist;
-    tasklist.push_back(task_s(ndof, 1, bm));
-    tasklist.push_back(task_s(ndof, 1, bm * 0.5 * M_PI / 180.0));
-    
-    tasklist[0].desired << 1.2;
-    tasklist[1].desired << 35.0 * M_PI / 180.0;
-    
-    tasklist[1].Jacobian << 0.0, 1.0; // constant in this case
-    
-    for (size_t ii(0); ii < 10000; ++ii) {
-      double const q0(system.state.coeff(0));
-      double const q1(system.state.coeff(1));
-      
-      tasklist[0].current <<
-	cos(q0) + cos(q0 + q1);
-      tasklist[0].Jacobian <<
-	-sin(q0) - sin(q0 + q1),
-	-sin(q0 + q1);
-      
-      tasklist[1].current <<
-	q1;
-      
-      Vector dq = recursive_task_priority_algorithm (system, tasklist);
-      
-      dump(system, tasklist, dq);
-      
-      system.state += dq;
-      
-    }
-    
-    cout << "\n\n";
+    cout << "\n";
   }
   
-  return 0;
+  
+  void dbg (system_s const & system,
+	    tasklist_t const & tasklist,
+	    Vector const & dq)
+  {
+    cout << "==================================================\n"
+	 << "state:";
+    for (size_t ii(0); ii < system.ndof; ++ii) {
+      cout << "\t" << system.state[ii];
+    }
+    for (size_t ii(0); ii < tasklist.size(); ++ii) {
+      cout << "\ntask " << ii << "\n";
+      cout << "  current:";
+      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+	cout << "\t" << tasklist[ii].current[jj];
+      }
+      cout << "\n  desired:";
+      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+	cout << "\t" << tasklist[ii].desired[jj];
+      }
+      cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
+      for (size_t jj(0); jj < system.ndof; ++jj) {
+	cout << "\t" << tasklist[ii].Jacobian(0, jj);
+      }
+    }
+    cout << "\ndelta_q:";
+    for (size_t ii(0); ii < system.ndof; ++ii) {
+      cout << "\t" << dq[ii];
+    }
+    cout << "\n";
+  }
+
 }

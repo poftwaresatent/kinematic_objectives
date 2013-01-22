@@ -43,21 +43,21 @@ list (APPEND
   /usr/include/eigen3
   )
 
-if (EIGEN3_DIR)
-  list (APPEND CMAKE_REQUIRED_INCLUDES
-    ${EIGEN3_DIR}/include
-    ${EIGEN3_DIR}
-    ${EIGEN3_DIR}/include/eigen3
-    ${EIGEN3_DIR}/eigen3
-    )
-  include_directories (
-    ${EIGEN3_DIR}/include
-    ${EIGEN3_DIR}
-    ${EIGEN3_DIR}/include/eigen3
-    ${EIGEN3_DIR}/
-    eigen3
-    )
-endif (EIGEN3_DIR)
+### if (EIGEN3_DIR)
+###   list (APPEND CMAKE_REQUIRED_INCLUDES
+###     ${EIGEN3_DIR}/include
+###     ${EIGEN3_DIR}
+###     ${EIGEN3_DIR}/include/eigen3
+###     ${EIGEN3_DIR}/eigen3
+###     )
+###   include_directories (
+###     ${EIGEN3_DIR}/include
+###     ${EIGEN3_DIR}
+###     ${EIGEN3_DIR}/include/eigen3
+###     ${EIGEN3_DIR}/
+###     eigen3
+###     )
+### endif (EIGEN3_DIR)
 
 include (CheckIncludeFileCXX)
 
@@ -68,11 +68,22 @@ else (HAVE_EIGEN3)
   message (FATAL_ERROR "Please install Eigen3.")
 endif (HAVE_EIGEN3)
 
-#list (APPEND SRCS
-#  pbmockup.cpp
-#  )
-#
-# add_library (pbmockup SHARED ${SRCS})
+find_package(GTK2 REQUIRED gtk)
+if (GTK2_FOUND)
+  message ("*** found GTK2 (required)")
+  include_directories (${GTK2_INCLUDE_DIRS})
+else (GTK2_FOUND)
+  message (FATAL_ERROR "Please install GTK2 development files (or tweak build sys to skip GTK-dependent stuff).")
+endif (GTK2_FOUND)
 
-add_executable (pbmockup pbmockup.cpp)
-# target_link_libraries (pbmockup FOO)
+list (APPEND SRCS
+  pbmockup.cpp
+  )
+
+add_library (pbmockup SHARED ${SRCS})
+
+add_executable (pbtest pbtest.cpp)
+target_link_libraries (pbtest pbmockup)
+
+add_executable (pbelastic pbelastic.cpp)
+target_link_libraries (pbelastic pbmockup ${GTK2_LIBRARIES})
