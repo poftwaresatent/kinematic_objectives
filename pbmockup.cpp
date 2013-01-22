@@ -250,37 +250,44 @@ int main (int argc, char ** argv)
 {
   size_t const ndof(2);
   
-  system_s system(ndof);
-  system.state << 0.3, -0.2;
-  
-  tasklist_t tasklist;
-  tasklist.push_back(task_s(ndof, 1, 1.0e-3));
-  tasklist.push_back(task_s(ndof, 1, 1.0e-2 * M_PI / 180.0));
-  
-  tasklist[0].desired << 1.2;
-  tasklist[1].desired << 35.0 * M_PI / 180.0;
-  
-  tasklist[1].Jacobian << 0.0, 1.0; // constant in this case
-  
-  for (;;) { ////size_t ii(0); ii < 10000; ++ii) {
-    double const q0(system.state.coeff(0));
-    double const q1(system.state.coeff(1));
+  for (double bm(1.0e-3); bm <= 1.0; bm *= 1.2) {
     
-    tasklist[0].current <<
-      cos(q0) + cos(q0 + q1);
-    tasklist[0].Jacobian <<
-      -sin(q0) - sin(q0 + q1),
-      -sin(q0 + q1);
+    cout << "# bm: " << bm << "\n";
     
-    tasklist[1].current <<
-      q1;
+    system_s system(ndof);
+    system.state << 0.3, -0.2;
     
-    Vector dq = recursive_task_priority_algorithm (system, tasklist);
+    tasklist_t tasklist;
+    tasklist.push_back(task_s(ndof, 1, bm));
+    tasklist.push_back(task_s(ndof, 1, bm * 0.5 * M_PI / 180.0));
     
-    dump(system, tasklist, dq);
+    tasklist[0].desired << 1.2;
+    tasklist[1].desired << 35.0 * M_PI / 180.0;
     
-    system.state += dq;
+    tasklist[1].Jacobian << 0.0, 1.0; // constant in this case
     
+    for (size_t ii(0); ii < 10000; ++ii) {
+      double const q0(system.state.coeff(0));
+      double const q1(system.state.coeff(1));
+      
+      tasklist[0].current <<
+	cos(q0) + cos(q0 + q1);
+      tasklist[0].Jacobian <<
+	-sin(q0) - sin(q0 + q1),
+	-sin(q0 + q1);
+      
+      tasklist[1].current <<
+	q1;
+      
+      Vector dq = recursive_task_priority_algorithm (system, tasklist);
+      
+      dump(system, tasklist, dq);
+      
+      system.state += dq;
+      
+    }
+    
+    cout << "\n\n";
   }
   
   return 0;
