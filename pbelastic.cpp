@@ -34,11 +34,135 @@
 
 /* Author: Roland Philippsen */
 
+#include "pbmockup.hpp"
+
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
+#include <list>
 
-using namespace std;
+#include <err.h>
+
+using namespace pbmockup;
+
+
+struct robot_s : public system_s {
+  
+  double const radius;
+  double const len_a;
+  double const len_b;
+  
+  Vector pos_a;
+  Vector pos_b;
+  
+
+  // robot_s ()
+  // : system_s(4),
+  //   radius(0.5),
+  //   len_a(0.8),
+  //   len_b(0.6),
+  //   pos_a(2),
+  //   pos_b(2)
+  // {
+  //   state << 2.5, 5.7, 15 * deg, 32 * deg;
+  //   update();
+  // }
+  
+  explicit robot_s (Vector const & state_)
+    : system_s(4),
+      radius(0.5),
+      len_a(0.8),
+      len_b(0.6),
+      pos_a(2),
+      pos_b(2)
+  {
+    if (state_.size() != 4) {
+      errx (EXIT_FAILURE, "only NDOF=4 allowed for now...");
+    }
+    state = state_;
+    update();
+  }
+  
+  void draw (cairo_t * cr, double pixelsize)
+  {
+    cairo_save (cr);
+    
+    cairo_set_source_rgba (cr, 0.7, 0.7, 0.7, 0.5);
+    cairo_arc (cr, state[0], state[1], radius, 0., 2. * M_PI);
+    cairo_fill (cr);
+    
+    cairo_set_source_rgb (cr, 0.2, 0.2, 0.2);
+    cairo_set_line_width (cr, 3.0 / pixelsize);
+    cairo_arc (cr, state[0], state[1], radius, 0., 2. * M_PI);
+    cairo_stroke (cr);
+    
+    cairo_move_to (cr, state[0], state[1]);
+    cairo_line_to (cr, pos_a[0], pos_a[1]);
+    cairo_line_to (cr, pos_b[0], pos_b[1]);
+    cairo_stroke (cr);
+    
+    cairo_restore (cr);
+  }
+  
+  void update ()
+  {
+    pos_a <<
+      state[0] + len_a * cos(state[2]),
+      state[1] + len_a * sin(state[2]);
+    pos_b <<
+      len_b * cos(state[2] + state[3]),
+      len_b * sin(state[2] + state[3]);
+    pos_b += pos_a;
+  }
+};
+
+
+// could templatize on robot_s or pass in a factory or something along
+// those lines to make it robot agnostic...
+class Elastic
+{
+public:
+  typedef list<robot_s *> path_t;
+  
+  ~Elastic ()
+  {
+    clear();
+  }
+  
+  void clear ()
+  {
+    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
+      delete *ii;
+    }
+    path_.clear();
+  }
+  
+  void init (Vector const & start, Vector const & dest, size_t nsteps)
+  {
+    clear();
+    
+    if (0 == nsteps) {
+      nsteps = 1;
+    }
+    Vector delta = (dest - start) / nsteps;
+    Vector state = start;
+    for (size_t ii(0); ii < nsteps; ++ii) {
+      path_.push_back (new robot_s(state));
+      state += delta;
+    }
+    path_.push_back (new robot_s(dest));    
+  }
+  
+  void draw (cairo_t * cr, double pixelsize)
+  {
+    for (path_t::reverse_iterator ii(path_.rbegin()); ii != path_.rend(); ++ii) {
+      (*ii)->draw(cr, pixelsize);
+    }
+  }
+  
+private:
+  path_t path_;
+};
 
 
 static double const dimx(10.);
@@ -49,6 +173,9 @@ static GtkWidget * gw(0);
 static gint gw_width(800), gw_height(640);
 static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static int play(0);
+
+////static robot_s robot;
+static Elastic elastic;
 
 
 static void update ()
@@ -96,10 +223,10 @@ static gint cb_expose (GtkWidget * ww,
   cairo_rectangle (cr, 0, 0, gw_width, gw_height);
   cairo_fill (cr);
   
-  cairo_set_source_rgb (cr, 0.5, 0.5, 0.5);
-  cairo_set_line_width (cr, 2.0);
-  cairo_rectangle (cr, gw_x0 - 2, gw_y0 + 2, dimx * gw_sx + 4, dimy * gw_sy - 4);
-  cairo_stroke (cr);
+  cairo_translate (cr, gw_x0, gw_y0);
+  cairo_scale (cr, gw_sx, gw_sy);
+  
+  elastic.draw(cr, gw_sx);
   
   cairo_destroy (cr);
   
@@ -150,7 +277,7 @@ static gint cb_click (GtkWidget * ww,
 }
 
 
-gint idle (gpointer data)
+static gint idle (gpointer data)
 {
   if (play) {
     update ();
@@ -159,12 +286,11 @@ gint idle (gpointer data)
 }
 
 
-int main (int argc, char ** argv)
+static void init_gui (int * argc, char *** argv)
 {
   GtkWidget *window, *vbox, *hbox, *btn;
   
-  gtk_init (&argc, &argv);
-  //  init ();
+  gtk_init (argc, argv);
   
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   
@@ -210,6 +336,18 @@ int main (int argc, char ** argv)
   gtk_idle_add (idle, 0);
   
   gtk_widget_show (window);
+}
+
+
+int main (int argc, char ** argv)
+{
+  init_gui (&argc, &argv);
+  
+  Vector start(4), dest(4);
+  start << 1.0, dimy - 1.0, 80*deg, -40*deg;
+  dest  << dimx -  1.0, 1.0, -90*deg, 60*deg;
+  elastic.init (start, dest, 7);
+  
   gtk_main ();
   
   return 0;
