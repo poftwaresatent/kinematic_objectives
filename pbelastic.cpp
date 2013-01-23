@@ -46,6 +46,9 @@
 using namespace pbmockup;
 
 
+static double const deg(M_PI / 180.);
+
+
 class Waypoint
 {
 public:
@@ -61,10 +64,15 @@ public:
   {
     task_.push_back (task_s(4, 2, 0.1));
     task_.push_back (task_s(4, 2, 0.1));
-    task_[1].Jacobian << 1, 0, 0, 0, 0, 1, 0, 0;
+    ////    task_.push_back (task_s(4, 2, 5.0 * deg));
+    task_[1].Jacobian <<
+      1, 0, 0, 0,
+      0, 1, 0, 0;
+    ////    task_[2].Jacobian = Matrix::Identity(4, 4);
     setState (state);
     task_[0].desired = task_[0].current;
     task_[1].desired = task_[1].current;
+    ////    task_[2].desired = task_[2].current;
   }
   
   void draw (cairo_t * cr, double pixelsize)
@@ -85,13 +93,13 @@ public:
     cairo_line_to (cr, pos_b_[0], pos_b_[1]);
     cairo_stroke (cr);
     
-    cairo_set_source_rgb (cr, 1.0, 0.2, 0.2);
+    cairo_set_source_rgb (cr, 1.0, 0.4, 0.4);
     cairo_set_line_width (cr, 1.0 / pixelsize);
     cairo_move_to (cr, task_[0].current[0], task_[0].current[1]);
     cairo_line_to (cr, task_[0].desired[0], task_[0].desired[1]);
     cairo_stroke (cr);
     
-    cairo_set_source_rgb (cr, 0.2, 1.0, 0.2);
+    cairo_set_source_rgb (cr, 0.4, 1.0, 0.4);
     cairo_move_to (cr, task_[1].current[0], task_[1].current[1]);
     cairo_line_to (cr, task_[1].desired[0], task_[1].desired[1]);
     cairo_stroke (cr);
@@ -102,26 +110,27 @@ public:
   void setEEGoal (Vector const & goal)
   {
     task_[0].desired = goal;
-    cout << "setEEGoal (v): " << task_[0].desired[0] << "  " << task_[0].desired[1] << "\n";
   }
   
   void setEEGoal (double gx, double gy)
   {
     task_[0].desired << gx, gy;
-    cout << "setEEGoal (dd): " << task_[0].desired[0] << "  " << task_[0].desired[1] << "\n";
   }
   
   void setBaseGoal (Vector const & goal)
   {
     task_[1].desired = goal;
-    cout << "setBaseGoal (v): " << task_[1].desired[0] << "  " << task_[1].desired[1] << "\n";
   }
   
   void setBaseGoal (double gx, double gy)
   {
     task_[1].desired << gx, gy;
-    cout << "setBaseGoal (dd): " << task_[1].desired[0] << "  " << task_[1].desired[1] << "\n";
   }
+  
+  // void setPosture (Vector const & goal)
+  // {
+  //   task_[2].desired = goal;
+  // }
   
   void setState (Vector const & state)
   {
@@ -144,6 +153,8 @@ public:
       0, 1,  ac2 + bc23,  bc23;
     
     task_[1].current << state_[0], state_[1];
+    
+    ////    task_[2].current = state_;
   }
   
   Vector const & getState () const { return state_; }
@@ -184,43 +195,44 @@ public:
     path_.clear();
   }
   
-  void init (Vector const & start, Vector const & dest, size_t nsteps)
+  void init (Vector const & ee0, Vector const & ee1,
+	     Vector const & base0, Vector const & base1,
+	     Vector const & posture,
+	     size_t nsteps)
   {
     if (0 == nsteps) {
       nsteps = 1;
     }
     clear();
     
-    Waypoint * start_wpt(new Waypoint(start));
-    Vector start_eegoal(start_wpt->getTasks()[0].current);
-    Vector start_basegoal(start_wpt->getTasks()[1].current);
+    start_ = new Waypoint(posture);
+    dest_ = new Waypoint(posture);
     
-    Waypoint * dest_wpt(new Waypoint(dest));
-    Vector dest_eegoal(dest_wpt->getTasks()[0].current);
-    Vector dest_basegoal(dest_wpt->getTasks()[1].current);
+    Vector delta_ee = (ee1 - ee0) / nsteps;
+    Vector delta_base = (base1 - base0) / nsteps;
     
-    Vector delta_eegoal = (dest_eegoal - start_eegoal) / nsteps;
-    Vector delta_basegoal = (dest_basegoal - start_basegoal) / nsteps;
+    Vector ee = ee0 + delta_ee;
+    Vector base = base0 + delta_base;
     
-    Vector eegoal = start_eegoal + delta_eegoal;
-    Vector basegoal = start_basegoal + delta_basegoal;
-    
-    Vector middle = (start + dest) / 2.0;
-    
-    path_.push_back (start_wpt);
+    path_.push_back (start_);
     for (size_t ii(1); ii < nsteps; ++ii) {
-      Waypoint * wpt(new Waypoint(middle));
-      wpt->setEEGoal(eegoal);
-      wpt->setBaseGoal(basegoal);
+      Waypoint * wpt(new Waypoint(posture));
+      wpt->setEEGoal(ee);
+      wpt->setBaseGoal(base);
       path_.push_back (wpt);
-      eegoal += delta_eegoal;
-      basegoal += delta_basegoal;
+      ee += delta_ee;
+      base += delta_base;
     }
-    path_.push_back (dest_wpt);
+    path_.push_back (dest_);
   }
   
-  void update ()
+  void update (Vector const & ee0, Vector const & ee1,
+	       Vector const & base0, Vector const & base1)
   {
+    start_->setEEGoal (ee0);
+    start_->setBaseGoal (base0);
+    dest_->setEEGoal (ee1);
+    dest_->setBaseGoal (base1);
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
       Vector dq = recursive_task_priority_algorithm (4, (*ii)->getTasks());
       (*ii)->setState ((*ii)->getState() + dq);
@@ -236,26 +248,35 @@ public:
   
 private:
   path_t path_;
+  Waypoint * start_;
+  Waypoint * dest_;
 };
 
 
 static double const dimx(10.);
 static double const dimy(8.);
-static double const deg(M_PI / 180.);
 
 static GtkWidget * gw(0);
 static gint gw_width(800), gw_height(640);
 static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static int play(0);
+static Vector start_ee(2);
+static Vector dest_ee(2);
+static Vector start_base(2);
+static Vector dest_base(2);
+static Vector posture(4);
+static Vector * handle[] = { &start_ee, &dest_ee, &start_base, &dest_base, 0 };
+static Vector * grabbed(0);
+static double grab_radius(0.2);
+static Vector grab_offset(2);
+
 
 static Elastic elastic;
 
 
 static void update ()
 {
-  static size_t tick(0);
-  cout << "tick " << tick++ << "\n";
-  elastic.update();
+  elastic.update (start_ee, dest_ee, start_base, dest_base);
   gtk_widget_queue_draw (gw);
 }
 
@@ -301,7 +322,30 @@ static gint cb_expose (GtkWidget * ww,
   cairo_translate (cr, gw_x0, gw_y0);
   cairo_scale (cr, gw_sx, gw_sy);
   
+  cairo_set_source_rgb (cr, 0.6, 0.0, 0.0);
+  cairo_set_line_width (cr, 1.0 / gw_sx);
+  cairo_move_to (cr, start_ee[0], start_ee[1]);
+  cairo_line_to (cr, dest_ee[0], dest_ee[1]);
+  cairo_stroke (cr);
+  
+  cairo_set_source_rgb (cr, 0.0, 0.6, 0.0);
+  cairo_move_to (cr, start_base[0], start_base[1]);
+  cairo_line_to (cr, dest_base[0], dest_base[1]);
+  cairo_stroke (cr);
+  
   elastic.draw(cr, gw_sx);
+  
+  cairo_set_source_rgba (cr, 0.6, 0.0, 0.0, 0.5);
+  cairo_arc (cr, start_ee[0], start_ee[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill (cr);
+  cairo_arc (cr, dest_ee[0], dest_ee[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill (cr);
+  
+  cairo_set_source_rgba (cr, 0.0, 0.6, 0.0, 0.5);
+  cairo_arc (cr, start_base[0], start_base[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill (cr);
+  cairo_arc (cr, dest_base[0], dest_base[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill (cr);
   
   cairo_destroy (cr);
   
@@ -341,12 +385,40 @@ static gint cb_click (GtkWidget * ww,
 		      GdkEventButton * bb,
 		      gpointer data)
 {
-  gdouble const cx = (bb->x - gw_x0) / gw_sx;
-  gdouble const cy = (bb->y - gw_y0) / gw_sy;
+  if (bb->type == GDK_BUTTON_PRESS) {
+    Vector point(2);
+    point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy;
+    for (Vector ** hh(handle); *hh != 0; ++hh) {
+      Vector offset = **hh - point;
+      if (offset.norm() <= grab_radius) {
+    	grab_offset = offset;
+    	grabbed = *hh;
+    	break;
+      }
+    }
+  }
+  else if (bb->type == GDK_BUTTON_RELEASE) {
+    grabbed = 0;
+    cout << "Why don't I get GDK_BUTTON_RELEASE (under OSX)?\n";
+  }
   
-  cout << "click " << cx << "  " << cy << "\n";
+  return TRUE;
+}
+
+
+static gint cb_motion (GtkWidget * ww,
+		       GdkEventMotion * ee)
+{
+  int mx, my;
+  GdkModifierType modifier;
+  gdk_window_get_pointer (ww->window, &mx, &my, &modifier);
   
-  ////  gtk_widget_queue_draw (w_phi);
+  if (0 != grabbed) {
+    Vector point(2);
+    point << (mx - gw_x0) / (double) gw_sx, (my - gw_y0) / (double) gw_sy;
+    *grabbed = point + grab_offset;
+    gtk_widget_queue_draw (gw);
+  }
   
   return TRUE;
 }
@@ -377,7 +449,11 @@ static void init_gui (int * argc, char *** argv)
   g_signal_connect (gw, "expose_event", G_CALLBACK (cb_expose), NULL);
   g_signal_connect (gw, "size_allocate", G_CALLBACK (cb_size_allocate), NULL);
   g_signal_connect (gw, "button_press_event", G_CALLBACK (cb_click), NULL);
-  gtk_widget_set_events (gw, GDK_BUTTON_PRESS_MASK);
+  g_signal_connect (gw, "motion_notify_event", G_CALLBACK (cb_motion), NULL);
+  gtk_widget_set_events (gw,
+			 GDK_BUTTON_PRESS_MASK |
+			 GDK_BUTTON_RELEASE_MASK |
+			 GDK_BUTTON_MOTION_MASK);
   
   gtk_widget_show (gw);
   
@@ -418,10 +494,13 @@ int main (int argc, char ** argv)
 {
   init_gui (&argc, &argv);
   
-  Vector start(4), dest(4);
-  start << 1.0, dimy - 1.0, 80*deg, -40*deg;
-  dest  << dimx -  1.0, 1.0, -90*deg, 60*deg;
-  elastic.init (start, dest, 7);
+  start_ee   << 1.0,        dimy - 1.0;
+  dest_ee    << dimx - 1.0, 2.0;
+  start_base << 1.0,        dimy - 2.0;
+  dest_base  << dimx - 1.0, 1.0;
+  posture    << dimx / 2.0, dimy / 2.0, 80.0 * deg, - 40.0 * deg;
+  
+  elastic.init (start_ee, dest_ee, start_base, dest_base, posture, 7);
   
   gtk_main ();
   
