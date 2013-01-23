@@ -7,7 +7,7 @@ if (COMMAND cmake_policy)
   endif (POLICY CMP0011)
 endif (COMMAND cmake_policy)
 
-project (PBMOCKUP)
+project (kinematic_elastic)
 
 set (CMAKE_VERBOSE_MAKEFILE ON)
 if (NOT BUILD_SHARED_LIBS)
@@ -89,14 +89,14 @@ endif (GTK2_FOUND)
 
 list (APPEND SRCS
   kinematic_elastic.cpp
-  pbmockup.cpp
+  baerlocher_algorithm.cpp
   print.cpp
   )
 
-add_library (pbmockup SHARED ${SRCS})
+add_library (kinematic_elastic SHARED ${SRCS})
 
-add_executable (pbtest pbtest.cpp)
-target_link_libraries (pbtest pbmockup)
+add_executable (test_baerlocher_algorithm test_baerlocher_algorithm.cpp)
+target_link_libraries (test_baerlocher_algorithm kinematic_elastic)
 
-add_executable (pbelastic pbelastic.cpp)
-target_link_libraries (pbelastic pbmockup ${GTK2_LIBRARIES})
+add_executable (elastic_gtk elastic_gtk.cpp)
+target_link_libraries (elastic_gtk kinematic_elastic ${GTK2_LIBRARIES})

@@ -34,13 +34,11 @@
 
 /* Author: Roland Philippsen */
 
-#include "pbmockup.hpp"
-
+#include "baerlocher_algorithm.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
 #include <list>
-
 #include <err.h>
 
 using namespace kinematic_elastic;

@@ -34,7 +34,7 @@
 
 /* Author: Roland Philippsen */
 
-#include "pbmockup.hpp"
+#include "baerlocher_algorithm.hpp"
 #include "print.hpp"
 #include <Eigen/SVD>
 #include <iostream>

@@ -34,8 +34,7 @@
 
 /* Author: Roland Philippsen */
 
-#include "pbmockup.hpp"
-
+#include "baerlocher_algorithm.hpp"
 #include <iostream>
 
 using namespace kinematic_elastic;
