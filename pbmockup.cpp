@@ -205,6 +205,11 @@ namespace pbmockup {
 	print (delta_projector,       *dbgos, "delta_projector", pre);
 	print (delta_q,               *dbgos, "delta_q",         pre);
 	print (projector,             *dbgos, "projector",       pre);
+	
+	Eigen::JacobiSVD<Matrix> svd(projector, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	print (svd.singularValues(), *dbgos, "proj. sigma", pre);
+	print (svd.matrixU(), *dbgos, "proj. U", pre);
+	print (svd.matrixV(), *dbgos, "proj. V", pre);
       }
     }
     
