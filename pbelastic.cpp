@@ -55,14 +55,16 @@ public:
     : radius_(0.5),
       len_a_(0.8),
       len_b_(0.6),
+      state_(state),
       pos_a_(2),
-      pos_b_(2),
-      state_(state)
+      pos_b_(2)
   {
-    if (state.size() != 4) {
-      errx (EXIT_FAILURE, "only NDOF=4 allowed for now...");
-    }
-    update();
+    task_.push_back (task_s(4, 2, 0.1));
+    task_.push_back (task_s(4, 2, 0.1));
+    task_[1].Jacobian << 1, 0, 0, 0, 0, 1, 0, 0;
+    setState (state);
+    task_[0].desired = task_[0].current;
+    task_[1].desired = task_[1].current;
   }
   
   void draw (cairo_t * cr, double pixelsize)
@@ -83,20 +85,70 @@ public:
     cairo_line_to (cr, pos_b_[0], pos_b_[1]);
     cairo_stroke (cr);
     
+    cairo_set_source_rgb (cr, 1.0, 0.2, 0.2);
+    cairo_set_line_width (cr, 1.0 / pixelsize);
+    cairo_move_to (cr, task_[0].current[0], task_[0].current[1]);
+    cairo_line_to (cr, task_[0].desired[0], task_[0].desired[1]);
+    cairo_stroke (cr);
+    
+    cairo_set_source_rgb (cr, 0.2, 1.0, 0.2);
+    cairo_move_to (cr, task_[1].current[0], task_[1].current[1]);
+    cairo_line_to (cr, task_[1].desired[0], task_[1].desired[1]);
+    cairo_stroke (cr);
+    
     cairo_restore (cr);
   }
   
-  void update ()
+  void setEEGoal (Vector const & goal)
   {
-    pos_a_ <<
-      state_[0] + len_a_ * cos(state_[2]),
-      state_[1] + len_a_ * sin(state_[2]);
-    pos_b_ <<
-      len_b_ * cos(state_[2] + state_[3]),
-      len_b_ * sin(state_[2] + state_[3]);
-    pos_b_ += pos_a_;
+    task_[0].desired = goal;
+    cout << "setEEGoal (v): " << task_[0].desired[0] << "  " << task_[0].desired[1] << "\n";
   }
-
+  
+  void setEEGoal (double gx, double gy)
+  {
+    task_[0].desired << gx, gy;
+    cout << "setEEGoal (dd): " << task_[0].desired[0] << "  " << task_[0].desired[1] << "\n";
+  }
+  
+  void setBaseGoal (Vector const & goal)
+  {
+    task_[1].desired = goal;
+    cout << "setBaseGoal (v): " << task_[1].desired[0] << "  " << task_[1].desired[1] << "\n";
+  }
+  
+  void setBaseGoal (double gx, double gy)
+  {
+    task_[1].desired << gx, gy;
+    cout << "setBaseGoal (dd): " << task_[1].desired[0] << "  " << task_[1].desired[1] << "\n";
+  }
+  
+  void setState (Vector const & state)
+  {
+    if (state.size() != 4) {
+      errx (EXIT_FAILURE, "only NDOF=4 allowed for now...");
+    }
+    state_ = state;
+    
+    double const ac2(len_a_ * cos(state_[2]));
+    double const as2(len_a_ * sin(state_[2]));
+    double const bc23(len_b_ * cos(state_[2] + state_[3]));
+    double const bs23(len_b_ * sin(state_[2] + state_[3]));
+    
+    pos_a_ << state_[0] + ac2, state_[1] + as2;
+    pos_b_ << pos_a_[0] + bc23, pos_a_[1] + bs23;
+    
+    task_[0].current = pos_b_;
+    task_[0].Jacobian <<
+      1, 0, -as2 - bs23, -bs23,
+      0, 1,  ac2 + bc23,  bc23;
+    
+    task_[1].current << state_[0], state_[1];
+  }
+  
+  tasklist_t const getTasks () const { return task_; }
+  
+  
 private:  
   double const radius_;
   double const len_a_;
@@ -105,6 +157,8 @@ private:
   Vector state_;
   Vector pos_a_;
   Vector pos_b_;
+  
+  tasklist_t task_;
 };
 
 
@@ -130,18 +184,37 @@ public:
   
   void init (Vector const & start, Vector const & dest, size_t nsteps)
   {
-    clear();
-    
     if (0 == nsteps) {
       nsteps = 1;
     }
-    Vector delta = (dest - start) / nsteps;
-    Vector state = start;
-    for (size_t ii(0); ii < nsteps; ++ii) {
-      path_.push_back (new Waypoint(state));
-      state += delta;
+    clear();
+    
+    Waypoint * start_wpt(new Waypoint(start));
+    Vector start_eegoal(start_wpt->getTasks()[0].current);
+    Vector start_basegoal(start_wpt->getTasks()[1].current);
+    
+    Waypoint * dest_wpt(new Waypoint(dest));
+    Vector dest_eegoal(dest_wpt->getTasks()[0].current);
+    Vector dest_basegoal(dest_wpt->getTasks()[1].current);
+    
+    Vector delta_eegoal = (dest_eegoal - start_eegoal) / nsteps;
+    Vector delta_basegoal = (dest_basegoal - start_basegoal) / nsteps;
+    
+    Vector eegoal = start_eegoal + delta_eegoal;
+    Vector basegoal = start_basegoal + delta_basegoal;
+    
+    Vector middle = (start + dest) / 2.0;
+    
+    path_.push_back (start_wpt);
+    for (size_t ii(1); ii < nsteps; ++ii) {
+      Waypoint * wpt(new Waypoint(middle));
+      wpt->setEEGoal(eegoal);
+      wpt->setBaseGoal(basegoal);
+      path_.push_back (wpt);
+      eegoal += delta_eegoal;
+      basegoal += delta_basegoal;
     }
-    path_.push_back (new Waypoint(dest));    
+    path_.push_back (dest_wpt);
   }
   
   void draw (cairo_t * cr, double pixelsize)
