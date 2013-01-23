@@ -46,40 +46,22 @@
 using namespace pbmockup;
 
 
-struct robot_s : public system_s {
+class Waypoint
+{
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
-  double const radius;
-  double const len_a;
-  double const len_b;
-  
-  Vector pos_a;
-  Vector pos_b;
-  
-
-  // robot_s ()
-  // : system_s(4),
-  //   radius(0.5),
-  //   len_a(0.8),
-  //   len_b(0.6),
-  //   pos_a(2),
-  //   pos_b(2)
-  // {
-  //   state << 2.5, 5.7, 15 * deg, 32 * deg;
-  //   update();
-  // }
-  
-  explicit robot_s (Vector const & state_)
-    : system_s(4),
-      radius(0.5),
-      len_a(0.8),
-      len_b(0.6),
-      pos_a(2),
-      pos_b(2)
+  explicit Waypoint (Vector const & state)
+    : radius_(0.5),
+      len_a_(0.8),
+      len_b_(0.6),
+      pos_a_(2),
+      pos_b_(2),
+      state_(state)
   {
-    if (state_.size() != 4) {
+    if (state.size() != 4) {
       errx (EXIT_FAILURE, "only NDOF=4 allowed for now...");
     }
-    state = state_;
     update();
   }
   
@@ -88,17 +70,17 @@ struct robot_s : public system_s {
     cairo_save (cr);
     
     cairo_set_source_rgba (cr, 0.7, 0.7, 0.7, 0.5);
-    cairo_arc (cr, state[0], state[1], radius, 0., 2. * M_PI);
+    cairo_arc (cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
     cairo_fill (cr);
     
     cairo_set_source_rgb (cr, 0.2, 0.2, 0.2);
     cairo_set_line_width (cr, 3.0 / pixelsize);
-    cairo_arc (cr, state[0], state[1], radius, 0., 2. * M_PI);
+    cairo_arc (cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
     cairo_stroke (cr);
     
-    cairo_move_to (cr, state[0], state[1]);
-    cairo_line_to (cr, pos_a[0], pos_a[1]);
-    cairo_line_to (cr, pos_b[0], pos_b[1]);
+    cairo_move_to (cr, state_[0], state_[1]);
+    cairo_line_to (cr, pos_a_[0], pos_a_[1]);
+    cairo_line_to (cr, pos_b_[0], pos_b_[1]);
     cairo_stroke (cr);
     
     cairo_restore (cr);
@@ -106,23 +88,32 @@ struct robot_s : public system_s {
   
   void update ()
   {
-    pos_a <<
-      state[0] + len_a * cos(state[2]),
-      state[1] + len_a * sin(state[2]);
-    pos_b <<
-      len_b * cos(state[2] + state[3]),
-      len_b * sin(state[2] + state[3]);
-    pos_b += pos_a;
+    pos_a_ <<
+      state_[0] + len_a_ * cos(state_[2]),
+      state_[1] + len_a_ * sin(state_[2]);
+    pos_b_ <<
+      len_b_ * cos(state_[2] + state_[3]),
+      len_b_ * sin(state_[2] + state_[3]);
+    pos_b_ += pos_a_;
   }
+
+private:  
+  double const radius_;
+  double const len_a_;
+  double const len_b_;
+  
+  Vector state_;
+  Vector pos_a_;
+  Vector pos_b_;
 };
 
 
-// could templatize on robot_s or pass in a factory or something along
+// could templatize on Waypoint or pass in a factory or something along
 // those lines to make it robot agnostic...
 class Elastic
 {
 public:
-  typedef list<robot_s *> path_t;
+  typedef list<Waypoint *> path_t;
   
   ~Elastic ()
   {
@@ -147,10 +138,10 @@ public:
     Vector delta = (dest - start) / nsteps;
     Vector state = start;
     for (size_t ii(0); ii < nsteps; ++ii) {
-      path_.push_back (new robot_s(state));
+      path_.push_back (new Waypoint(state));
       state += delta;
     }
-    path_.push_back (new robot_s(dest));    
+    path_.push_back (new Waypoint(dest));    
   }
   
   void draw (cairo_t * cr, double pixelsize)
@@ -174,7 +165,6 @@ static gint gw_width(800), gw_height(640);
 static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static int play(0);
 
-////static robot_s robot;
 static Elastic elastic;
 
 

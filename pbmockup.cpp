@@ -54,14 +54,6 @@ namespace pbmockup {
   }
   
   
-  system_s::
-  system_s (size_t ndof_)
-    : ndof(ndof_)
-  {
-    state = Vector::Zero(ndof_);
-  }
-  
-  
   static void compute_svd_stuff(Matrix const & Jt,
 				double d_damp,
 				Matrix & Jt_inv_damped,
@@ -125,12 +117,12 @@ namespace pbmockup {
   }
   
   
-  Vector recursive_task_priority_algorithm (system_s const & system,
+  Vector recursive_task_priority_algorithm (size_t ndof,
 					    tasklist_t const & tasklist)
   {
     // initialization (without constraints for now...)
-    Vector delta_q(Vector::Zero(system.ndof));
-    Matrix projector(Matrix::Identity(system.ndof, system.ndof));
+    Vector delta_q(Vector::Zero(ndof));
+    Matrix projector(Matrix::Identity(ndof, ndof));
     
     // recursively add tasks, projected into the nullspace of
     // higher-priority tasks [Baerlocher 2001 Fig 5.12]
@@ -162,12 +154,12 @@ namespace pbmockup {
   }
   
   
-  void dump (system_s const & system,
+  void dump (Vector const & state,
 	     tasklist_t const & tasklist,
 	     Vector const & dq)
   {
-    for (size_t ii(0); ii < system.ndof; ++ii) {
-      cout << system.state[ii] << "  ";
+    for (ssize_t ii(0); ii < state.size(); ++ii) {
+      cout << state[ii] << "  ";
     }
     for (size_t ii(0); ii < tasklist.size(); ++ii) {
       cout << "  ";
@@ -176,21 +168,21 @@ namespace pbmockup {
       }
     }
     cout << "  ";
-    for (size_t ii(0); ii < system.ndof; ++ii) {
+    for (ssize_t ii(0); ii < dq.size(); ++ii) {
       cout << dq[ii] << "  ";
     }
     cout << "\n";
   }
   
   
-  void dbg (system_s const & system,
+  void dbg (Vector const & state,
 	    tasklist_t const & tasklist,
 	    Vector const & dq)
   {
     cout << "==================================================\n"
 	 << "state:";
-    for (size_t ii(0); ii < system.ndof; ++ii) {
-      cout << "\t" << system.state[ii];
+    for (ssize_t ii(0); ii < state.size(); ++ii) {
+      cout << "\t" << state[ii];
     }
     for (size_t ii(0); ii < tasklist.size(); ++ii) {
       cout << "\ntask " << ii << "\n";
@@ -203,12 +195,12 @@ namespace pbmockup {
 	cout << "\t" << tasklist[ii].desired[jj];
       }
       cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
-      for (size_t jj(0); jj < system.ndof; ++jj) {
+      for (ssize_t jj(0); jj < state.size(); ++jj) {
 	cout << "\t" << tasklist[ii].Jacobian(0, jj);
       }
     }
     cout << "\ndelta_q:";
-    for (size_t ii(0); ii < system.ndof; ++ii) {
+    for (ssize_t ii(0); ii < dq.size(); ++ii) {
       cout << "\t" << dq[ii];
     }
     cout << "\n";

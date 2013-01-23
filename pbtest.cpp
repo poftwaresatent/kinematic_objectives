@@ -49,8 +49,8 @@ int main (int argc, char ** argv)
     
     cout << "# bm: " << bm << "\n";
     
-    system_s system(ndof);
-    system.state << 0.3, -0.2;
+    Vector state(ndof);
+    state << 0.3, -0.2;
     
     tasklist_t tasklist;
     tasklist.push_back(task_s(ndof, 1, bm));
@@ -62,8 +62,8 @@ int main (int argc, char ** argv)
     tasklist[1].Jacobian << 0.0, 1.0; // constant in this case
     
     for (size_t ii(0); ii < 10000; ++ii) {
-      double const q0(system.state.coeff(0));
-      double const q1(system.state.coeff(1));
+      double const q0(state.coeff(0));
+      double const q1(state.coeff(1));
       
       tasklist[0].current <<
 	cos(q0) + cos(q0 + q1);
@@ -74,11 +74,11 @@ int main (int argc, char ** argv)
       tasklist[1].current <<
 	q1;
       
-      Vector dq = recursive_task_priority_algorithm (system, tasklist);
+      Vector dq = recursive_task_priority_algorithm (2, tasklist);
       
-      dump(system, tasklist, dq);
+      dump(state, tasklist, dq);
       
-      system.state += dq;
+      state += dq;
       
     }
     

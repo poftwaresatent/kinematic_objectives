@@ -64,25 +64,15 @@ namespace pbmockup {
   typedef vector<task_s> tasklist_t;
   
   
-  struct system_s {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    system_s (size_t ndof);
-    
-    Vector state;
-    size_t ndof;
-  };
-  
-  
-  Vector recursive_task_priority_algorithm (system_s const & system,
+  Vector recursive_task_priority_algorithm (size_t ndof,
 					    tasklist_t const & tasklist);
   
   
-  void dump (system_s const & system,
+  void dump (Vector const & state,
 	     tasklist_t const & tasklist,
 	     Vector const & dq);
   
-  void dbg (system_s const & system,
+  void dbg (Vector const & state,
 	    tasklist_t const & tasklist,
 	    Vector const & dq);
   
