@@ -37,10 +37,10 @@
 #ifndef KINEMATIC_ELASTIC_PRINT_HPP
 #define KINEMATIC_ELASTIC_PRINT_HPP
 
-#include "pbmockup.hpp"
+#include "kinematic_elastic.hpp"
 
 
-namespace pbmockup {
+namespace kinematic_elastic {
   
   using namespace std;
   

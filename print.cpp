@@ -40,7 +40,7 @@
 #include <stdio.h>
 
 
-namespace pbmockup {  
+namespace kinematic_elastic {  
   
   
   string pstring(Vector const & vv)

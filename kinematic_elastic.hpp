@@ -34,19 +34,46 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_BAERLOCHER_HPP
-#define KINEMATIC_ELASTIC_BAERLOCHER_HPP
+#ifndef KINEMATIC_ELASTIC_HPP
+#define KINEMATIC_ELASTIC_HPP
 
-#include "kinematic_elastic.hpp"
+#include <iosfwd>
+
+#include <Eigen/Core>
+#include <Eigen/StdVector>
 
 
 namespace kinematic_elastic {
   
-  Vector baerlocher_algorithm (size_t ndof,
-			       tasklist_t const & tasklist,
-			       ostream * dbgos = 0,
-			       char const * dbgpre = "");
+  typedef Eigen::VectorXd Vector;
+  typedef Eigen::MatrixXd Matrix;
+  
+  using namespace std;
+  
+  
+  struct task_s {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    
+    task_s(size_t ndof, size_t ndim, double b_max);
+    
+    Vector current;
+    Vector desired;
+    Matrix Jacobian;
+    double b_max;
+    size_t ndim;
+  };
+  
+  typedef vector<task_s> tasklist_t;
+  
+  
+  void dump (Vector const & state,
+	     tasklist_t const & tasklist,
+	     Vector const & dq);
+  
+  void dbg (Vector const & state,
+	    tasklist_t const & tasklist,
+	    Vector const & dq);
   
 }
 
-#endif // KINEMATIC_ELASTIC_BAERLOCHER_HPP
+#endif // KINEMATIC_ELASTIC_HPP

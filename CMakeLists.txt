@@ -88,6 +88,7 @@ else (GTK2_FOUND)
 endif (GTK2_FOUND)
 
 list (APPEND SRCS
+  kinematic_elastic.cpp
   pbmockup.cpp
   print.cpp
   )

@@ -38,7 +38,7 @@
 
 #include <iostream>
 
-using namespace pbmockup;
+using namespace kinematic_elastic;
 
 
 int main (int argc, char ** argv)
@@ -74,7 +74,7 @@ int main (int argc, char ** argv)
       tasklist[1].current <<
 	q1;
       
-      Vector dq = recursive_task_priority_algorithm (2, tasklist);
+      Vector dq = baerlocher_algorithm (2, tasklist);
       
       dump(state, tasklist, dq);
       

@@ -34,19 +34,75 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_BAERLOCHER_HPP
-#define KINEMATIC_ELASTIC_BAERLOCHER_HPP
-
-#include "kinematic_elastic.hpp"
+#include "pbmockup.hpp"
+#include "print.hpp"
+#include <iostream>
 
 
 namespace kinematic_elastic {
   
-  Vector baerlocher_algorithm (size_t ndof,
-			       tasklist_t const & tasklist,
-			       ostream * dbgos = 0,
-			       char const * dbgpre = "");
   
-}
+  task_s::
+  task_s(size_t ndof, size_t ndim_, double b_max_)
+    : b_max(b_max_),
+      ndim(ndim_)
+  {
+    current = Vector::Zero(ndim_);
+    desired = Vector::Zero(ndim_);
+    Jacobian = Matrix::Zero(ndim_, ndof);
+  }
+  
+  
+  void dump (Vector const & state,
+	     tasklist_t const & tasklist,
+	     Vector const & dq)
+  {
+    for (ssize_t ii(0); ii < state.size(); ++ii) {
+      cout << state[ii] << "  ";
+    }
+    for (size_t ii(0); ii < tasklist.size(); ++ii) {
+      cout << "  ";
+      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+	cout << tasklist[ii].current[jj] << "  ";
+      }
+    }
+    cout << "  ";
+    for (ssize_t ii(0); ii < dq.size(); ++ii) {
+      cout << dq[ii] << "  ";
+    }
+    cout << "\n";
+  }
+  
+  
+  void dbg (Vector const & state,
+	    tasklist_t const & tasklist,
+	    Vector const & dq)
+  {
+    cout << "==================================================\n"
+	 << "state:";
+    for (ssize_t ii(0); ii < state.size(); ++ii) {
+      cout << "\t" << state[ii];
+    }
+    for (size_t ii(0); ii < tasklist.size(); ++ii) {
+      cout << "\ntask " << ii << "\n";
+      cout << "  current:";
+      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+	cout << "\t" << tasklist[ii].current[jj];
+      }
+      cout << "\n  desired:";
+      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
+	cout << "\t" << tasklist[ii].desired[jj];
+      }
+      cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
+      for (ssize_t jj(0); jj < state.size(); ++jj) {
+	cout << "\t" << tasklist[ii].Jacobian(0, jj);
+      }
+    }
+    cout << "\ndelta_q:";
+    for (ssize_t ii(0); ii < dq.size(); ++ii) {
+      cout << "\t" << dq[ii];
+    }
+    cout << "\n";
+  }
 
-#endif // KINEMATIC_ELASTIC_BAERLOCHER_HPP
+}

@@ -43,7 +43,7 @@
 
 #include <err.h>
 
-using namespace pbmockup;
+using namespace kinematic_elastic;
 
 
 static double const deg(M_PI / 180.);
@@ -244,7 +244,7 @@ public:
       else {
 	cout << "waypoint\n";
       }
-      Vector dq = recursive_task_priority_algorithm (4, (*ii)->getTasks(), &cout, "  ");
+      Vector dq = baerlocher_algorithm (4, (*ii)->getTasks(), &cout, "  ");
       (*ii)->setState ((*ii)->getState() + dq);
       cout << "--------------------------------------------------\n";
     }
