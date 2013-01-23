@@ -35,6 +35,17 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
   endif (CXX_FLAG_O0)
 endif (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 
+if (APPLE)
+  include_directories (
+    /opt/local/include
+    /opt/local/include/eigen3
+    )
+  list (APPEND CMAKE_REQUIRED_INCLUDES
+    /opt/local/include
+    /opt/local/include/eigen3
+    )
+endif (APPLE)
+
 include_directories (
   /usr/include/eigen3
   )

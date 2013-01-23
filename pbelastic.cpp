@@ -146,6 +146,8 @@ public:
     task_[1].current << state_[0], state_[1];
   }
   
+  Vector const & getState () const { return state_; }
+  
   tasklist_t const getTasks () const { return task_; }
   
   
@@ -217,6 +219,14 @@ public:
     path_.push_back (dest_wpt);
   }
   
+  void update ()
+  {
+    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
+      Vector dq = recursive_task_priority_algorithm (4, (*ii)->getTasks());
+      (*ii)->setState ((*ii)->getState() + dq);
+    }
+  }
+  
   void draw (cairo_t * cr, double pixelsize)
   {
     for (path_t::reverse_iterator ii(path_.rbegin()); ii != path_.rend(); ++ii) {
@@ -245,6 +255,8 @@ static void update ()
 {
   static size_t tick(0);
   cout << "tick " << tick++ << "\n";
+  elastic.update();
+  gtk_widget_queue_draw (gw);
 }
 
 
