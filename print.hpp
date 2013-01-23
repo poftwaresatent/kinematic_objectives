@@ -34,52 +34,27 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef PBMOCKUP_HPP
-#define PBMOCKUP_HPP
+#ifndef KINEMATIC_ELASTIC_PRINT_HPP
+#define KINEMATIC_ELASTIC_PRINT_HPP
 
-#include <iosfwd>
-
-#include <Eigen/Core>
-#include <Eigen/StdVector>
+#include "pbmockup.hpp"
 
 
 namespace pbmockup {
   
-  typedef Eigen::VectorXd Vector;
-  typedef Eigen::MatrixXd Matrix;
-  
   using namespace std;
   
+  string pstring(double vv);
+  string pstring(Vector const & vv);
+  string pstring(Matrix const & mm, string const & prefix);
   
-  struct task_s {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    task_s(size_t ndof, size_t ndim, double b_max);
-    
-    Vector current;
-    Vector desired;
-    Matrix Jacobian;
-    double b_max;
-    size_t ndim;
-  };
+  void print(Vector const & vv, ostream & os,
+	     string const & title, string const & prefix, bool nonl = false);
   
-  typedef vector<task_s> tasklist_t;
-  
-  
-  Vector recursive_task_priority_algorithm (size_t ndof,
-					    tasklist_t const & tasklist,
-					    ostream * dbgos = 0,
-					    char const * dbgpre = "");
-  
-  
-  void dump (Vector const & state,
-	     tasklist_t const & tasklist,
-	     Vector const & dq);
-  
-  void dbg (Vector const & state,
-	    tasklist_t const & tasklist,
-	    Vector const & dq);
+  void print(Matrix const & mm, ostream & os,
+	     string const & title, string const & prefix,
+	     bool vecmode = false, bool nonl = false);
   
 }
 
-#endif // PBMOCKUP_HPP
+#endif // KINEMATIC_ELASTIC_PRINT_HPP

@@ -89,6 +89,7 @@ endif (GTK2_FOUND)
 
 list (APPEND SRCS
   pbmockup.cpp
+  print.cpp
   )
 
 add_library (pbmockup SHARED ${SRCS})

@@ -233,9 +233,20 @@ public:
     start_->setBaseGoal (base0);
     dest_->setEEGoal (ee1);
     dest_->setBaseGoal (base1);
+    cout << "==================================================\n";
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      Vector dq = recursive_task_priority_algorithm (4, (*ii)->getTasks());
+      if (start_ == *ii) {
+	cout << "START\n";
+      }
+      else if (dest_ == *ii) {
+	cout << "DESTINATION\n";
+      }
+      else {
+	cout << "waypoint\n";
+      }
+      Vector dq = recursive_task_priority_algorithm (4, (*ii)->getTasks(), &cout, "  ");
       (*ii)->setState ((*ii)->getState() + dq);
+      cout << "--------------------------------------------------\n";
     }
   }
   
@@ -500,7 +511,7 @@ int main (int argc, char ** argv)
   dest_base  << dimx - 1.0, 1.0;
   posture    << dimx / 2.0, dimy / 2.0, 80.0 * deg, - 40.0 * deg;
   
-  elastic.init (start_ee, dest_ee, start_base, dest_base, posture, 7);
+  elastic.init (start_ee, dest_ee, start_base, dest_base, posture, 1);//7);
   
   gtk_main ();
   

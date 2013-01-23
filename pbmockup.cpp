@@ -35,6 +35,8 @@
 /* Author: Roland Philippsen */
 
 #include "pbmockup.hpp"
+#include "print.hpp"
+
 #include <Eigen/SVD>
 
 #include <iostream>
@@ -57,13 +59,27 @@ namespace pbmockup {
   static void compute_svd_stuff(Matrix const & Jt,
 				double d_damp,
 				Matrix & Jt_inv_damped,
-				Matrix & delta_projector)
+				Matrix & delta_projector,
+				Matrix * dbgU,
+				Vector * dbgsigma,
+				Matrix * dbgV,
+				Vector * dbgdamping)
   {
     Eigen::JacobiSVD<Matrix> svd(Jt, Eigen::ComputeFullU | Eigen::ComputeFullV);
     if (0 == svd.nonzeroSingularValues()) {
       Jt_inv_damped = Matrix::Zero(Jt.cols(), Jt.rows());
       delta_projector = Matrix::Zero(Jt.cols(), Jt.cols());
       return;
+    }
+    
+    if (dbgU) {
+      *dbgU = svd.matrixU();
+    }
+    if (dbgsigma) {
+      *dbgsigma = svd.singularValues();
+    }
+    if (dbgV) {
+      *dbgV = svd.matrixV();
     }
     
     typedef Eigen::JacobiSVD<Matrix>::Index index_t;
@@ -82,6 +98,15 @@ namespace pbmockup {
 	  * svd.matrixV().col(ii)
 	  * svd.matrixU().col(ii).transpose();
       }
+      
+      if (dbgdamping) {
+	*dbgdamping = Vector::Zero(svd.nonzeroSingularValues() + 1);
+	for (index_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
+	  (*dbgdamping)[ii] =
+	    1.0 / svd.singularValues()[ii];
+	}
+      }
+      
     }
     else {
       
@@ -103,6 +128,16 @@ namespace pbmockup {
 	  * svd.matrixV().col(ii)
 	  * svd.matrixU().col(ii).transpose();
       }
+      
+      if (dbgdamping) {
+	*dbgdamping = Vector::Zero(svd.nonzeroSingularValues() + 1);
+	for (index_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
+	  (*dbgdamping)[ii] =
+	    svd.singularValues()[ii] / (pow(svd.singularValues()[ii], 2.0) + lsquare);
+	}
+	(*dbgdamping)[svd.nonzeroSingularValues()] = sqrt(lsquare);
+      }
+      
     }
     
     // the following could be sped up because it produces a symmetric matrix
@@ -118,8 +153,21 @@ namespace pbmockup {
   
   
   Vector recursive_task_priority_algorithm (size_t ndof,
-					    tasklist_t const & tasklist)
+					    tasklist_t const & tasklist,
+					    ostream * dbgos,
+					    char const * dbgpre)
   {
+    Matrix * dbgU(0);
+    Matrix * dbgV(0);
+    Vector * dbgsigma(0);
+    Vector * dbgdamping(0);
+    if (dbgos) {
+      dbgU = new Matrix();
+      dbgV = new Matrix();
+      dbgsigma = new Vector();
+      dbgdamping = new Vector();
+    }
+    
     // initialization (without constraints for now...)
     Vector delta_q(Vector::Zero(ndof));
     Matrix projector(Matrix::Identity(ndof, ndof));
@@ -136,11 +184,30 @@ namespace pbmockup {
       Matrix Jtilda = tasklist[ii].Jacobian * projector;
       
       Matrix Jtilda_inv, delta_projector;
-      compute_svd_stuff (Jtilda, d_damp, Jtilda_inv, delta_projector);
+      compute_svd_stuff (Jtilda, d_damp, Jtilda_inv, delta_projector,
+			 dbgU, dbgsigma, dbgV, dbgdamping);
       
       delta_q = delta_q + Jtilda_inv * dx_comp;
       
       projector = projector - delta_projector;
+      
+      if (dbgos) {
+	*dbgos << dbgpre << "task[" << ii << "]:\n";
+	string pre (dbgpre);
+	pre += "  ";
+	print (dx,                    *dbgos, "dx",              pre);
+	print (tasklist[ii].Jacobian, *dbgos, "J",               pre);
+	print (dx_comp,               *dbgos, "dx_comp",         pre);
+	print (Jtilda,                *dbgos, "Jtilda",          pre);
+	print (*dbgU,                 *dbgos, "U",               pre);
+	print (*dbgsigma,             *dbgos, "sigma",           pre);
+	print (*dbgdamping,           *dbgos, "damping",         pre);
+	print (*dbgV,                 *dbgos, "V",               pre);
+	print (Jtilda_inv,            *dbgos, "Jtilda_inv",      pre);
+	print (delta_projector,       *dbgos, "delta_projector", pre);
+	print (delta_q,               *dbgos, "delta_q",         pre);
+	print (projector,             *dbgos, "projector",       pre);
+      }
     }
     
     // // add joint-space "criterion minimization term" (i.e. posture)
@@ -149,6 +216,13 @@ namespace pbmockup {
     // Vector const & posture_gradient(system.state); // Vector::Ones(ndof)); // some bias...
     
     // delta_q = delta_q + projector * xi * posture_gradient;
+    
+    if (dbgos) {
+      delete dbgU;
+      delete dbgV;
+      delete dbgsigma;
+      delete dbgdamping;
+    }
     
     return delta_q;
   }
