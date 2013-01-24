@@ -64,18 +64,34 @@ namespace kinematic_elastic {
     
     size_t const ndof(state.size());
     Vector dq(Vector::Zero(ndof));
-	      
+    
     if (tl.empty()) {
+      if (dbgos) {
+	*dbgos << dbgpre << "DONE (no tasks):\n";
+	print (dq, *dbgos, "dq", string(dbgpre) + "  ");
+      }
       return dq;
     }
     
-    Vector dxa;
+    Vector dxa(tl[0]->desired - tl[0]->current);
     Matrix Ja_inv;
-    dxa = tl[0]->desired - tl[0]->current;
     pseudo_inverse_nonsingular (tl[0]->Jacobian, Ja_inv);
     dq += Ja_inv * dxa;
     
+    if (dbgos) {
+      *dbgos << dbgpre << "primary task:\n";
+      string pre (dbgpre);
+      pre += "  ";
+      print (dxa,             *dbgos, "dxa",    pre);
+      print (tl[0]->Jacobian, *dbgos, "Ja",     pre);
+      print (Ja_inv,          *dbgos, "Ja_inv", pre);
+      print (dq,              *dbgos, "dq",     pre);
+    }
+    
     if (tl.size() == 1) {
+      if (dbgos) {
+	*dbgos << dbgpre << "DONE (single task):\n";
+      }
       return dq;
     }
     
@@ -90,7 +106,22 @@ namespace kinematic_elastic {
     pseudo_inverse_damped (Jb, tmp, Jb_inv);
     Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * tl[0]->Jacobian);
     dq +=  Na * Jb_inv * dxb;
+
+    if (dbgos) {
+      *dbgos << dbgpre << "secondary task:\n";
+      string pre (dbgpre);
+      pre += "  ";
+      print (Na,     *dbgos, "Na",     pre);
+      print (dxb,    *dbgos, "dxb",    pre);
+      print (Jb,     *dbgos, "Jb",     pre);
+      print (Jb_inv, *dbgos, "Jb_inv", pre);
+      print (dq,     *dbgos, "dq",     pre);
+    }
+    
     if (tl.size() == 2) {
+      if (dbgos) {
+	*dbgos << dbgpre << "DONE (two tasks):\n";
+      }
       return dq;
     }
     
@@ -112,6 +143,18 @@ namespace kinematic_elastic {
     Matrix Jc_inv;
     pseudo_inverse_damped (Jc, 1.0 / tmp, Jc_inv);
     dq += Na * Nb * Jc_inv * dxc;
+    
+    if (dbgos) {
+      *dbgos << dbgpre << "remainder:\n";
+      string pre (dbgpre);
+      pre += "  ";
+      print (Nb,     *dbgos, "Nb",     pre);
+      print (dxc,    *dbgos, "dxc",    pre);
+      print (Jc,     *dbgos, "Jc",     pre);
+      print (Jc_inv, *dbgos, "Jc_inv", pre);
+      print (dq,     *dbgos, "dq",     pre);
+      *dbgos << dbgpre << "DONE\n";
+    }
     
     return dq;
   }

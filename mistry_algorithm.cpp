@@ -80,6 +80,20 @@ namespace kinematic_elastic {
     // would need Nb for supporting more than 2 tasks... later...
     
     Vector dq = Ja_inv * dxa + Na * Jb_inv * dxb;
+    
+    if (dbgos) {
+      string pre (dbgpre);
+      pre += "  ";
+      print (dxa,                  *dbgos, "dxa",    pre);
+      print (tasklist[0].Jacobian, *dbgos, "Ja",     pre);
+      print (Ja_inv,               *dbgos, "Ja_inv", pre);
+      print (Na,                   *dbgos, "Na",     pre);
+      print (dxb,                  *dbgos, "dxb",    pre);
+      print (Jb,                   *dbgos, "Jb",     pre);
+      print (Jb_inv,               *dbgos, "Jb_inv", pre);
+      print (dq,                   *dbgos, "dq",     pre);
+    }
+    
     return dq;
   }
   

@@ -239,18 +239,25 @@ public:
     start_->setBaseGoal (base0);
     dest_->setEEGoal (ee1);
     dest_->setBaseGoal (base1);
+    cout << "\n**************************************************\n";
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
       Vector dq;
       if (start_ == *ii) {
-	dq = baerlocher_algorithm (model_, (*ii)->getState(), (*ii)->getTasks());//, &cout, "  ");
+	cout << "--------------------------------------------------\n"
+	     << "START (Baerlocher)\n";
+	dq = baerlocher_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), &cout, "  ");
       }
       else if (dest_ == *ii) {
-	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks());//, &cout, "  ");
+	cout << "--------------------------------------------------\n"
+	     << "DEST (Mistry)\n";
+	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), &cout, "  ");
       }
       else {
+	cout << "--------------------------------------------------\n"
+	     << "Waypoint\n";
 	(*ii)->setEEGoal(0.5 * (ee0 + ee1));
 	(*ii)->setBaseGoal(0.5 * (base0 + base1));
-	dq = algorithm (model_, (*ii)->getState(), (*ii)->getTasks());
+	dq = algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), &cout, "  ");
       }
       (*ii)->setState ((*ii)->getState() + dq);
     }

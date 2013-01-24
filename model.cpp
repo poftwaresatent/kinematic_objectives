@@ -37,6 +37,8 @@
 #include "model.hpp"
 #include <limits>
 
+#include <iostream>		// dbg only
+
 
 namespace kinematic_elastic {
   
@@ -48,10 +50,10 @@ namespace kinematic_elastic {
     for (size_t ii(0); ii < ndof; ++ii) {
       size_t jj(0);
       for (; jj < 2; ++jj) {
-	joint_limits_(ii, jj) = numeric_limits<double>::min();
+	joint_limits_(ii, jj) = -numeric_limits<double>::max();
       }
       for (; jj < 4; ++jj) {
-	joint_limits_(ii, jj) = numeric_limits<double>::max();
+	joint_limits_(ii, jj) =  numeric_limits<double>::max();
       }
     }
   }
@@ -68,11 +70,17 @@ namespace kinematic_elastic {
     vector<double> cur, des;
     for (ssize_t ii(0); ii < state.size(); ++ii) {
       if (state[ii] < joint_limits_(ii, 0)) {
+	
+	cout << "joint[" << ii << "] = " << state[ii] << " < limit = " << joint_limits_(ii, 0) << "\n";
+	
 	lock.push_back(ii);
 	cur.push_back(state[ii]);
 	des.push_back(joint_limits_(ii, 1));
       }
       else if (state[ii] > joint_limits_(ii, 3)) {
+	
+	cout << "joint[" << ii << "] = " << state[ii] << " > limit = " << joint_limits_(ii, 3) << "\n";
+	
 	lock.push_back(ii);
 	cur.push_back(state[ii]);
 	des.push_back(joint_limits_(ii, 2));
