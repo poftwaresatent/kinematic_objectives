@@ -50,6 +50,11 @@ namespace kinematic_elastic {
     
     explicit Model (size_t ndof);
     
+    /**
+       \return True if all joints are within (hard) joint limits.
+    */
+    bool checkJointLimits (Vector const & state) const;
+    
     void createJointLimitTask (Vector const & state, task_s & jl) const;
 
     //protected: or something...

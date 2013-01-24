@@ -59,6 +59,22 @@ namespace kinematic_elastic {
   }
   
   
+  bool Model::
+  checkJointLimits (Vector const & state)
+    const
+  {
+    for (ssize_t ii(0); ii < state.size(); ++ii) {
+      if (state[ii] < joint_limits_(ii, 0)) {
+	return false;
+      }
+      if (state[ii] > joint_limits_(ii, 3)) {
+	return false;
+      }
+    }
+    return true;
+  }
+  
+  
   void Model::
   createJointLimitTask (Vector const & state,
 			task_s & jl)
@@ -75,7 +91,7 @@ namespace kinematic_elastic {
 	
 	lock.push_back(ii);
 	cur.push_back(state[ii]);
-	des.push_back(joint_limits_(ii, 1));
+	des.push_back(joint_limits_(ii, 0));////1));
       }
       else if (state[ii] > joint_limits_(ii, 3)) {
 	
@@ -83,7 +99,7 @@ namespace kinematic_elastic {
 	
 	lock.push_back(ii);
 	cur.push_back(state[ii]);
-	des.push_back(joint_limits_(ii, 2));
+	des.push_back(joint_limits_(ii, 3));////2));
       }
     }
     
