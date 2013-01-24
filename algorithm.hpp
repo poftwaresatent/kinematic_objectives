@@ -34,56 +34,26 @@
 
 /* Author: Roland Philippsen */
 
-#include "baerlocher_algorithm.hpp"
-#include <iostream>
+#ifndef KINEMATIC_ELASTIC_ALGORITHM_HPP
+#define KINEMATIC_ELASTIC_ALGORITHM_HPP
 
-using namespace kinematic_elastic;
+#include "model.hpp"
 
 
-int main (int argc, char ** argv)
-{
-  size_t const ndof(2);
-  Model const model(ndof);
+namespace kinematic_elastic {
   
-  for (double bm(1.0e-3); bm <= 1.0; bm *= 1.2) {
-    
-    cout << "# bm: " << bm << "\n";
-    
-    Vector state(ndof);
-    state << 0.3, -0.2;
-    
-    tasklist_t tasklist;
-    tasklist.push_back(task_s(ndof, 1, bm));
-    tasklist.push_back(task_s(ndof, 1, bm * 0.5 * M_PI / 180.0));
-    
-    tasklist[0].desired << 1.2;
-    tasklist[1].desired << 35.0 * M_PI / 180.0;
-    
-    tasklist[1].Jacobian << 0.0, 1.0; // constant in this case
-    
-    for (size_t ii(0); ii < 10000; ++ii) {
-      double const q0(state.coeff(0));
-      double const q1(state.coeff(1));
-      
-      tasklist[0].current <<
-	cos(q0) + cos(q0 + q1);
-      tasklist[0].Jacobian <<
-	-sin(q0) - sin(q0 + q1),
-	-sin(q0 + q1);
-      
-      tasklist[1].current <<
-	q1;
-      
-      Vector dq = baerlocher_algorithm (model, state, tasklist);
-      
-      dump(state, tasklist, dq);
-      
-      state += dq;
-      
-    }
-    
-    cout << "\n\n";
-  }
+  size_t create_joint_limit_constraints (Model const & model,
+					 Vector const & state,
+					 Vector & dq_limit,
+					 Matrix & J_limit,
+					 Matrix & N_limit);
   
-  return 0;
+  Vector algorithm (Model const & model,
+		    Vector const & state,
+		    tasklist_t const & tasklist,
+		    ostream * dbgos = 0,
+		    char const * dbgpre = "");
+  
 }
+
+#endif // KINEMATIC_ELASTIC_ALGORITHM_HPP

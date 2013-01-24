@@ -34,75 +34,58 @@
 
 /* Author: Roland Philippsen */
 
-#include "baerlocher_algorithm.hpp"
-#include "print.hpp"
-#include <iostream>
+#include "model.hpp"
+#include <limits>
 
 
 namespace kinematic_elastic {
   
   
-  task_s::
-  task_s(size_t ndof, size_t ndim_, double b_max_)
-    : b_max(b_max_),
-      ndim(ndim_)
+  Model::
+  Model (size_t ndof)
+    : joint_limits_(ndof, 4)
   {
-    current = Vector::Zero(ndim_);
-    desired = Vector::Zero(ndim_);
-    Jacobian = Matrix::Zero(ndim_, ndof);
+    for (size_t ii(0); ii < ndof; ++ii) {
+      size_t jj(0);
+      for (; jj < 2; ++jj) {
+	joint_limits_(ii, jj) = numeric_limits<double>::min();
+      }
+      for (; jj < 4; ++jj) {
+	joint_limits_(ii, jj) = numeric_limits<double>::max();
+      }
+    }
   }
   
   
-  void dump (Vector const & state,
-	     tasklist_t const & tasklist,
-	     Vector const & dq)
+  void Model::
+  createJointLimitTask (Vector const & state,
+			task_s & jl)
+    const
   {
+    jl.b_max = numeric_limits<double>::max();
+    
+    vector<size_t> lock;
+    vector<double> cur, des;
     for (ssize_t ii(0); ii < state.size(); ++ii) {
-      cout << state[ii] << "  ";
-    }
-    for (size_t ii(0); ii < tasklist.size(); ++ii) {
-      cout << "  ";
-      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-	cout << tasklist[ii].current[jj] << "  ";
+      if (state[ii] < joint_limits_(ii, 0)) {
+	lock.push_back(ii);
+	cur.push_back(state[ii]);
+	des.push_back(joint_limits_(ii, 1));
+      }
+      else if (state[ii] > joint_limits_(ii, 3)) {
+	lock.push_back(ii);
+	cur.push_back(state[ii]);
+	des.push_back(joint_limits_(ii, 2));
       }
     }
-    cout << "  ";
-    for (ssize_t ii(0); ii < dq.size(); ++ii) {
-      cout << dq[ii] << "  ";
+    
+    jl.ndim = lock.size();
+    jl.current = Vector::Map(&cur[0], jl.ndim);
+    jl.desired = Vector::Map(&des[0], jl.ndim);
+    jl.Jacobian = Matrix::Zero(jl.ndim, state.size());
+    for (size_t ii(0); ii < jl.ndim; ++ii) {
+      jl.Jacobian(ii, lock[ii]) = 1.0;
     }
-    cout << "\n";
   }
   
-  
-  void dbg (Vector const & state,
-	    tasklist_t const & tasklist,
-	    Vector const & dq)
-  {
-    cout << "==================================================\n"
-	 << "state:";
-    for (ssize_t ii(0); ii < state.size(); ++ii) {
-      cout << "\t" << state[ii];
-    }
-    for (size_t ii(0); ii < tasklist.size(); ++ii) {
-      cout << "\ntask " << ii << "\n";
-      cout << "  current:";
-      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-	cout << "\t" << tasklist[ii].current[jj];
-      }
-      cout << "\n  desired:";
-      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-	cout << "\t" << tasklist[ii].desired[jj];
-      }
-      cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
-      for (ssize_t jj(0); jj < state.size(); ++jj) {
-	cout << "\t" << tasklist[ii].Jacobian(0, jj);
-      }
-    }
-    cout << "\ndelta_q:";
-    for (ssize_t ii(0); ii < dq.size(); ++ii) {
-      cout << "\t" << dq[ii];
-    }
-    cout << "\n";
-  }
-
 }

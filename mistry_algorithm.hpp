@@ -37,12 +37,13 @@
 #ifndef KINEMATIC_ELASTIC_MISTRY_HPP
 #define KINEMATIC_ELASTIC_MISTRY_HPP
 
-#include "kinematic_elastic.hpp"
+#include "model.hpp"
 
 
 namespace kinematic_elastic {
   
-  Vector mistry_algorithm (size_t ndof,
+  Vector mistry_algorithm (Model const & model,
+			   Vector const & state,
 			   tasklist_t const & tasklist,
 			   ostream * dbgos = 0,
 			   char const * dbgpre = "");

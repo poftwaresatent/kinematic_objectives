@@ -44,7 +44,8 @@
 namespace kinematic_elastic {
   
   
-  Vector baerlocher_algorithm (size_t ndof,
+  Vector baerlocher_algorithm (Model const & model,
+			       Vector const & state,
 			       tasklist_t const & tasklist,
 			       ostream * dbgos,
 			       char const * dbgpre)
@@ -61,6 +62,7 @@ namespace kinematic_elastic {
     }
     
     // initialization (without constraints for now...)
+    size_t const ndof(state.size());
     Vector delta_q(Vector::Zero(ndof));
     Matrix projector(Matrix::Identity(ndof, ndof));
     

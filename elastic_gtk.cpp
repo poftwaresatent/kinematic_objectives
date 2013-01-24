@@ -36,6 +36,7 @@
 
 #include "baerlocher_algorithm.hpp"
 #include "mistry_algorithm.hpp"
+#include "algorithm.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -180,6 +181,12 @@ class Elastic
 {
 public:
   typedef list<Waypoint *> path_t;
+
+  Elastic()
+    : model_(4)
+  {
+  }
+  
   
   ~Elastic ()
   {
@@ -232,23 +239,20 @@ public:
     start_->setBaseGoal (base0);
     dest_->setEEGoal (ee1);
     dest_->setBaseGoal (base1);
-    //    cout << "==================================================\n";
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
       Vector dq;
       if (start_ == *ii) {
-	//	cout << "START\n";
-	dq = baerlocher_algorithm (4, (*ii)->getTasks());//, &cout, "  ");
+	dq = baerlocher_algorithm (model_, (*ii)->getState(), (*ii)->getTasks());//, &cout, "  ");
       }
       else if (dest_ == *ii) {
-	//	cout << "DESTINATION\n";
-	dq = mistry_algorithm (4, (*ii)->getTasks());//, &cout, "  ");
+	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks());//, &cout, "  ");
       }
       else {
-	//	cout << "waypoint\n";
-	dq = mistry_algorithm (4, (*ii)->getTasks());
+	(*ii)->setEEGoal(0.5 * (ee0 + ee1));
+	(*ii)->setBaseGoal(0.5 * (base0 + base1));
+	dq = algorithm (model_, (*ii)->getState(), (*ii)->getTasks());
       }
       (*ii)->setState ((*ii)->getState() + dq);
-      //cout << "--------------------------------------------------\n";
     }
   }
   
@@ -263,6 +267,8 @@ private:
   path_t path_;
   Waypoint * start_;
   Waypoint * dest_;
+  
+  Model model_;			// where should this live?
 };
 
 
@@ -513,7 +519,7 @@ int main (int argc, char ** argv)
   dest_base  << dimx - 1.0, 1.0;
   posture    << dimx / 2.0, dimy / 2.0, 80.0 * deg, - 40.0 * deg;
   
-  elastic.init (start_ee, dest_ee, start_base, dest_base, posture, 1);//7);
+  elastic.init (start_ee, dest_ee, start_base, dest_base, posture, 2);//7);
   
   gtk_main ();
   

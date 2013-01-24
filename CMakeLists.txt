@@ -88,7 +88,9 @@ else (GTK2_FOUND)
 endif (GTK2_FOUND)
 
 list (APPEND SRCS
-  kinematic_elastic.cpp
+  task.cpp
+  model.cpp
+  algorithm.cpp
   baerlocher_algorithm.cpp
   mistry_algorithm.cpp
   pseudo_inverse.cpp

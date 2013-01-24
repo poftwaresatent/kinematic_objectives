@@ -44,12 +44,13 @@
 namespace kinematic_elastic {
   
   
-  Vector mistry_algorithm (size_t ndof,
+  Vector mistry_algorithm (Model const & model,
+			   Vector const & state,
 			   tasklist_t const & tasklist,
 			   ostream * dbgos,
 			   char const * dbgpre)
   {
-    Vector const & dxa(tasklist[0].desired - tasklist[0].current);
+    Vector const dxa(tasklist[0].desired - tasklist[0].current);
     
     Matrix const & Ja(tasklist[0].Jacobian);
     
@@ -57,6 +58,7 @@ namespace kinematic_elastic {
     dxb.block(0,                0, tasklist[0].ndim, 1) = dxa;
     dxb.block(tasklist[0].ndim, 0, tasklist[1].ndim, 1) = tasklist[1].desired - tasklist[1].current;
     
+    size_t const ndof(state.size());
     Matrix Jb(tasklist[0].ndim + tasklist[1].ndim, ndof);
     Jb.block(0,                0, tasklist[0].ndim, ndof) = Ja;
     Jb.block(tasklist[0].ndim, 0, tasklist[1].ndim, ndof) = tasklist[1].Jacobian;
