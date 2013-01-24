@@ -53,13 +53,13 @@ namespace kinematic_elastic {
     
     Matrix const & Ja(tasklist[0].Jacobian);
     
-    Vector dxb(2 * ndof);
-    dxb.block(0,    0, ndof, 1) = dxa;
-    dxb.block(ndof, 0, ndof, 1) = tasklist[1].desired - tasklist[1].current;
+    Vector dxb(tasklist[0].ndim + tasklist[1].ndim);
+    dxb.block(0,                0, tasklist[0].ndim, 1) = dxa;
+    dxb.block(tasklist[0].ndim, 0, tasklist[1].ndim, 1) = tasklist[1].desired - tasklist[1].current;
     
     Matrix Jb(tasklist[0].ndim + tasklist[1].ndim, ndof);
-    Jb.block(0,    0, tasklist[0].ndim, ndof) = Ja;
-    Jb.block(ndof, 0, tasklist[1].ndim, ndof) = tasklist[1].Jacobian;
+    Jb.block(0,                0, tasklist[0].ndim, ndof) = Ja;
+    Jb.block(tasklist[0].ndim, 0, tasklist[1].ndim, ndof) = tasklist[1].Jacobian;
     
     // could add support for more than 2 tasks later...
     

@@ -35,6 +35,7 @@
 /* Author: Roland Philippsen */
 
 #include "baerlocher_algorithm.hpp"
+#include "mistry_algorithm.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -242,7 +243,8 @@ public:
       else {
 	cout << "waypoint\n";
       }
-      Vector dq = baerlocher_algorithm (4, (*ii)->getTasks(), &cout, "  ");
+      ////      Vector dq = baerlocher_algorithm (4, (*ii)->getTasks(), &cout, "  ");
+      Vector dq = mistry_algorithm (4, (*ii)->getTasks(), &cout, "  ");
       (*ii)->setState ((*ii)->getState() + dq);
       cout << "--------------------------------------------------\n";
     }
