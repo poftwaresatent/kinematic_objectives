@@ -90,6 +90,8 @@ endif (GTK2_FOUND)
 list (APPEND SRCS
   kinematic_elastic.cpp
   baerlocher_algorithm.cpp
+  mistry_algorithm.cpp
+  pseudo_inverse.cpp
   print.cpp
   )
 

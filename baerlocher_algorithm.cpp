@@ -35,108 +35,13 @@
 /* Author: Roland Philippsen */
 
 #include "baerlocher_algorithm.hpp"
+#include "pseudo_inverse.hpp"
 #include "print.hpp"
 #include <Eigen/SVD>
 #include <iostream>
 
 
 namespace kinematic_elastic {
-  
-  
-  static void compute_svd_stuff(Matrix const & Jt,
-				double d_damp,
-				Matrix & Jt_inv_damped,
-				Matrix & delta_projector,
-				Matrix * dbgU,
-				Vector * dbgsigma,
-				Matrix * dbgV,
-				Vector * dbgdamping)
-  {
-    Eigen::JacobiSVD<Matrix> svd(Jt, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    if (0 == svd.nonzeroSingularValues()) {
-      Jt_inv_damped = Matrix::Zero(Jt.cols(), Jt.rows());
-      delta_projector = Matrix::Zero(Jt.cols(), Jt.cols());
-      return;
-    }
-    
-    if (dbgU) {
-      *dbgU = svd.matrixU();
-    }
-    if (dbgsigma) {
-      *dbgsigma = svd.singularValues();
-    }
-    if (dbgV) {
-      *dbgV = svd.matrixV();
-    }
-    
-    typedef Eigen::JacobiSVD<Matrix>::Index index_t;
-    
-    double const sigma_min(svd.singularValues()[svd.nonzeroSingularValues() - 1]);
-    if (sigma_min >= d_damp) {
-      
-      // no need for damping, use straight Moore-Penrose pseudo-inverse
-      Jt_inv_damped
-	= (1.0 / svd.singularValues()[0])
-	* svd.matrixV().col(0)
-	* svd.matrixU().col(0).transpose();
-      for (index_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
-	Jt_inv_damped
-	  += (1.0 / svd.singularValues()[ii])
-	  * svd.matrixV().col(ii)
-	  * svd.matrixU().col(ii).transpose();
-      }
-      
-      if (dbgdamping) {
-	*dbgdamping = Vector::Zero(svd.nonzeroSingularValues() + 1);
-	for (index_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
-	  (*dbgdamping)[ii] =
-	    1.0 / svd.singularValues()[ii];
-	}
-      }
-      
-    }
-    else {
-      
-      double lsquare;
-      if (sigma_min <= d_damp / 2.0) {
-	lsquare = pow(d_damp / 2.0, 2.0);
-      }
-      else {
-	lsquare = sigma_min * (d_damp - sigma_min);
-      }
-      
-      Jt_inv_damped
-	= (svd.singularValues()[0] / (pow(svd.singularValues()[0], 2.0) + lsquare))
-	* svd.matrixV().col(0)
-	* svd.matrixU().col(0).transpose();
-      for (index_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
-	Jt_inv_damped
-	  += (svd.singularValues()[ii] / (pow(svd.singularValues()[ii], 2.0) + lsquare))
-	  * svd.matrixV().col(ii)
-	  * svd.matrixU().col(ii).transpose();
-      }
-      
-      if (dbgdamping) {
-	*dbgdamping = Vector::Zero(svd.nonzeroSingularValues() + 1);
-	for (index_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
-	  (*dbgdamping)[ii] =
-	    svd.singularValues()[ii] / (pow(svd.singularValues()[ii], 2.0) + lsquare);
-	}
-	(*dbgdamping)[svd.nonzeroSingularValues()] = sqrt(lsquare);
-      }
-      
-    }
-    
-    // the following could be sped up because it produces a symmetric matrix
-    delta_projector
-      = svd.matrixV().col(0)
-      * svd.matrixV().col(0).transpose();
-    for (index_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
-      delta_projector
-	+= svd.matrixV().col(ii)
-	* svd.matrixV().col(ii).transpose();
-    }
-  }
   
   
   Vector baerlocher_algorithm (size_t ndof,
@@ -171,8 +76,8 @@ namespace kinematic_elastic {
       Matrix Jtilda = tasklist[ii].Jacobian * projector;
       
       Matrix Jtilda_inv, delta_projector;
-      compute_svd_stuff (Jtilda, d_damp, Jtilda_inv, delta_projector,
-			 dbgU, dbgsigma, dbgV, dbgdamping);
+      pseudo_inverse_baerlocher (Jtilda, d_damp, Jtilda_inv, delta_projector,
+				 dbgU, dbgsigma, dbgV, dbgdamping);
       
       delta_q = delta_q + Jtilda_inv * dx_comp;
       
