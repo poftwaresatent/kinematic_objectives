@@ -232,21 +232,23 @@ public:
     start_->setBaseGoal (base0);
     dest_->setEEGoal (ee1);
     dest_->setBaseGoal (base1);
-    cout << "==================================================\n";
+    //    cout << "==================================================\n";
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
+      Vector dq;
       if (start_ == *ii) {
-	cout << "START\n";
+	//	cout << "START\n";
+	dq = baerlocher_algorithm (4, (*ii)->getTasks());//, &cout, "  ");
       }
       else if (dest_ == *ii) {
-	cout << "DESTINATION\n";
+	//	cout << "DESTINATION\n";
+	dq = mistry_algorithm (4, (*ii)->getTasks());//, &cout, "  ");
       }
       else {
-	cout << "waypoint\n";
+	//	cout << "waypoint\n";
+	dq = mistry_algorithm (4, (*ii)->getTasks());
       }
-      ////      Vector dq = baerlocher_algorithm (4, (*ii)->getTasks(), &cout, "  ");
-      Vector dq = mistry_algorithm (4, (*ii)->getTasks(), &cout, "  ");
       (*ii)->setState ((*ii)->getState() + dq);
-      cout << "--------------------------------------------------\n";
+      //cout << "--------------------------------------------------\n";
     }
   }
   
