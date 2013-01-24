@@ -48,14 +48,26 @@ using namespace kinematic_elastic;
 
 static double const deg(M_PI / 180.);
 
+static inline double bound (double lower, double value, double upper)
+{
+  if (value < lower) {
+    value = lower;
+  }
+  else if (value > upper) {
+    value = upper;
+  }
+  return value;
+}
+
 
 class Waypoint
 {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
-  explicit Waypoint (Vector const & state)
-    : radius_(0.5),
+  Waypoint (Model const & model, Vector const & state)
+    : model_(model),
+      radius_(0.5),
       len_a_(0.8),
       len_b_(0.6),
       state_(state),
@@ -79,26 +91,49 @@ public:
   {
     cairo_save (cr);
     
+    // translucent disk for base
     cairo_set_source_rgba (cr, 0.7, 0.7, 0.7, 0.5);
     cairo_arc (cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
     cairo_fill (cr);
     
+    // thick circle outline for base
     cairo_set_source_rgb (cr, 0.2, 0.2, 0.2);
     cairo_set_line_width (cr, 3.0 / pixelsize);
     cairo_arc (cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
     cairo_stroke (cr);
     
+    // thin arcs for arm joint limits
+    cairo_set_source_rgb (cr, 0.5, 0.5, 1.0);
+    cairo_set_line_width (cr, 1.0 / pixelsize);
+    cairo_move_to (cr, state_[0], state_[1]);
+    cairo_arc (cr, state_[0], state_[1], 0.1,
+	       bound(-2.0*M_PI, model_.joint_limits_(2, 0), 2.0*M_PI),
+	       bound(-2.0*M_PI, model_.joint_limits_(2, 3), 2.0*M_PI));
+    cairo_line_to (cr, state_[0], state_[1]);
+    cairo_stroke (cr);
+    cairo_move_to (cr, pos_a_[0], pos_a_[1]);
+    cairo_arc (cr, pos_a_[0], pos_a_[1], 0.1,
+	       bound(-2.0*M_PI, state_[2] + model_.joint_limits_(3, 0), 2.0*M_PI),
+	       bound(-2.0*M_PI, state_[2] + model_.joint_limits_(3, 3), 2.0*M_PI));
+    cairo_line_to (cr, pos_a_[0], pos_a_[1]);
+    cairo_stroke (cr);
+    
+    // thick line for arms
+    cairo_set_source_rgb (cr, 0.2, 0.2, 0.2);
+    cairo_set_line_width (cr, 3.0 / pixelsize);
     cairo_move_to (cr, state_[0], state_[1]);
     cairo_line_to (cr, pos_a_[0], pos_a_[1]);
     cairo_line_to (cr, pos_b_[0], pos_b_[1]);
     cairo_stroke (cr);
     
+    // thin line for first task
     cairo_set_source_rgb (cr, 1.0, 0.4, 0.4);
     cairo_set_line_width (cr, 1.0 / pixelsize);
     cairo_move_to (cr, task_[0].current[0], task_[0].current[1]);
     cairo_line_to (cr, task_[0].desired[0], task_[0].desired[1]);
     cairo_stroke (cr);
     
+    // thin line for second task
     cairo_set_source_rgb (cr, 0.4, 1.0, 0.4);
     cairo_move_to (cr, task_[1].current[0], task_[1].current[1]);
     cairo_line_to (cr, task_[1].desired[0], task_[1].desired[1]);
@@ -163,6 +198,8 @@ public:
   
   
 private:  
+  Model const & model_;
+  
   double const radius_;
   double const len_a_;
   double const len_b_;
@@ -185,6 +222,15 @@ public:
   Elastic()
     : model_(4)
   {
+    model_.joint_limits_(2, 0) = -90.0*deg;
+    model_.joint_limits_(2, 1) = -89.9*deg;
+    model_.joint_limits_(2, 2) =  89.9*deg;
+    model_.joint_limits_(2, 3) =  90.0*deg;
+
+    model_.joint_limits_(3, 0) = -120.0*deg;
+    model_.joint_limits_(3, 1) = -119.9*deg;
+    model_.joint_limits_(3, 2) =  119.9*deg;
+    model_.joint_limits_(3, 3) =  120.0*deg;
   }
   
   
@@ -211,8 +257,8 @@ public:
     }
     clear();
     
-    start_ = new Waypoint(posture);
-    dest_ = new Waypoint(posture);
+    start_ = new Waypoint(model_, posture);
+    dest_ = new Waypoint(model_, posture);
     
     Vector delta_ee = (ee1 - ee0) / nsteps;
     Vector delta_base = (base1 - base0) / nsteps;
@@ -222,7 +268,7 @@ public:
     
     path_.push_back (start_);
     for (size_t ii(1); ii < nsteps; ++ii) {
-      Waypoint * wpt(new Waypoint(posture));
+      Waypoint * wpt(new Waypoint(model_, posture));
       wpt->setEEGoal(ee);
       wpt->setBaseGoal(base);
       path_.push_back (wpt);
