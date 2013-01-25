@@ -78,8 +78,8 @@ namespace kinematic_elastic {
     
     if (tasks.empty()) {
       if (dbgos) {
-	*dbgos << dbgpre << "DONE (no tasks):\n";
 	print (dq, *dbgos, "dq", string(dbgpre) + "  ");
+	*dbgos << dbgpre << "DONE (no tasks)\n";
       }
       return dq;
     }
@@ -101,7 +101,7 @@ namespace kinematic_elastic {
     
     if (tasks.size() == 1) {
       if (dbgos) {
-	*dbgos << dbgpre << "DONE (single task):\n";
+	*dbgos << dbgpre << "DONE (single task)\n";
       }
       return dq;
     }
@@ -125,12 +125,18 @@ namespace kinematic_elastic {
       print (dxb,    *dbgos, "dxb",    pre);
       print (Jb,     *dbgos, "Jb",     pre);
       print (Jb_inv, *dbgos, "Jb_inv", pre);
+      
+      Matrix Na_times_Jb_inv(Na * Jb_inv);
+      Vector dqb(Na_times_Jb_inv * dxb);
+      print (Na_times_Jb_inv, *dbgos, "Na * Jb_inv", pre);
+      print (dqb,             *dbgos, "Na * Jb_inv * dxb",     pre);
+      
       print (dq,     *dbgos, "dq",     pre);
     }
     
     if (tasks.size() == 2) {
       if (dbgos) {
-	*dbgos << dbgpre << "DONE (two tasks):\n";
+	*dbgos << dbgpre << "DONE (two tasks)\n";
       }
       return dq;
     }
