@@ -48,6 +48,9 @@ using namespace kinematic_elastic;
 
 static double const deg(M_PI / 180.);
 
+static bool verbose(false);
+
+
 static inline double bound (double lower, double value, double upper)
 {
   if (value < lower) {
@@ -289,25 +292,35 @@ public:
     start_->setBaseGoal (base0);
     dest_->setEEGoal (ee1);
     dest_->setBaseGoal (base1);
-    cout << "\n**************************************************\n";
+    ostream * dbgos(0);
+    if (verbose) {
+      dbgos = &cout;
+      cout << "\n**************************************************\n";
+    }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
       Vector dq;
       if (start_ == *ii) {
-	cout << "--------------------------------------------------\n"
-	     << "START (Baerlocher)\n";
-	dq = baerlocher_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), &cout, "  ");
+	if (verbose) {
+	  cout << "--------------------------------------------------\n"
+	       << "START (Baerlocher)\n";
+	}
+	dq = baerlocher_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
       }
       else if (dest_ == *ii) {
-	cout << "--------------------------------------------------\n"
-	     << "DEST (Mistry)\n";
-	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), &cout, "  ");
+	if (verbose) {
+	  cout << "--------------------------------------------------\n"
+	       << "DEST (Mistry)\n";
+	}
+	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
       }
       else {
-	cout << "--------------------------------------------------\n"
-	     << "Waypoint\n";
+	if (verbose) {
+	  cout << "--------------------------------------------------\n"
+	       << "Waypoint\n";
+	}
 	(*ii)->setEEGoal(0.5 * (ee0 + ee1));
 	(*ii)->setBaseGoal(0.5 * (base0 + base1));
-	dq = algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), &cout, "  ");
+	dq = algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
       }
       (*ii)->setState ((*ii)->getState() + dq);
     }
@@ -569,6 +582,10 @@ static void init_gui (int * argc, char *** argv)
 int main (int argc, char ** argv)
 {
   init_gui (&argc, &argv);
+  
+  if ((argc > 1) && strcmp("-v", argv[1])) {
+    verbose = true;
+  }
   
   start_ee   << 1.0,        dimy - 1.0;
   dest_ee    << dimx - 1.0, 2.0;

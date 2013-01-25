@@ -89,17 +89,11 @@ namespace kinematic_elastic {
     locked.clear();
     for (ssize_t ii(0); ii < state.size(); ++ii) {
       if (state[ii] < joint_limits_(ii, 1)) {
-	
-	cout << "joint[" << ii << "] = " << state[ii] << " < limit = " << joint_limits_(ii, 0) << "\n";
-	
 	locked.push_back(ii);
 	cur.push_back(state[ii]);
 	des.push_back(joint_limits_(ii, 0));
       }
       else if (state[ii] > joint_limits_(ii, 2)) {
-	
-	cout << "joint[" << ii << "] = " << state[ii] << " > limit = " << joint_limits_(ii, 3) << "\n";
-	
 	locked.push_back(ii);
 	cur.push_back(state[ii]);
 	des.push_back(joint_limits_(ii, 3));
