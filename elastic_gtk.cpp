@@ -82,44 +82,57 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
   explicit Robot (Vector const & state)
-    : Model(4),
+    : Model(5),
       radius_(0.5),
       len_a_(0.8),
       len_b_(0.6),
+      len_c_(0.3),
       pos_a_(2),
-      pos_b_(2)
+      pos_b_(2),
+      pos_c_(2)
   {
     // yet another subtlety: soft limits must not be too close to hard
     // limits, otherwise we get jitter from the joint-limit avoidance
     // algorithm.
+    
+    joint_limits_(3, 0) = -120.0 * deg;
+    joint_limits_(3, 1) = -119.0 * deg;
+    joint_limits_(3, 2) =  119.0 * deg;
+    joint_limits_(3, 3) =  120.0 * deg;
 
-    joint_limits_(2, 0) = -90.0*deg;
-    joint_limits_(2, 1) = -89.0*deg;
-    joint_limits_(2, 2) =  89.0*deg;
-    joint_limits_(2, 3) =  90.0*deg;
-
-    joint_limits_(3, 0) = -120.0*deg;
-    joint_limits_(3, 1) = -119.0*deg;
-    joint_limits_(3, 2) =  119.0*deg;
-    joint_limits_(3, 3) =  120.0*deg;
+    joint_limits_(4, 0) = -120.0 * deg;
+    joint_limits_(4, 1) = -119.0 * deg;
+    joint_limits_(4, 2) =  119.0 * deg;
+    joint_limits_(4, 3) =  120.0 * deg;
     
     update(state);
   }
   
   void update (Vector const & state)
   {
-    if (state.size() != 4) {
-      errx (EXIT_FAILURE, "only NDOF=4 allowed for now...");
+    if (state.size() != 5) {
+      errx (EXIT_FAILURE, "only NDOF=5 allowed for now...");
     }
     state_ = state;
     
     ac2_ = len_a_ * cos(state_[2]);
     as2_ = len_a_ * sin(state_[2]);
-    bc23_ = len_b_ * cos(state_[2] + state_[3]);
-    bs23_ = len_b_ * sin(state_[2] + state_[3]);
+    q23_ = state_[2] + state_[3];
+    bc23_ = len_b_ * cos(q23_);
+    bs23_ = len_b_ * sin(q23_);
+    q234_ = q23_ + state_[4];
+    cc234_ = len_c_ * cos(q234_);
+    cs234_ = len_c_ * sin(q234_);
     
-    pos_a_ << state_[0] + ac2_, state_[1] + as2_;
-    pos_b_ << pos_a_[0] + bc23_, pos_a_[1] + bs23_;
+    pos_a_ <<
+      state_[0] + ac2_,
+      state_[1] + as2_;
+    pos_b_ <<
+      pos_a_[0] + bc23_,
+      pos_a_[1] + bs23_;
+    pos_c_ <<
+      pos_b_[0] + cc234_,
+      pos_b_[1] + cs234_;
   }
   
   void draw (cairo_t * cr, double pixelsize)
@@ -140,17 +153,17 @@ public:
     // thin arcs for arm joint limits
     cairo_set_source_rgb (cr, 0.5, 0.5, 1.0);
     cairo_set_line_width (cr, 1.0 / pixelsize);
-    cairo_move_to (cr, state_[0], state_[1]);
-    cairo_arc (cr, state_[0], state_[1], 0.1,
-	       bound(-2.0*M_PI, joint_limits_(2, 0), 2.0*M_PI),
-	       bound(-2.0*M_PI, joint_limits_(2, 3), 2.0*M_PI));
-    cairo_line_to (cr, state_[0], state_[1]);
-    cairo_stroke (cr);
     cairo_move_to (cr, pos_a_[0], pos_a_[1]);
     cairo_arc (cr, pos_a_[0], pos_a_[1], 0.1,
 	       bound(-2.0*M_PI, state_[2] + joint_limits_(3, 0), 2.0*M_PI),
 	       bound(-2.0*M_PI, state_[2] + joint_limits_(3, 3), 2.0*M_PI));
     cairo_line_to (cr, pos_a_[0], pos_a_[1]);
+    cairo_stroke (cr);
+    cairo_move_to (cr, pos_b_[0], pos_b_[1]);
+    cairo_arc (cr, pos_b_[0], pos_b_[1], 0.1,
+	       bound(-2.0*M_PI, q23_ + joint_limits_(4, 0), 2.0*M_PI),
+	       bound(-2.0*M_PI, q23_ + joint_limits_(4, 3), 2.0*M_PI));
+    cairo_line_to (cr, pos_b_[0], pos_b_[1]);
     cairo_stroke (cr);
     
     // thick line for arms
@@ -159,6 +172,7 @@ public:
     cairo_move_to (cr, state_[0], state_[1]);
     cairo_line_to (cr, pos_a_[0], pos_a_[1]);
     cairo_line_to (cr, pos_b_[0], pos_b_[1]);
+    cairo_line_to (cr, pos_c_[0], pos_c_[1]);
     cairo_stroke (cr);
     
     cairo_restore(cr);
@@ -169,15 +183,21 @@ public:
   double const radius_;
   double const len_a_;
   double const len_b_;
+  double const len_c_;
   
   Vector state_;
   Vector pos_a_;
   Vector pos_b_;
+  Vector pos_c_;
   
+  double q23_;
+  double q234_;
   double ac2_;
   double as2_;
   double bc23_;
   double bs23_;
+  double cc234_;
+  double cs234_;
 };
 
 
@@ -188,15 +208,15 @@ public:
   
   explicit Waypoint (Vector const & state)
     : model_(state),
-      eetask_(4, 2, 0.1),
-      basetask_(4, 2, 0.1)
+      eetask_(5, 2, 0.1),
+      basetask_(5, 2, 0.1)
   {
     task_.push_back(&eetask_);
     task_.push_back(&basetask_);
     
     basetask_.Jx <<
-      1, 0, 0, 0,
-      0, 1, 0, 0;
+      1, 0, 0, 0, 0,
+      0, 1, 0, 0, 0;
     
     update(state);
     for (size_t ii(0); ii < task_.size(); ++ii) {
@@ -255,11 +275,19 @@ public:
   {
     model_.update(state);
     
-    eetask_.xcur = model_.pos_b_;
+    eetask_.xcur = model_.pos_c_;
     eetask_.dx = eetask_.xdes - eetask_.xcur;
     eetask_.Jx <<
-      1, 0, -model_.as2_ - model_.bs23_, -model_.bs23_,
-      0, 1,  model_.ac2_ + model_.bc23_,  model_.bc23_;
+      1,
+      0,
+      -model_.as2_ - model_.bs23_ - model_.cs234_,
+      -model_.bs23_ - model_.cs234_,
+      -model_.cs234_,
+      0,
+      1,
+      model_.ac2_ + model_.bc23_ + model_.cc234_,
+      model_.bc23_ + model_.cc234_,
+      model_.cc234_;
     
     basetask_.xcur << state[0], state[1];
     basetask_.dx = basetask_.xdes - basetask_.xcur;
@@ -310,12 +338,13 @@ public:
     basegoal <<
       dimx - 1.0, 1.0;
     
-    Vector posture(4);
+    Vector posture(5);
     posture <<
       dimx / 2.0,
       dimy / 2.0,
       80.0 * deg,
-      - 40.0 * deg;
+      - 40.0 * deg,
+      25.0 * deg;
     
     wpt_ = new Waypoint(posture);
     wpt_->setEEGoal(eegoal);
