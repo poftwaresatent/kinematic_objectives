@@ -57,7 +57,8 @@ static bool verbose(false);
 static int play(0);
 static Vector eegoal(2);
 static Vector basegoal(2);
-static Vector * handle[] = { &eegoal, &basegoal, 0 };
+static Vector lasergoal(2);
+static Vector * handle[] = { &eegoal, &basegoal, &lasergoal, 0 };
 static Vector * grabbed(0);
 static double grab_radius(0.2);
 static Vector grab_offset(2);
@@ -72,6 +73,19 @@ static inline double bound (double lower, double value, double upper)
     value = upper;
   }
   return value;
+}
+
+
+static inline double normangle (double phi)
+{
+  phi = fmod(phi, 2.0 * M_PI);
+  if (phi > M_PI) {
+    phi -= M_PI;
+  }
+  else if (phi < -M_PI) {
+    phi += M_PI;
+  }
+  return phi;
 }
 
 
@@ -91,19 +105,19 @@ public:
       pos_b_(2),
       pos_c_(2)
   {
-    // yet another subtlety: soft limits must not be too close to hard
-    // limits, otherwise we get jitter from the joint-limit avoidance
-    // algorithm.
+    // // yet another subtlety: soft limits must not be too close to hard
+    // // limits, otherwise we get jitter from the joint-limit avoidance
+    // // algorithm.
     
-    joint_limits_(3, 0) = -120.0 * deg;
-    joint_limits_(3, 1) = -119.0 * deg;
-    joint_limits_(3, 2) =  119.0 * deg;
-    joint_limits_(3, 3) =  120.0 * deg;
+    // joint_limits_(3, 0) = -120.0 * deg;
+    // joint_limits_(3, 1) = -119.0 * deg;
+    // joint_limits_(3, 2) =  119.0 * deg;
+    // joint_limits_(3, 3) =  120.0 * deg;
 
-    joint_limits_(4, 0) = -120.0 * deg;
-    joint_limits_(4, 1) = -119.0 * deg;
-    joint_limits_(4, 2) =  119.0 * deg;
-    joint_limits_(4, 3) =  120.0 * deg;
+    // joint_limits_(4, 0) = -120.0 * deg;
+    // joint_limits_(4, 1) = -119.0 * deg;
+    // joint_limits_(4, 2) =  119.0 * deg;
+    // joint_limits_(4, 3) =  120.0 * deg;
     
     update(state);
   }
@@ -209,8 +223,10 @@ public:
   explicit Waypoint (Vector const & state)
     : model_(state),
       eetask_(5, 2, 0.1),
-      basetask_(5, 2, 0.1)
+      basetask_(5, 2, 0.1),
+      lasertask_(5, 1, 0.05)
   {
+    task_.push_back(&lasertask_);
     task_.push_back(&eetask_);
     task_.push_back(&basetask_);
     
@@ -221,7 +237,7 @@ public:
     update(state);
     for (size_t ii(0); ii < task_.size(); ++ii) {
       task_[ii]->xdes = task_[ii]->xcur;
-      task_[ii]->dx = Vector::Zero(4);
+      task_[ii]->dx = Vector::Zero(task_[ii]->ndim);
     }
   }
   
@@ -244,6 +260,14 @@ public:
     cairo_line_to (cr, basetask_.xdes[0], basetask_.xdes[1]);
     cairo_stroke (cr);
     
+    // thin line for laser task
+    cairo_set_source_rgb (cr, 0.4, 0.4, 1.0);
+    cairo_move_to (cr, model_.pos_c_[0], model_.pos_c_[1]);
+    double const dx(3.0 * cos(lasertask_.xdes[0]));
+    double const dy(3.0 * sin(lasertask_.xdes[0]));
+    cairo_line_to (cr, model_.pos_c_[0] + dx, model_.pos_c_[1] + dy);
+    cairo_stroke (cr);
+    
     cairo_restore (cr);
   }
   
@@ -253,22 +277,17 @@ public:
     eetask_.dx = eetask_.xdes - eetask_.xcur;
   }
   
-  void setEEGoal (double gx, double gy)
-  {
-    eetask_.xdes << gx, gy;
-    eetask_.dx = eetask_.xdes - eetask_.xcur;
-  }
-  
   void setBaseGoal (Vector const & goal)
   {
     basetask_.xdes = goal;
     basetask_.dx = basetask_.xdes - basetask_.xcur;
   }
   
-  void setBaseGoal (double gx, double gy)
+  void setLaserGoal (Vector const & goalpoint)
   {
-    basetask_.xdes << gx, gy;
-    basetask_.dx = basetask_.xdes - basetask_.xcur;
+    Vector dg(goalpoint - model_.pos_c_);
+    lasertask_.xdes << atan2(dg[1], dg[0]);
+    lasertask_.dx << normangle(lasertask_.xdes[0] - lasertask_.xcur[0]);
   }
   
   void update (Vector const & state)
@@ -291,6 +310,15 @@ public:
     
     basetask_.xcur << state[0], state[1];
     basetask_.dx = basetask_.xdes - basetask_.xcur;
+    
+    lasertask_.xcur << model_.q234_;
+    lasertask_.dx << normangle(lasertask_.xdes[0] - lasertask_.xcur[0]);
+    // strictly speaking, the Jacobian of the laser task also has
+    // entries for the base... but for now just treat it as a moving
+    // goal when the base moves, even if the laser target point has
+    // not moved.
+    lasertask_.Jx <<
+      0, 0, 1, 1, 1;
   }
   
   Model const & getModel () const { return model_; }
@@ -304,6 +332,7 @@ private:
   Robot model_;
   task_s eetask_;
   task_s basetask_;
+  task_s lasertask_;
   tasklist_t task_;
 };
 
@@ -336,7 +365,11 @@ public:
       1.0,
       dimy - 1.0;
     basegoal <<
-      dimx - 1.0, 1.0;
+      dimx - 1.0,
+      1.0;
+    lasergoal <<
+      dimx - 1.0,
+      dimy - 1.0;
     
     Vector posture(5);
     posture <<
@@ -349,6 +382,7 @@ public:
     wpt_ = new Waypoint(posture);
     wpt_->setEEGoal(eegoal);
     wpt_->setBaseGoal(basegoal);
+    wpt_->setLaserGoal(lasergoal);
     path_.push_back (wpt_);
   }
   
@@ -365,6 +399,7 @@ public:
       }
       (*ii)->setEEGoal(eegoal);
       (*ii)->setBaseGoal(basegoal);
+      (*ii)->setLaserGoal(lasergoal);
       Vector dq(algorithm((*ii)->getModel(), (*ii)->getState(), (*ii)->getTasks(), dbgos, "  "));
       (*ii)->update ((*ii)->getState() + dq);
     }
@@ -442,6 +477,10 @@ static gint cb_expose (GtkWidget * ww,
   
   cairo_set_source_rgba (cr, 0.0, 0.6, 0.0, 0.5);
   cairo_arc (cr, basegoal[0], basegoal[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill (cr);
+  
+  cairo_set_source_rgba (cr, 0.0, 0.0, 0.6, 0.5);
+  cairo_arc (cr, lasergoal[0], lasergoal[1], grab_radius, 0., 2. * M_PI);
   cairo_fill (cr);
   
   cairo_destroy (cr);
