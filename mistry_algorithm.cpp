@@ -46,52 +46,46 @@ namespace kinematic_elastic {
   
   Vector mistry_algorithm (Model const & model,
 			   Vector const & state,
-			   tasklist_t const & tasklist,
+			   tasklist_t const & tl,
 			   ostream * dbgos,
 			   char const * dbgpre)
   {
-    Vector const dxa(tasklist[0].desired - tasklist[0].current);
+    Vector dxb;
+    stack(tl[0]->dx, tl[1]->dx, dxb);
     
-    Matrix const & Ja(tasklist[0].Jacobian);
-    
-    Vector dxb(tasklist[0].ndim + tasklist[1].ndim);
-    dxb.block(0,                0, tasklist[0].ndim, 1) = dxa;
-    dxb.block(tasklist[0].ndim, 0, tasklist[1].ndim, 1) = tasklist[1].desired - tasklist[1].current;
-    
-    size_t const ndof(state.size());
-    Matrix Jb(tasklist[0].ndim + tasklist[1].ndim, ndof);
-    Jb.block(0,                0, tasklist[0].ndim, ndof) = Ja;
-    Jb.block(tasklist[0].ndim, 0, tasklist[1].ndim, ndof) = tasklist[1].Jacobian;
+    Matrix Jb;
+    stack(tl[0]->Jx, tl[1]->Jx, Jb);
     
     // could add support for more than 2 tasks later...
     
     Matrix Ja_inv;
-    pseudo_inverse_nonsingular (Ja, Ja_inv);
+    pseudo_inverse_nonsingular (tl[0]->Jx, Ja_inv);
     
-    Matrix Na = Matrix::Identity(ndof, ndof) - Ja_inv * Ja;
+    size_t const ndof(state.size());
+    Matrix Na = Matrix::Identity(ndof, ndof) - Ja_inv * tl[0]->Jx;
     
     Matrix Jb_inv;
-    double foo(tasklist[0].b_max); // well... how to find a good lambda?
-    if (tasklist[1].b_max < foo) {
-      foo = tasklist[1].b_max;
+    double foo(tl[0]->b_max); // well... how to find a good lambda?
+    if (tl[1]->b_max < foo) {
+      foo = tl[1]->b_max;
     }
     pseudo_inverse_damped (Jb, 1.0 / foo, Jb_inv);
     
     // would need Nb for supporting more than 2 tasks... later...
     
-    Vector dq = Ja_inv * dxa + Na * Jb_inv * dxb;
+    Vector dq = Ja_inv * tl[0]->dx + Na * Jb_inv * dxb;
     
     if (dbgos) {
       string pre (dbgpre);
       pre += "  ";
-      print (dxa,                  *dbgos, "dxa",    pre);
-      print (tasklist[0].Jacobian, *dbgos, "Ja",     pre);
-      print (Ja_inv,               *dbgos, "Ja_inv", pre);
-      print (Na,                   *dbgos, "Na",     pre);
-      print (dxb,                  *dbgos, "dxb",    pre);
-      print (Jb,                   *dbgos, "Jb",     pre);
-      print (Jb_inv,               *dbgos, "Jb_inv", pre);
-      print (dq,                   *dbgos, "dq",     pre);
+      print (tl[0]->dx, *dbgos, "dxa",    pre);
+      print (tl[0]->Jx, *dbgos, "Ja",     pre);
+      print (Ja_inv,    *dbgos, "Ja_inv", pre);
+      print (Na,        *dbgos, "Na",     pre);
+      print (dxb,       *dbgos, "dxb",    pre);
+      print (Jb,        *dbgos, "Jb",     pre);
+      print (Jb_inv,    *dbgos, "Jb_inv", pre);
+      print (dq,        *dbgos, "dq",     pre);
     }
     
     return dq;

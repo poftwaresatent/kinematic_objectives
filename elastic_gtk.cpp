@@ -34,7 +34,6 @@
 
 /* Author: Roland Philippsen */
 
-#include "baerlocher_algorithm.hpp"
 #include "mistry_algorithm.hpp"
 #include "algorithm.hpp"
 #include <gtk/gtk.h>
@@ -75,19 +74,22 @@ public:
       len_b_(0.6),
       state_(state),
       pos_a_(2),
-      pos_b_(2)
+      pos_b_(2),
+      eetask_(4, 2, 0.1),
+      basetask_(4, 2, 0.1)
   {
-    task_.push_back (task_s(4, 2, 0.1));
-    task_.push_back (task_s(4, 2, 0.1));
-    ////    task_.push_back (task_s(4, 2, 5.0 * deg));
-    task_[1].Jacobian <<
+    task_.push_back(&eetask_);
+    task_.push_back(&basetask_);
+    
+    basetask_.Jx <<
       1, 0, 0, 0,
       0, 1, 0, 0;
-    ////    task_[2].Jacobian = Matrix::Identity(4, 4);
+    
     setState (state);
-    task_[0].desired = task_[0].current;
-    task_[1].desired = task_[1].current;
-    ////    task_[2].desired = task_[2].current;
+    for (size_t ii(0); ii < task_.size(); ++ii) {
+      task_[ii]->xdes = task_[ii]->xcur;
+      task_[ii]->dx = Vector::Zero(4);
+    }
   }
   
   void draw (cairo_t * cr, double pixelsize)
@@ -132,14 +134,14 @@ public:
     // thin line for first task
     cairo_set_source_rgb (cr, 1.0, 0.4, 0.4);
     cairo_set_line_width (cr, 1.0 / pixelsize);
-    cairo_move_to (cr, task_[0].current[0], task_[0].current[1]);
-    cairo_line_to (cr, task_[0].desired[0], task_[0].desired[1]);
+    cairo_move_to (cr, eetask_.xcur[0], eetask_.xcur[1]);
+    cairo_line_to (cr, eetask_.xdes[0], eetask_.xdes[1]);
     cairo_stroke (cr);
     
     // thin line for second task
     cairo_set_source_rgb (cr, 0.4, 1.0, 0.4);
-    cairo_move_to (cr, task_[1].current[0], task_[1].current[1]);
-    cairo_line_to (cr, task_[1].desired[0], task_[1].desired[1]);
+    cairo_move_to (cr, basetask_.xcur[0], basetask_.xcur[1]);
+    cairo_line_to (cr, basetask_.xdes[0], basetask_.xdes[1]);
     cairo_stroke (cr);
     
     cairo_restore (cr);
@@ -147,28 +149,27 @@ public:
   
   void setEEGoal (Vector const & goal)
   {
-    task_[0].desired = goal;
+    eetask_.xdes = goal;
+    eetask_.dx = eetask_.xdes - eetask_.xcur;
   }
   
   void setEEGoal (double gx, double gy)
   {
-    task_[0].desired << gx, gy;
+    eetask_.xdes << gx, gy;
+    eetask_.dx = eetask_.xdes - eetask_.xcur;
   }
   
   void setBaseGoal (Vector const & goal)
   {
-    task_[1].desired = goal;
+    basetask_.xdes = goal;
+    basetask_.dx = basetask_.xdes - basetask_.xcur;
   }
   
   void setBaseGoal (double gx, double gy)
   {
-    task_[1].desired << gx, gy;
+    basetask_.xdes << gx, gy;
+    basetask_.dx = basetask_.xdes - basetask_.xcur;
   }
-  
-  // void setPosture (Vector const & goal)
-  // {
-  //   task_[2].desired = goal;
-  // }
   
   void setState (Vector const & state)
   {
@@ -185,14 +186,14 @@ public:
     pos_a_ << state_[0] + ac2, state_[1] + as2;
     pos_b_ << pos_a_[0] + bc23, pos_a_[1] + bs23;
     
-    task_[0].current = pos_b_;
-    task_[0].Jacobian <<
+    eetask_.xcur = pos_b_;
+    eetask_.dx = eetask_.xdes - eetask_.xcur;
+    eetask_.Jx <<
       1, 0, -as2 - bs23, -bs23,
       0, 1,  ac2 + bc23,  bc23;
     
-    task_[1].current << state_[0], state_[1];
-    
-    ////    task_[2].current = state_;
+    basetask_.xcur << state_[0], state_[1];
+    basetask_.dx = basetask_.xdes - basetask_.xcur;
   }
   
   Vector const & getState () const { return state_; }
@@ -211,6 +212,8 @@ private:
   Vector pos_a_;
   Vector pos_b_;
   
+  task_s eetask_;
+  task_s basetask_;
   tasklist_t task_;
 };
 
@@ -302,9 +305,9 @@ public:
       if (start_ == *ii) {
 	if (verbose) {
 	  cout << "--------------------------------------------------\n"
-	       << "START (Baerlocher)\n";
+	       << "START (Mistry)\n";
 	}
-	dq = baerlocher_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
+	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
       }
       else if (dest_ == *ii) {
 	if (verbose) {

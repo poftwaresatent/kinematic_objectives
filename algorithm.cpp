@@ -39,136 +39,82 @@
 #include "print.hpp"
 #include <Eigen/LU>
 #include <iostream>
-#include <deque>
 
 
 namespace kinematic_elastic {
   
   
-  typedef deque<task_s> taskdeque_t; // we need a local modifiable copy of the task list given by the user
-  
-  
-  static inline void stack (Vector const & v1,
-			    Vector const & v2,
-			    Vector & vv)
-  {
-    vv.resize(v1.size() + v2.size());
-    vv.block(0,         0, v1.size(), 1) = v1;
-    vv.block(v1.size(), 0, v2.size(), 1) = v2;
-  }
-  
-  
-  static inline void stack (Matrix const & m1,
-			    Matrix const & m2,
-			    Matrix & mm)
-  {
-    mm.resize(m1.rows() + m2.rows(), m1.cols());
-    mm.block(0, 0, m1.rows(), m1.cols()) = m1;
-    mm.block(m1.rows(), 0, m2.rows(), m2.cols()) = m2; // this should abort automatically if m2.cols() != m1.cols()
-  }
-  
-  
-  static Vector compute_dq (size_t ndof,
-			    taskdeque_t const & tasks,
-			    //// sensible speedup: Matrix const * precomputed_Ja_inv,
+  /**
+     \pre tl must not be empty, and tl[0] must be non-singular.
+  */
+  static Vector compute_dq (tasklist_t const & tl,
 			    ostream * dbgos,
 			    char const * dbgpre)
   {
-    Vector dq(Vector::Zero(ndof));
-    
-    if (tasks.empty()) {
-      if (dbgos) {
-	print (dq, *dbgos, "dq", string(dbgpre) + "  ");
-	*dbgos << dbgpre << "DONE (no tasks)\n";
-      }
-      return dq;
-    }
-    
-    Vector dxa(tasks[0].desired - tasks[0].current);
     Matrix Ja_inv;
-    pseudo_inverse_nonsingular (tasks[0].Jacobian, Ja_inv);
-    dq += Ja_inv * dxa;
+    pseudo_inverse_nonsingular (tl[0]->Jx, Ja_inv);
+    Vector dq(Ja_inv * tl[0]->dx);
     
     if (dbgos) {
       *dbgos << dbgpre << "primary task:\n";
       string pre (dbgpre);
       pre += "  ";
-      print (dxa,               *dbgos, "dxa",    pre);
-      print (tasks[0].Jacobian, *dbgos, "Ja",     pre);
-      print (Ja_inv,            *dbgos, "Ja_inv", pre);
-      print (dq,                *dbgos, "dq",     pre);
+      print (tl[0]->dx, *dbgos, "dxa",    pre);
+      print (tl[0]->Jx, *dbgos, "Ja",     pre);
+      print (Ja_inv,    *dbgos, "Ja_inv", pre);
+      print (dq,        *dbgos, "dq",     pre);
     }
     
-    if (tasks.size() == 1) {
+    if (tl.size() == 1) {
       if (dbgos) {
 	*dbgos << dbgpre << "DONE (single task)\n";
       }
       return dq;
     }
     
-    Vector dxb(tasks[0].ndim + tasks[1].ndim);
-    dxb.block(0,              0, tasks[0].ndim, 1) = dxa;
-    dxb.block(tasks[0].ndim, 0, tasks[1].ndim, 1) = tasks[1].desired - tasks[1].current;
-    Matrix Jb;
-    stack(tasks[0].Jacobian, tasks[1].Jacobian, Jb);
     Matrix Jb_inv;
-    double tmp(1.0 / (tasks[0].b_max < tasks[1].b_max ? tasks[0].b_max : tasks[1].b_max));
-    pseudo_inverse_damped (Jb, tmp, Jb_inv);
-    Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * tasks[0].Jacobian);
-    dq +=  Na * Jb_inv * dxb;
+    pseudo_inverse_damped (tl[1]->Jx, 1.0 / tl[1]->b_max, Jb_inv);
+    size_t const ndof(tl[0]->Jx.cols());
+    Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * tl[0]->Jx);
+    dq +=  Na * Jb_inv * tl[1]->dx;
     
     if (dbgos) {
+      Matrix Na_times_Jb_inv(Na * Jb_inv);
+      Vector dqb(Na_times_Jb_inv * tl[1]->dx);
+      
       *dbgos << dbgpre << "secondary task:\n";
       string pre (dbgpre);
       pre += "  ";
-      print (Na,     *dbgos, "Na",     pre);
-      print (dxb,    *dbgos, "dxb",    pre);
-      print (Jb,     *dbgos, "Jb",     pre);
-      print (Jb_inv, *dbgos, "Jb_inv", pre);
-      
-      Matrix Na_times_Jb_inv(Na * Jb_inv);
-      Vector dqb(Na_times_Jb_inv * dxb);
+      print (Na,              *dbgos, "Na", pre);
+      print (tl[1]->dx,       *dbgos, "dxb", pre);
+      print (tl[1]->Jx,       *dbgos, "Jb", pre);
+      print (Jb_inv,          *dbgos, "Jb_inv", pre);
       print (Na_times_Jb_inv, *dbgos, "Na * Jb_inv", pre);
-      print (dqb,             *dbgos, "Na * Jb_inv * dxb",     pre);
-      
-      print (dq,     *dbgos, "dq",     pre);
+      print (dqb,             *dbgos, "Na * Jb_inv * dxb", pre);
+      print (dq,              *dbgos, "dq", pre);
     }
     
-    if (tasks.size() == 2) {
+    if (tl.size() == 2) {
       if (dbgos) {
 	*dbgos << dbgpre << "DONE (two tasks)\n";
       }
       return dq;
     }
     
-    Matrix Nb(Matrix::Identity(ndof, ndof) - Jb_inv * Jb);
-    size_t nrest(0);
-    for (size_t it(2); it < tasks.size(); ++it) {
-      nrest += tasks[it].ndim;
-    }
-    Vector dxc(nrest);
-    Matrix Jc(nrest, ndof);
-    tmp = numeric_limits<double>::max();
-    for (size_t it(2), ir(0); it < tasks.size(); ir += tasks[it++].ndim) { // obscure update expression, grr
-      dxc.block(ir, 0, tasks[it].ndim, 1) = tasks[it].desired - tasks[it].current;
-      Jc.block( ir, 0, tasks[it].ndim, ndof) = tasks[it].Jacobian;
-      if (tasks[it].b_max < tmp) {
-	tmp = tasks[it].b_max; // beware: tmp is 1.0/lambda here (whereas it was lambda above)
-      }
-    }
+    Matrix Nb(Matrix::Identity(ndof, ndof) - Jb_inv * tl[1]->Jx);
     Matrix Jc_inv;
-    pseudo_inverse_damped (Jc, 1.0 / tmp, Jc_inv);
-    dq += Na * Nb * Jc_inv * dxc;
+    pseudo_inverse_damped (tl[2]->Jx, 1.0 / tl[2]->b_max, Jc_inv);
+    dq += Na * Nb * Jc_inv * tl[2]->dx;
     
     if (dbgos) {
       *dbgos << dbgpre << "remainder:\n";
       string pre (dbgpre);
       pre += "  ";
-      print (Nb,     *dbgos, "Nb",     pre);
-      print (dxc,    *dbgos, "dxc",    pre);
-      print (Jc,     *dbgos, "Jc",     pre);
-      print (Jc_inv, *dbgos, "Jc_inv", pre);
-      print (dq,     *dbgos, "dq",     pre);
+      print (Nb,        *dbgos, "Nb",     pre);
+      print (tl[2]->dx, *dbgos, "dxc",    pre);
+      print (tl[2]->Jx, *dbgos, "Jc",     pre);
+      print (Jc_inv,    *dbgos, "Jc_inv", pre);
+      print (dq,        *dbgos, "dq",     pre);
       *dbgos << dbgpre << "DONE\n";
     }
     
@@ -182,16 +128,27 @@ namespace kinematic_elastic {
 		    ostream * dbgos,
 		    char const * dbgpre)
   {
-    // XXXX Make this copy lazy. But that requires templatizing
-    // compute_dq on the container type. Do that later, once
-    // everything works.
-    taskdeque_t tasks(tasklist.size());
-    for (size_t ii(0); ii < tasklist.size(); ++ii) {
-      tasks[ii] = tasklist[ii];
+    size_t const ndof(state.size());
+    Vector dq(Vector::Zero(ndof));
+    
+    if ( ! tasklist.empty()) {
+      tasklist_t tl;
+      task_s tmp1, tmp2;
+      tl.push_back(tasklist[0]);
+      if (tasklist.size() > 1) {
+	tmp1 = stack(tasklist, 0, 2);
+	tl.push_back(&tmp1);
+      }
+      if (tasklist.size() > 3) {
+	tmp2 = stack(tasklist, 2, tasklist.size() - 2);
+	tl.push_back(&tmp2);
+      }
+      else if (tasklist.size() == 3) {
+	tl.push_back(tasklist[2]);
+      }
+      dq = compute_dq(tl, dbgos, dbgpre);
     }
     
-    size_t const ndof(state.size());
-    Vector dq(compute_dq(ndof, tasks, dbgos, dbgpre));
     Vector const next_state(state + dq);
     if (model.checkJointLimits(next_state)) {
       if (dbgos) {
@@ -205,9 +162,11 @@ namespace kinematic_elastic {
     // Now here's an intricate point: need to lock based on what we
     // would get AFTER this iteration.
     model.createJointLimitTask(next_state, t_lim, locked);
-    if (tasks.empty()) {
-      tasks.push_back(t_lim);	// XXXX this ends up copy-constructing I guess
-      dq = compute_dq(ndof, tasks, dbgos, dbgpre);
+    
+    if (tasklist.empty()) {
+      tasklist_t tl;
+      tl.push_back(&t_lim);
+      dq = compute_dq(tl, dbgos, dbgpre);
       if (dbgos) {
 	*dbgos << dbgpre << "joint limits adjusted, but empty task list\n";
       }
@@ -217,20 +176,15 @@ namespace kinematic_elastic {
     // Try stacking the joint limits on top of the primary task. That
     // means knocking out the locked joints from the primary task's
     // Jacobian, too.
-    //
-    // XXXX There may be some caching opportunities here, at the very
-    // least all deltas except for the first set would remain
-    // untouched and should just be reused instead of
-    // recomputed.
     
     if (dbgos) {
       string pre (dbgpre);
       pre += "  ";
-      *dbgos << dbgpre << "knock locked joints out from primary task...\n";
-      print (t_lim.Jacobian, *dbgos, "J_lim", pre);
+      *dbgos << dbgpre << "try removing joints from the primary task...\n";
+      print (t_lim.Jx, *dbgos, "J_lim", pre);
     }
     
-    Matrix J_try(tasks[0].Jacobian);
+    Matrix J_try(tasklist[0]->Jx);
     for (size_t ii(0); ii < locked.size(); ++ii) {
       J_try.block(0, locked[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
       if (dbgos) {
@@ -240,19 +194,46 @@ namespace kinematic_elastic {
     Eigen::FullPivLU<Matrix> plu(J_try * J_try.transpose());
     if (plu.isInvertible()) {
       if (dbgos) {
-	*dbgos << dbgpre << "great: primary task should still be achievable even with locked joints\n";
+	*dbgos << dbgpre << "primary task remains achievable with locked joints\n";
       }
-      stack(t_lim.Jacobian, J_try, tasks[0].Jacobian);
-      tasks[0].ndim += t_lim.ndim;
-      Vector tmp;
-      stack(t_lim.current, tasks[0].current, tmp);
-      tasks[0].current = tmp;
-      stack(t_lim.desired, tasks[0].desired, tmp);
-      tasks[0].desired = tmp;
-      // We could also knock the locked joints from the other
-      // tasks. Maybe we should, but the null-space projection
-      // "should" take care of it anyway from tasks[1] onward.
-      dq = compute_dq(ndof, tasks, dbgos, dbgpre);
+      tasklist_t tl;
+      task_s tmp1, tmp2;
+      tmp1 = stack(t_lim, *tasklist[0]);
+      // grr, spurious extra work...
+      stack(t_lim.Jx, J_try, tmp1.Jx);
+      tl.push_back(&tmp1);
+      if (tasklist.size() > 1) {
+	// Now this is a bit of an open question. Ideally we should
+	// select a set of tasks that are somewhat likely to be not
+	// overly conflicting. Reasonable heuristics are either:
+	//  - t_lim, tasklist[0], tasklist[1]
+	//    but that is likely to kill tasklist[1] entirely.
+	//  - tasklist[0], tasklist[1]
+	//    i.e. try to achieve both (ignoring joint limits, which
+	//    get respected due to the nullspace of tl[0]).
+	//  - just tasklist[1]
+	//    This would appear to heighten our chances of achieving
+	//    the secondary task, which is likely to be something that
+	//    users actually care about (whereas ternary etc are
+	//    conceivably just meant as "nice to have" anyway).
+	//
+	// ...using the third option for the time being...
+	tl.push_back(tasklist[1]);
+      }
+      if (tasklist.size() > 3) {
+	// At the time of writing, this is the same as tmp2 above, so
+	// why not just reuse that? But beware of future changes, this
+	// code is highly experimental at the moment.
+	tmp2 = stack(tasklist, 2, tasklist.size() - 2);
+	tl.push_back(&tmp2);
+      }
+      else if (tasklist.size() == 3) {
+	tl.push_back(tasklist[2]);
+      }
+      // We could also knock the locked joints from the other tasks,
+      // but the null-space projection "should" take care of it anyway
+      // from tl[1] onward.
+      dq = compute_dq(tl, dbgos, dbgpre);
       if (dbgos) {
 	*dbgos << dbgpre << "joint limits merged into primary task\n";
       }
@@ -262,9 +243,27 @@ namespace kinematic_elastic {
     // Well, that didn't work, which means that the primary task
     // cannot be achieved due to joint limits. The best we can do is
     // prepend the joint limits to the task list.
+    //
+    // Again, some open questions regarding what to stack together for
+    // the second task that gets passed to compute_dq(). But it seems
+    // natural to now push the (original) secondary into the "nice to
+    // have" category and keep the (original) primary "please try as
+    // hard as you can."
     
-    tasks.push_front(t_lim);	// XXXX another copy-construction?
-    dq = compute_dq(ndof, tasks, dbgos, dbgpre);
+    tasklist_t tl;
+    task_s tmp;
+    tl.push_back(&t_lim);
+    tl.push_back(tasklist[0]);
+    if (tasklist.size() > 1) {
+      if (tasklist.size() > 2) {
+	tmp = stack(tasklist, 1, tasklist.size() - 1);
+	tl.push_back(&tmp);
+      }
+      else {
+	tl.push_back(tasklist[1]);
+      }
+    }
+    dq = compute_dq(tl, dbgos, dbgpre);
     if (dbgos) {
       *dbgos << dbgpre << "joint limits take precedence over primary task\n";
     }

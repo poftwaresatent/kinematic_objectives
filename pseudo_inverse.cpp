@@ -35,7 +35,6 @@
 /* Author: Roland Philippsen */
 
 #include "pseudo_inverse.hpp"
-#include "print.hpp"
 #include <Eigen/LU>
 #include <Eigen/SVD>
 #include <iostream>

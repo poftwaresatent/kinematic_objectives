@@ -88,19 +88,16 @@ else (GTK2_FOUND)
 endif (GTK2_FOUND)
 
 list (APPEND SRCS
+  kinematic_elastic.cpp
   task.cpp
   model.cpp
   algorithm.cpp
-  baerlocher_algorithm.cpp
   mistry_algorithm.cpp
   pseudo_inverse.cpp
   print.cpp
   )
 
 add_library (kinematic_elastic SHARED ${SRCS})
-
-add_executable (test_baerlocher_algorithm test_baerlocher_algorithm.cpp)
-target_link_libraries (test_baerlocher_algorithm kinematic_elastic)
 
 add_executable (elastic_gtk elastic_gtk.cpp)
 target_link_libraries (elastic_gtk kinematic_elastic ${GTK2_LIBRARIES})

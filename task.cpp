@@ -35,7 +35,6 @@
 /* Author: Roland Philippsen */
 
 #include "task.hpp"
-#include "print.hpp"
 #include <iostream>
 
 
@@ -55,9 +54,55 @@ namespace kinematic_elastic {
     : b_max(b_max_),
       ndim(ndim_)
   {
-    current = Vector::Zero(ndim_);
-    desired = Vector::Zero(ndim_);
-    Jacobian = Matrix::Zero(ndim_, ndof);
+    xcur = Vector::Zero(ndim_);
+    xdes = Vector::Zero(ndim_);
+    dx = Vector::Zero(ndim_);
+    Jx = Matrix::Zero(ndim_, ndof);
+  }
+  
+  
+  task_s stack(task_s const & t1, task_s const & t2)
+  {
+    task_s tt;
+    stack(t1.xcur, t2.xcur, tt.xcur);
+    stack(t1.xdes, t2.xdes, tt.xdes);
+    stack(t1.dx, t2.dx, tt.dx);
+    stack(t1.Jx, t2.Jx, tt.Jx);
+    if (t1.b_max < t2.b_max) {
+      tt.b_max = t1.b_max;
+    }
+    else {
+      tt.b_max = t2.b_max;
+    }
+    tt.ndim = t1.ndim + t2.ndim;
+    return tt;
+  }
+  
+  
+  task_s stack(tasklist_t const & tl, size_t first, size_t count)
+  {
+    count += first;
+    
+    size_t ndim(0);
+    double b_max(numeric_limits<double>::max());
+    for (size_t ii(first); ii < count; ++ii) {
+      ndim += tl[ii]->ndim;
+      if (b_max > tl[ii]->b_max) {
+	b_max = tl[ii]->b_max;
+      }
+    }
+    size_t const ndof(tl[first]->Jx.cols());
+    task_s tt(ndof, ndim, b_max);
+    
+    // Beware of obscure update expression... it has two effects.
+    for (size_t it(first), ir(0); it < count; ir += tl[it++]->ndim) {
+      tt.xcur.block(ir, 0, tl[it]->ndim, 1) = tl[it]->xcur;
+      tt.xdes.block(ir, 0, tl[it]->ndim, 1) = tl[it]->xdes;
+      tt.dx.block(ir, 0, tl[it]->ndim, 1) = tl[it]->dx;
+      tt.Jx.block(ir, 0, tl[it]->ndim, ndof) = tl[it]->Jx;
+    }
+    
+    return tt;
   }
   
   
@@ -70,8 +115,8 @@ namespace kinematic_elastic {
     }
     for (size_t ii(0); ii < tasklist.size(); ++ii) {
       cout << "  ";
-      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-	cout << tasklist[ii].current[jj] << "  ";
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << tasklist[ii]->xcur[jj] << "  ";
       }
     }
     cout << "  ";
@@ -94,16 +139,20 @@ namespace kinematic_elastic {
     for (size_t ii(0); ii < tasklist.size(); ++ii) {
       cout << "\ntask " << ii << "\n";
       cout << "  current:";
-      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-	cout << "\t" << tasklist[ii].current[jj];
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << "\t" << tasklist[ii]->xcur[jj];
       }
       cout << "\n  desired:";
-      for (size_t jj(0); jj < tasklist[ii].ndim; ++jj) {
-	cout << "\t" << tasklist[ii].desired[jj];
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << "\t" << tasklist[ii]->xdes[jj];
+      }
+      cout << "\n  delta:";
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << "\t" << tasklist[ii]->dx[jj];
       }
       cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
       for (ssize_t jj(0); jj < state.size(); ++jj) {
-	cout << "\t" << tasklist[ii].Jacobian(0, jj);
+	cout << "\t" << tasklist[ii]->Jx(0, jj);
       }
     }
     cout << "\ndelta_q:";

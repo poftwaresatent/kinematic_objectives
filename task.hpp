@@ -50,14 +50,20 @@ namespace kinematic_elastic {
     task_s();
     task_s(size_t ndof, size_t ndim, double b_max);
     
-    Vector current;
-    Vector desired;
-    Matrix Jacobian;
+    Vector xcur;
+    Vector xdes;
+    Vector dx;			// xdes - xcur
+    Matrix Jx;
     double b_max;
     size_t ndim;
   };
   
-  typedef vector<task_s> tasklist_t;
+  typedef vector<task_s *> tasklist_t;
+  
+  
+  task_s stack(task_s const & t1, task_s const & t2);
+  
+  task_s stack(tasklist_t const & tl, size_t first, size_t count);
   
   
   void dump (Vector const & state,

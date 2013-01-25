@@ -101,11 +101,12 @@ namespace kinematic_elastic {
     }
     
     jl.ndim = locked.size();
-    jl.current = Vector::Map(&cur[0], jl.ndim);
-    jl.desired = Vector::Map(&des[0], jl.ndim);
-    jl.Jacobian = Matrix::Zero(jl.ndim, state.size());
+    jl.xcur = Vector::Map(&cur[0], jl.ndim);
+    jl.xdes = Vector::Map(&des[0], jl.ndim);
+    jl.dx = jl.xdes - jl.xcur;
+    jl.Jx = Matrix::Zero(jl.ndim, state.size());
     for (size_t ii(0); ii < jl.ndim; ++ii) {
-      jl.Jacobian(ii, locked[ii]) = 1.0;
+      jl.Jx(ii, locked[ii]) = 1.0;
     }
   }
   

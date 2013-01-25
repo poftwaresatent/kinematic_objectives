@@ -34,28 +34,29 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_HPP
-#define KINEMATIC_ELASTIC_HPP
-
-#include <Eigen/Core>
-#include <Eigen/StdVector>
+#include "kinematic_elastic.hpp"
 
 
 namespace kinematic_elastic {
   
-  typedef Eigen::VectorXd Vector;
-  typedef Eigen::MatrixXd Matrix;
-  
-  using namespace std;
   
   void stack (Vector const & v1,
 	      Vector const & v2,
-	      Vector & vv);
+	      Vector & vv)
+  {
+    vv.resize(v1.size() + v2.size());
+    vv.block(0,         0, v1.size(), 1) = v1;
+    vv.block(v1.size(), 0, v2.size(), 1) = v2;
+  }
+  
   
   void stack (Matrix const & m1,
 	      Matrix const & m2,
-	      Matrix & mm);
+	      Matrix & mm)
+  {
+    mm.resize(m1.rows() + m2.rows(), m1.cols());
+    mm.block(0, 0, m1.rows(), m1.cols()) = m1;
+    mm.block(m1.rows(), 0, m2.rows(), m2.cols()) = m2;
+  }
   
 }
-
-#endif // KINEMATIC_ELASTIC_HPP
