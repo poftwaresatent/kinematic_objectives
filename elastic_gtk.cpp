@@ -583,7 +583,7 @@ int main (int argc, char ** argv)
 {
   init_gui (&argc, &argv);
   
-  if ((argc > 1) && strcmp("-v", argv[1])) {
+  if ((argc > 1) && (0 == strcmp("-v", argv[1]))) {
     verbose = true;
   }
   
