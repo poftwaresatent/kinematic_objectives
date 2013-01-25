@@ -197,7 +197,7 @@ namespace kinematic_elastic {
 	*dbgos << dbgpre << "primary task remains achievable with locked joints\n";
       }
       tasklist_t tl;
-      task_s tmp1, tmp2;
+      task_s tmp1, tmp2, tmp3;
       tmp1 = stack(t_lim, *tasklist[0]);
       // grr, spurious extra work...
       stack(t_lim.Jx, J_try, tmp1.Jx);
@@ -206,24 +206,37 @@ namespace kinematic_elastic {
 	// Now this is a bit of an open question. Ideally we should
 	// select a set of tasks that are somewhat likely to be not
 	// overly conflicting. Reasonable heuristics are either:
-	//  - t_lim, tasklist[0], tasklist[1]
-	//    but that is likely to kill tasklist[1] entirely.
-	//  - tasklist[0], tasklist[1]
-	//    i.e. try to achieve both (ignoring joint limits, which
-	//    get respected due to the nullspace of tl[0]).
-	//  - just tasklist[1]
-	//    This would appear to heighten our chances of achieving
-	//    the secondary task, which is likely to be something that
-	//    users actually care about (whereas ternary etc are
-	//    conceivably just meant as "nice to have" anyway).
+	//  A: t_lim, tasklist[0], tasklist[1]
+	//     but that is likely to kill tasklist[1] entirely.
+	//  B: tasklist[0], tasklist[1]
+	//     i.e. try to achieve both (ignoring joint limits, which
+	//     get respected due to the nullspace of tl[0]).
+	//  C: just tasklist[1]
+	//     This would appear to heighten our chances of achieving
+	//     the secondary task, which is likely to be something that
+	//     users actually care about (whereas ternary etc are
+	//     conceivably just meant as "nice to have" anyway).
 	//
-	// ...using the third option for the time being...
-	tl.push_back(tasklist[1]);
+	// Tried (C) but that lead to no improvement (although there
+	// were tiny little dq that appeared to be in the right kind
+	// of direction).
+	//
+	// So, now let's try (B): I figure at least the secondary will
+	// be aware of the primary, and that combo works well in the
+	// absence of joint limits.
+	//
+	// BTW yes, the tmpX scheme is not very pretty... and yes,
+	// tmp3 is the same as tmp1 in the first trial. This is
+	// prototyping code after all.
+	//
+	tmp3 = stack(tasklist, 0, 2);
+	tl.push_back(&tmp3);
       }
       if (tasklist.size() > 3) {
-	// At the time of writing, this is the same as tmp2 above, so
-	// why not just reuse that? But beware of future changes, this
-	// code is highly experimental at the moment.
+	// At the time of writing, this is the same as tmp2 in the
+	// first trial, so why not just reuse that? But beware of
+	// future changes, this code is highly experimental at the
+	// moment.
 	tmp2 = stack(tasklist, 2, tasklist.size() - 2);
 	tl.push_back(&tmp2);
       }
