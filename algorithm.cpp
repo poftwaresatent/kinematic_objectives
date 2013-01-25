@@ -197,7 +197,7 @@ namespace kinematic_elastic {
 	*dbgos << dbgpre << "primary task remains achievable with locked joints\n";
       }
       tasklist_t tl;
-      task_s tmp1, tmp2, tmp3;
+      task_s tmp1, tmp2;
       tmp1 = stack(t_lim, *tasklist[0]);
       // grr, spurious extra work...
       stack(t_lim.Jx, J_try, tmp1.Jx);
@@ -217,20 +217,10 @@ namespace kinematic_elastic {
 	//     users actually care about (whereas ternary etc are
 	//     conceivably just meant as "nice to have" anyway).
 	//
-	// Tried (C) but that lead to no improvement (although there
-	// were tiny little dq that appeared to be in the right kind
-	// of direction).
+	// Tried (B) and (C) but saw no difference, so going with (C)
+	// because that avoids creating yet another tmp.
 	//
-	// So, now let's try (B): I figure at least the secondary will
-	// be aware of the primary, and that combo works well in the
-	// absence of joint limits.
-	//
-	// BTW yes, the tmpX scheme is not very pretty... and yes,
-	// tmp3 is the same as tmp1 in the first trial. This is
-	// prototyping code after all.
-	//
-	tmp3 = stack(tasklist, 0, 2);
-	tl.push_back(&tmp3);
+	tl.push_back(tasklist[1]);
       }
       if (tasklist.size() > 3) {
 	// At the time of writing, this is the same as tmp2 in the
