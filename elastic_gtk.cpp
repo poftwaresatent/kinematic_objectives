@@ -46,8 +46,21 @@ using namespace kinematic_elastic;
 
 
 static double const deg(M_PI / 180.);
+static double const dimx(10.);
+static double const dimy(8.);
+
+static GtkWidget * gw(0);
+static gint gw_width(800), gw_height(640);
+static gint gw_sx, gw_sy, gw_x0, gw_y0;
 
 static bool verbose(false);
+static int play(0);
+static Vector eegoal(2);
+static Vector basegoal(2);
+static Vector * handle[] = { &eegoal, &basegoal, 0 };
+static Vector * grabbed(0);
+static double grab_radius(0.2);
+static Vector grab_offset(2);
 
 
 static inline double bound (double lower, double value, double upper)
@@ -257,74 +270,43 @@ public:
     path_.clear();
   }
   
-  void init (Vector const & ee0, Vector const & ee1,
-	     Vector const & base0, Vector const & base1,
-	     Vector const & posture,
-	     size_t nsteps)
+  void init ()
   {
-    if (0 == nsteps) {
-      nsteps = 1;
-    }
     clear();
     
-    start_ = new Waypoint(model_, posture);
-    dest_ = new Waypoint(model_, posture);
+    eegoal <<
+      1.0,
+      dimy - 1.0;
+    basegoal <<
+      dimx - 1.0, 1.0;
     
-    Vector delta_ee = (ee1 - ee0) / nsteps;
-    Vector delta_base = (base1 - base0) / nsteps;
+    Vector posture(4);
+    posture <<
+      dimx / 2.0,
+      dimy / 2.0,
+      80.0 * deg,
+      - 40.0 * deg;
     
-    Vector ee = ee0 + delta_ee;
-    Vector base = base0 + delta_base;
-    
-    path_.push_back (start_);
-    for (size_t ii(1); ii < nsteps; ++ii) {
-      Waypoint * wpt(new Waypoint(model_, posture));
-      wpt->setEEGoal(ee);
-      wpt->setBaseGoal(base);
-      path_.push_back (wpt);
-      ee += delta_ee;
-      base += delta_base;
-    }
-    path_.push_back (dest_);
+    wpt_ = new Waypoint(model_, posture);
+    wpt_->setEEGoal(eegoal);
+    wpt_->setBaseGoal(basegoal);
+    path_.push_back (wpt_);
   }
   
-  void update (Vector const & ee0, Vector const & ee1,
-	       Vector const & base0, Vector const & base1)
+  void update ()
   {
-    start_->setEEGoal (ee0);
-    start_->setBaseGoal (base0);
-    dest_->setEEGoal (ee1);
-    dest_->setBaseGoal (base1);
     ostream * dbgos(0);
     if (verbose) {
       dbgos = &cout;
       cout << "\n**************************************************\n";
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      Vector dq;
-      if (start_ == *ii) {
-	if (verbose) {
-	  cout << "--------------------------------------------------\n"
-	       << "START (Mistry)\n";
-	}
-	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
+      if (verbose) {
+	cout << "--------------------------------------------------\n";
       }
-      else if (dest_ == *ii) {
-	if (verbose) {
-	  cout << "--------------------------------------------------\n"
-	       << "DEST (Mistry)\n";
-	}
-	dq = mistry_algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
-      }
-      else {
-	if (verbose) {
-	  cout << "--------------------------------------------------\n"
-	       << "Waypoint\n";
-	}
-	(*ii)->setEEGoal(0.5 * (ee0 + ee1));
-	(*ii)->setBaseGoal(0.5 * (base0 + base1));
-	dq = algorithm (model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  ");
-      }
+      (*ii)->setEEGoal(eegoal);
+      (*ii)->setBaseGoal(basegoal);
+      Vector dq(algorithm(model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  "));
       (*ii)->setState ((*ii)->getState() + dq);
     }
   }
@@ -338,29 +320,9 @@ public:
   
 private:
   path_t path_;
-  Waypoint * start_;
-  Waypoint * dest_;
-  
+  Waypoint * wpt_;
   Model model_;			// where should this live?
 };
-
-
-static double const dimx(10.);
-static double const dimy(8.);
-
-static GtkWidget * gw(0);
-static gint gw_width(800), gw_height(640);
-static gint gw_sx, gw_sy, gw_x0, gw_y0;
-static int play(0);
-static Vector start_ee(2);
-static Vector dest_ee(2);
-static Vector start_base(2);
-static Vector dest_base(2);
-static Vector posture(4);
-static Vector * handle[] = { &start_ee, &dest_ee, &start_base, &dest_base, 0 };
-static Vector * grabbed(0);
-static double grab_radius(0.2);
-static Vector grab_offset(2);
 
 
 static Elastic elastic;
@@ -368,7 +330,7 @@ static Elastic elastic;
 
 static void update ()
 {
-  elastic.update (start_ee, dest_ee, start_base, dest_base);
+  elastic.update ();
   gtk_widget_queue_draw (gw);
 }
 
@@ -414,29 +376,14 @@ static gint cb_expose (GtkWidget * ww,
   cairo_translate (cr, gw_x0, gw_y0);
   cairo_scale (cr, gw_sx, gw_sy);
   
-  cairo_set_source_rgb (cr, 0.6, 0.0, 0.0);
-  cairo_set_line_width (cr, 1.0 / gw_sx);
-  cairo_move_to (cr, start_ee[0], start_ee[1]);
-  cairo_line_to (cr, dest_ee[0], dest_ee[1]);
-  cairo_stroke (cr);
-  
-  cairo_set_source_rgb (cr, 0.0, 0.6, 0.0);
-  cairo_move_to (cr, start_base[0], start_base[1]);
-  cairo_line_to (cr, dest_base[0], dest_base[1]);
-  cairo_stroke (cr);
-  
   elastic.draw(cr, gw_sx);
   
   cairo_set_source_rgba (cr, 0.6, 0.0, 0.0, 0.5);
-  cairo_arc (cr, start_ee[0], start_ee[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill (cr);
-  cairo_arc (cr, dest_ee[0], dest_ee[1], grab_radius, 0., 2. * M_PI);
+  cairo_arc (cr, eegoal[0], eegoal[1], grab_radius, 0., 2. * M_PI);
   cairo_fill (cr);
   
   cairo_set_source_rgba (cr, 0.0, 0.6, 0.0, 0.5);
-  cairo_arc (cr, start_base[0], start_base[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill (cr);
-  cairo_arc (cr, dest_base[0], dest_base[1], grab_radius, 0., 2. * M_PI);
+  cairo_arc (cr, basegoal[0], basegoal[1], grab_radius, 0., 2. * M_PI);
   cairo_fill (cr);
   
   cairo_destroy (cr);
@@ -590,13 +537,7 @@ int main (int argc, char ** argv)
     verbose = true;
   }
   
-  start_ee   << 1.0,        dimy - 1.0;
-  dest_ee    << dimx - 1.0, 2.0;
-  start_base << 1.0,        dimy - 2.0;
-  dest_base  << dimx - 1.0, 1.0;
-  posture    << dimx / 2.0, dimy / 2.0, 80.0 * deg, - 40.0 * deg;
-  
-  elastic.init (start_ee, dest_ee, start_base, dest_base, posture, 2);//7);
+  elastic.init ();
   
   gtk_main ();
   

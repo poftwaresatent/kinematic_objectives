@@ -199,7 +199,7 @@ namespace kinematic_elastic {
       tasklist_t tl;
       task_s tmp1, tmp2;
       tmp1 = stack(t_lim, *tasklist[0]);
-      // grr, spurious extra work...
+      // grr, spurious extra work... and maybe not even necessary
       stack(t_lim.Jx, J_try, tmp1.Jx);
       tl.push_back(&tmp1);
       if (tasklist.size() > 1) {
