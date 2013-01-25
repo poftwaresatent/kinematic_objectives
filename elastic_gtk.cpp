@@ -222,14 +222,18 @@ public:
   Elastic()
     : model_(4)
   {
+    // yet another subtlety: soft limits must not be too close to hard
+    // limits, otherwise we get jitter from the joint-limit avoidance
+    // algorithm.
+
     model_.joint_limits_(2, 0) = -90.0*deg;
-    model_.joint_limits_(2, 1) = -89.9*deg;
-    model_.joint_limits_(2, 2) =  89.9*deg;
+    model_.joint_limits_(2, 1) = -89.0*deg;
+    model_.joint_limits_(2, 2) =  89.0*deg;
     model_.joint_limits_(2, 3) =  90.0*deg;
 
     model_.joint_limits_(3, 0) = -120.0*deg;
-    model_.joint_limits_(3, 1) = -119.9*deg;
-    model_.joint_limits_(3, 2) =  119.9*deg;
+    model_.joint_limits_(3, 1) = -119.0*deg;
+    model_.joint_limits_(3, 2) =  119.0*deg;
     model_.joint_limits_(3, 3) =  120.0*deg;
   }
   

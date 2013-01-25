@@ -45,7 +45,7 @@
 namespace kinematic_elastic {
   
   
-  typedef deque<task_s const *> taskdeque_t;
+  typedef deque<task_s> taskdeque_t; // we need a local modifiable copy of the task list given by the user
   
   
   static inline void stack (Vector const & v1,
@@ -84,19 +84,19 @@ namespace kinematic_elastic {
       return dq;
     }
     
-    Vector dxa(tasks[0]->desired - tasks[0]->current);
+    Vector dxa(tasks[0].desired - tasks[0].current);
     Matrix Ja_inv;
-    pseudo_inverse_nonsingular (tasks[0]->Jacobian, Ja_inv);
+    pseudo_inverse_nonsingular (tasks[0].Jacobian, Ja_inv);
     dq += Ja_inv * dxa;
     
     if (dbgos) {
       *dbgos << dbgpre << "primary task:\n";
       string pre (dbgpre);
       pre += "  ";
-      print (dxa,                *dbgos, "dxa",    pre);
-      print (tasks[0]->Jacobian, *dbgos, "Ja",     pre);
-      print (Ja_inv,             *dbgos, "Ja_inv", pre);
-      print (dq,                 *dbgos, "dq",     pre);
+      print (dxa,               *dbgos, "dxa",    pre);
+      print (tasks[0].Jacobian, *dbgos, "Ja",     pre);
+      print (Ja_inv,            *dbgos, "Ja_inv", pre);
+      print (dq,                *dbgos, "dq",     pre);
     }
     
     if (tasks.size() == 1) {
@@ -106,15 +106,15 @@ namespace kinematic_elastic {
       return dq;
     }
     
-    Vector dxb(tasks[0]->ndim + tasks[1]->ndim);
-    dxb.block(0,              0, tasks[0]->ndim, 1) = dxa;
-    dxb.block(tasks[0]->ndim, 0, tasks[1]->ndim, 1) = tasks[1]->desired - tasks[1]->current;
+    Vector dxb(tasks[0].ndim + tasks[1].ndim);
+    dxb.block(0,              0, tasks[0].ndim, 1) = dxa;
+    dxb.block(tasks[0].ndim, 0, tasks[1].ndim, 1) = tasks[1].desired - tasks[1].current;
     Matrix Jb;
-    stack(tasks[0]->Jacobian, tasks[1]->Jacobian, Jb);
+    stack(tasks[0].Jacobian, tasks[1].Jacobian, Jb);
     Matrix Jb_inv;
-    double tmp(1.0 / (tasks[0]->b_max < tasks[1]->b_max ? tasks[0]->b_max : tasks[1]->b_max));
+    double tmp(1.0 / (tasks[0].b_max < tasks[1].b_max ? tasks[0].b_max : tasks[1].b_max));
     pseudo_inverse_damped (Jb, tmp, Jb_inv);
-    Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * tasks[0]->Jacobian);
+    Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * tasks[0].Jacobian);
     dq +=  Na * Jb_inv * dxb;
     
     if (dbgos) {
@@ -138,16 +138,16 @@ namespace kinematic_elastic {
     Matrix Nb(Matrix::Identity(ndof, ndof) - Jb_inv * Jb);
     size_t nrest(0);
     for (size_t it(2); it < tasks.size(); ++it) {
-      nrest += tasks[it]->ndim;
+      nrest += tasks[it].ndim;
     }
     Vector dxc(nrest);
     Matrix Jc(nrest, ndof);
     tmp = numeric_limits<double>::max();
-    for (size_t it(2), ir(0); it < tasks.size(); ir += tasks[it++]->ndim) { // obscure update expression, grr
-      dxc.block(ir, 0, tasks[it]->ndim, 1) = tasks[it]->desired - tasks[it]->current;
-      Jc.block( ir, 0, tasks[it]->ndim, ndof) = tasks[it]->Jacobian;
-      if (tasks[it]->b_max < tmp) {
-	tmp = tasks[it]->b_max; // beware: tmp is 1.0/lambda here (whereas it was lambda above)
+    for (size_t it(2), ir(0); it < tasks.size(); ir += tasks[it++].ndim) { // obscure update expression, grr
+      dxc.block(ir, 0, tasks[it].ndim, 1) = tasks[it].desired - tasks[it].current;
+      Jc.block( ir, 0, tasks[it].ndim, ndof) = tasks[it].Jacobian;
+      if (tasks[it].b_max < tmp) {
+	tmp = tasks[it].b_max; // beware: tmp is 1.0/lambda here (whereas it was lambda above)
       }
     }
     Matrix Jc_inv;
@@ -176,14 +176,18 @@ namespace kinematic_elastic {
 		    ostream * dbgos,
 		    char const * dbgpre)
   {
+    // XXXX Make this copy lazy. But that requires templatizing
+    // compute_dq on the container type. Do that later, once
+    // everything works.
     taskdeque_t tasks(tasklist.size());
     for (size_t ii(0); ii < tasklist.size(); ++ii) {
-      tasks[ii] = &tasklist[ii];
+      tasks[ii] = tasklist[ii];
     }
     
     size_t const ndof(state.size());
     Vector dq(compute_dq(ndof, tasks, dbgos, dbgpre));
-    if (model.checkJointLimits(state + dq)) {
+    Vector const next_state(state + dq);
+    if (model.checkJointLimits(next_state)) {
       if (dbgos) {
 	*dbgos << dbgpre << "joint limit check passed\n";
       }
@@ -191,9 +195,12 @@ namespace kinematic_elastic {
     }
     
     task_s t_lim;
-    model.createJointLimitTask(state, t_lim);
+    vector<size_t> locked;
+    // Now here's an intricate point: need to lock based on what we
+    // would get AFTER this iteration.
+    model.createJointLimitTask(next_state, t_lim, locked);
     if (tasks.empty()) {
-      tasks.push_back(&t_lim);
+      tasks.push_back(t_lim);	// XXXX this ends up copy-constructing I guess
       dq = compute_dq(ndof, tasks, dbgos, dbgpre);
       if (dbgos) {
 	*dbgos << dbgpre << "joint limits adjusted, but empty task list\n";
@@ -201,23 +208,44 @@ namespace kinematic_elastic {
       return dq;
     }
     
-    // Try stacking the joint limits on top of the primary task.
+    // Try stacking the joint limits on top of the primary task. That
+    // means knocking out the locked joints from the primary task's
+    // Jacobian, too.
     //
-    // XXXX there are some easy caching opportunities here, all
-    // matrices and deltas except for the first set would remain
+    // XXXX There may be some caching opportunities here, at the very
+    // least all deltas except for the first set would remain
     // untouched and should just be reused instead of
-    // recomputed. Also, we recompute the LU decomposition of
-    // t_try.Jacobian in compute_dq if we end up using the t_try task.
+    // recomputed.
     
-    task_s t_try;
-    stack(t_lim.Jacobian, tasklist[0].Jacobian, t_try.Jacobian);
-    Eigen::FullPivLU<Matrix> plu(t_try.Jacobian * t_try.Jacobian.transpose());
+    if (dbgos) {
+      string pre (dbgpre);
+      pre += "  ";
+      *dbgos << dbgpre << "knock locked joints out from primary task...\n";
+      print (t_lim.Jacobian, *dbgos, "J_lim", pre);
+    }
+    
+    Matrix J_try(tasks[0].Jacobian);
+    for (size_t ii(0); ii < locked.size(); ++ii) {
+      J_try.block(0, locked[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
+      if (dbgos) {
+	*dbgos << dbgpre << "  joint " << locked[ii] << " is locked!\n";
+      }
+    }
+    Eigen::FullPivLU<Matrix> plu(J_try * J_try.transpose());
     if (plu.isInvertible()) {
-      t_try.b_max = tasklist[0].b_max;
-      t_try.ndim = t_lim.ndim + tasklist[0].ndim;
-      stack(t_lim.current, tasklist[0].current, t_try.current);
-      stack(t_lim.desired, tasklist[0].desired, t_try.desired);
-      tasks[0] = &t_try;
+      if (dbgos) {
+	*dbgos << dbgpre << "great: primary task should still be achievable even with locked joints\n";
+      }
+      stack(t_lim.Jacobian, J_try, tasks[0].Jacobian);
+      tasks[0].ndim += t_lim.ndim;
+      Vector tmp;
+      stack(t_lim.current, tasks[0].current, tmp);
+      tasks[0].current = tmp;
+      stack(t_lim.desired, tasks[0].desired, tmp);
+      tasks[0].desired = tmp;
+      // We could also knock the locked joints from the other
+      // tasks. Maybe we should, but the null-space projection
+      // "should" take care of it anyway from tasks[1] onward.
       dq = compute_dq(ndof, tasks, dbgos, dbgpre);
       if (dbgos) {
 	*dbgos << dbgpre << "joint limits merged into primary task\n";
@@ -229,7 +257,7 @@ namespace kinematic_elastic {
     // cannot be achieved due to joint limits. The best we can do is
     // prepend the joint limits to the task list.
     
-    tasks.push_front(&t_lim);
+    tasks.push_front(t_lim);	// XXXX another copy-construction?
     dq = compute_dq(ndof, tasks, dbgos, dbgpre);
     if (dbgos) {
       *dbgos << dbgpre << "joint limits take precedence over primary task\n";

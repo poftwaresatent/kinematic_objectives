@@ -64,10 +64,12 @@ namespace kinematic_elastic {
     const
   {
     for (ssize_t ii(0); ii < state.size(); ++ii) {
-      if (state[ii] < joint_limits_(ii, 0)) {
+      // Another subtlety: decide to lock joints based on soft limit,
+      // but lock them to hard limit.
+      if (state[ii] < joint_limits_(ii, 1)) {
 	return false;
       }
-      if (state[ii] > joint_limits_(ii, 3)) {
+      if (state[ii] > joint_limits_(ii, 2)) {
 	return false;
       }
     }
@@ -77,38 +79,39 @@ namespace kinematic_elastic {
   
   void Model::
   createJointLimitTask (Vector const & state,
-			task_s & jl)
+			task_s & jl,
+			vector<size_t> & locked)
     const
   {
     jl.b_max = numeric_limits<double>::max();
     
-    vector<size_t> lock;
     vector<double> cur, des;
+    locked.clear();
     for (ssize_t ii(0); ii < state.size(); ++ii) {
-      if (state[ii] < joint_limits_(ii, 0)) {
+      if (state[ii] < joint_limits_(ii, 1)) {
 	
 	cout << "joint[" << ii << "] = " << state[ii] << " < limit = " << joint_limits_(ii, 0) << "\n";
 	
-	lock.push_back(ii);
+	locked.push_back(ii);
 	cur.push_back(state[ii]);
-	des.push_back(joint_limits_(ii, 0));////1));
+	des.push_back(joint_limits_(ii, 0));
       }
-      else if (state[ii] > joint_limits_(ii, 3)) {
+      else if (state[ii] > joint_limits_(ii, 2)) {
 	
 	cout << "joint[" << ii << "] = " << state[ii] << " > limit = " << joint_limits_(ii, 3) << "\n";
 	
-	lock.push_back(ii);
+	locked.push_back(ii);
 	cur.push_back(state[ii]);
-	des.push_back(joint_limits_(ii, 3));////2));
+	des.push_back(joint_limits_(ii, 3));
       }
     }
     
-    jl.ndim = lock.size();
+    jl.ndim = locked.size();
     jl.current = Vector::Map(&cur[0], jl.ndim);
     jl.desired = Vector::Map(&des[0], jl.ndim);
     jl.Jacobian = Matrix::Zero(jl.ndim, state.size());
     for (size_t ii(0); ii < jl.ndim; ++ii) {
-      jl.Jacobian(ii, lock[ii]) = 1.0;
+      jl.Jacobian(ii, locked[ii]) = 1.0;
     }
   }
   

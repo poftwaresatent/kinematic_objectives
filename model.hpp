@@ -55,7 +55,7 @@ namespace kinematic_elastic {
     */
     bool checkJointLimits (Vector const & state) const;
     
-    void createJointLimitTask (Vector const & state, task_s & jl) const;
+    void createJointLimitTask (Vector const & state, task_s & jl, vector<size_t> & locked) const;
 
     //protected: or something...
     
