@@ -75,34 +75,51 @@ static inline double bound (double lower, double value, double upper)
 }
 
 
-class Waypoint
+class Robot
+  : public Model
 {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
-  Waypoint (Model const & model, Vector const & state)
-    : model_(model),
+  explicit Robot (Vector const & state)
+    : Model(4),
       radius_(0.5),
       len_a_(0.8),
       len_b_(0.6),
-      state_(state),
       pos_a_(2),
-      pos_b_(2),
-      eetask_(4, 2, 0.1),
-      basetask_(4, 2, 0.1)
+      pos_b_(2)
   {
-    task_.push_back(&eetask_);
-    task_.push_back(&basetask_);
+    // yet another subtlety: soft limits must not be too close to hard
+    // limits, otherwise we get jitter from the joint-limit avoidance
+    // algorithm.
+
+    joint_limits_(2, 0) = -90.0*deg;
+    joint_limits_(2, 1) = -89.0*deg;
+    joint_limits_(2, 2) =  89.0*deg;
+    joint_limits_(2, 3) =  90.0*deg;
+
+    joint_limits_(3, 0) = -120.0*deg;
+    joint_limits_(3, 1) = -119.0*deg;
+    joint_limits_(3, 2) =  119.0*deg;
+    joint_limits_(3, 3) =  120.0*deg;
     
-    basetask_.Jx <<
-      1, 0, 0, 0,
-      0, 1, 0, 0;
-    
-    setState (state);
-    for (size_t ii(0); ii < task_.size(); ++ii) {
-      task_[ii]->xdes = task_[ii]->xcur;
-      task_[ii]->dx = Vector::Zero(4);
+    update(state);
+  }
+  
+  void update (Vector const & state)
+  {
+    if (state.size() != 4) {
+      errx (EXIT_FAILURE, "only NDOF=4 allowed for now...");
     }
+    state_ = state;
+    
+    ac2_ = len_a_ * cos(state_[2]);
+    as2_ = len_a_ * sin(state_[2]);
+    bc23_ = len_b_ * cos(state_[2] + state_[3]);
+    bs23_ = len_b_ * sin(state_[2] + state_[3]);
+    
+    pos_a_ << state_[0] + ac2_, state_[1] + as2_;
+    pos_b_ << pos_a_[0] + bc23_, pos_a_[1] + bs23_;
   }
   
   void draw (cairo_t * cr, double pixelsize)
@@ -125,14 +142,14 @@ public:
     cairo_set_line_width (cr, 1.0 / pixelsize);
     cairo_move_to (cr, state_[0], state_[1]);
     cairo_arc (cr, state_[0], state_[1], 0.1,
-	       bound(-2.0*M_PI, model_.joint_limits_(2, 0), 2.0*M_PI),
-	       bound(-2.0*M_PI, model_.joint_limits_(2, 3), 2.0*M_PI));
+	       bound(-2.0*M_PI, joint_limits_(2, 0), 2.0*M_PI),
+	       bound(-2.0*M_PI, joint_limits_(2, 3), 2.0*M_PI));
     cairo_line_to (cr, state_[0], state_[1]);
     cairo_stroke (cr);
     cairo_move_to (cr, pos_a_[0], pos_a_[1]);
     cairo_arc (cr, pos_a_[0], pos_a_[1], 0.1,
-	       bound(-2.0*M_PI, state_[2] + model_.joint_limits_(3, 0), 2.0*M_PI),
-	       bound(-2.0*M_PI, state_[2] + model_.joint_limits_(3, 3), 2.0*M_PI));
+	       bound(-2.0*M_PI, state_[2] + joint_limits_(3, 0), 2.0*M_PI),
+	       bound(-2.0*M_PI, state_[2] + joint_limits_(3, 3), 2.0*M_PI));
     cairo_line_to (cr, pos_a_[0], pos_a_[1]);
     cairo_stroke (cr);
     
@@ -144,14 +161,64 @@ public:
     cairo_line_to (cr, pos_b_[0], pos_b_[1]);
     cairo_stroke (cr);
     
-    // thin line for first task
+    cairo_restore(cr);
+  }
+
+  //protected: or whatnot...
+  
+  double const radius_;
+  double const len_a_;
+  double const len_b_;
+  
+  Vector state_;
+  Vector pos_a_;
+  Vector pos_b_;
+  
+  double ac2_;
+  double as2_;
+  double bc23_;
+  double bs23_;
+};
+
+
+class Waypoint
+{
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  
+  explicit Waypoint (Vector const & state)
+    : model_(state),
+      eetask_(4, 2, 0.1),
+      basetask_(4, 2, 0.1)
+  {
+    task_.push_back(&eetask_);
+    task_.push_back(&basetask_);
+    
+    basetask_.Jx <<
+      1, 0, 0, 0,
+      0, 1, 0, 0;
+    
+    update(state);
+    for (size_t ii(0); ii < task_.size(); ++ii) {
+      task_[ii]->xdes = task_[ii]->xcur;
+      task_[ii]->dx = Vector::Zero(4);
+    }
+  }
+  
+  void draw (cairo_t * cr, double pixelsize)
+  {
+    model_.draw(cr, pixelsize);
+    
+    cairo_save (cr);
+    
+    // thin line for end effector task
     cairo_set_source_rgb (cr, 1.0, 0.4, 0.4);
     cairo_set_line_width (cr, 1.0 / pixelsize);
     cairo_move_to (cr, eetask_.xcur[0], eetask_.xcur[1]);
     cairo_line_to (cr, eetask_.xdes[0], eetask_.xdes[1]);
     cairo_stroke (cr);
     
-    // thin line for second task
+    // thin line for base task
     cairo_set_source_rgb (cr, 0.4, 1.0, 0.4);
     cairo_move_to (cr, basetask_.xcur[0], basetask_.xcur[1]);
     cairo_line_to (cr, basetask_.xdes[0], basetask_.xdes[1]);
@@ -184,47 +251,29 @@ public:
     basetask_.dx = basetask_.xdes - basetask_.xcur;
   }
   
-  void setState (Vector const & state)
+  void update (Vector const & state)
   {
-    if (state.size() != 4) {
-      errx (EXIT_FAILURE, "only NDOF=4 allowed for now...");
-    }
-    state_ = state;
+    model_.update(state);
     
-    double const ac2(len_a_ * cos(state_[2]));
-    double const as2(len_a_ * sin(state_[2]));
-    double const bc23(len_b_ * cos(state_[2] + state_[3]));
-    double const bs23(len_b_ * sin(state_[2] + state_[3]));
-    
-    pos_a_ << state_[0] + ac2, state_[1] + as2;
-    pos_b_ << pos_a_[0] + bc23, pos_a_[1] + bs23;
-    
-    eetask_.xcur = pos_b_;
+    eetask_.xcur = model_.pos_b_;
     eetask_.dx = eetask_.xdes - eetask_.xcur;
     eetask_.Jx <<
-      1, 0, -as2 - bs23, -bs23,
-      0, 1,  ac2 + bc23,  bc23;
+      1, 0, -model_.as2_ - model_.bs23_, -model_.bs23_,
+      0, 1,  model_.ac2_ + model_.bc23_,  model_.bc23_;
     
-    basetask_.xcur << state_[0], state_[1];
+    basetask_.xcur << state[0], state[1];
     basetask_.dx = basetask_.xdes - basetask_.xcur;
   }
   
-  Vector const & getState () const { return state_; }
+  Model const & getModel () const { return model_; }
+  
+  Vector const & getState () const { return model_.state_; }
   
   tasklist_t const getTasks () const { return task_; }
   
   
 private:  
-  Model const & model_;
-  
-  double const radius_;
-  double const len_a_;
-  double const len_b_;
-  
-  Vector state_;
-  Vector pos_a_;
-  Vector pos_b_;
-  
+  Robot model_;
   task_s eetask_;
   task_s basetask_;
   tasklist_t task_;
@@ -238,25 +287,6 @@ class Elastic
 public:
   typedef list<Waypoint *> path_t;
 
-  Elastic()
-    : model_(4)
-  {
-    // yet another subtlety: soft limits must not be too close to hard
-    // limits, otherwise we get jitter from the joint-limit avoidance
-    // algorithm.
-
-    model_.joint_limits_(2, 0) = -90.0*deg;
-    model_.joint_limits_(2, 1) = -89.0*deg;
-    model_.joint_limits_(2, 2) =  89.0*deg;
-    model_.joint_limits_(2, 3) =  90.0*deg;
-
-    model_.joint_limits_(3, 0) = -120.0*deg;
-    model_.joint_limits_(3, 1) = -119.0*deg;
-    model_.joint_limits_(3, 2) =  119.0*deg;
-    model_.joint_limits_(3, 3) =  120.0*deg;
-  }
-  
-  
   ~Elastic ()
   {
     clear();
@@ -287,7 +317,7 @@ public:
       80.0 * deg,
       - 40.0 * deg;
     
-    wpt_ = new Waypoint(model_, posture);
+    wpt_ = new Waypoint(posture);
     wpt_->setEEGoal(eegoal);
     wpt_->setBaseGoal(basegoal);
     path_.push_back (wpt_);
@@ -306,8 +336,8 @@ public:
       }
       (*ii)->setEEGoal(eegoal);
       (*ii)->setBaseGoal(basegoal);
-      Vector dq(algorithm(model_, (*ii)->getState(), (*ii)->getTasks(), dbgos, "  "));
-      (*ii)->setState ((*ii)->getState() + dq);
+      Vector dq(algorithm((*ii)->getModel(), (*ii)->getState(), (*ii)->getTasks(), dbgos, "  "));
+      (*ii)->update ((*ii)->getState() + dq);
     }
   }
   
@@ -321,7 +351,6 @@ public:
 private:
   path_t path_;
   Waypoint * wpt_;
-  Model model_;			// where should this live?
 };
 
 
