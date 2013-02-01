@@ -59,8 +59,9 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 static Vector eegoal(2);
+static Vector ellbowgoal(2);
 static Vector basegoal(2);
-static Vector * handle[] = { &eegoal, &basegoal, 0 };
+static Vector * handle[] = { &eegoal, &ellbowgoal, &basegoal, 0 };
 static Vector * grabbed(0);
 static double grab_radius(0.2);
 static Vector grab_offset(2);
@@ -352,9 +353,11 @@ public:
   
   Waypoint()
     : eetask_(3, Vector::Zero(2)),
+      ellbowtask_(1, Vector::Zero(2)),
       basetask_(0, Vector::Zero(2))
   {
     tasks_.push_back(&eetask_);
+    tasks_.push_back(&ellbowtask_);
     tasks_.push_back(&basetask_);
   }
   
@@ -375,6 +378,13 @@ public:
     cairo_set_line_width(cr, 1.0 / pixelsize);
     cairo_move_to(cr, eetask_.gpoint_[0], eetask_.gpoint_[1]);
     cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
+    cairo_stroke(cr);
+    
+    // thin line for ellbox task
+    cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_move_to(cr, ellbowtask_.gpoint_[0], ellbowtask_.gpoint_[1]);
+    cairo_line_to(cr, ellbowtask_.goal_[0], ellbowtask_.goal_[1]);
     cairo_stroke(cr);
     
     // thin line for base task
@@ -398,6 +408,12 @@ public:
   void setEEGoal(Vector const & goal)
   {
     eetask_.goal_ = goal;
+  }
+  
+  
+  void setEllbowGoal(Vector const & goal)
+  {
+    ellbowtask_.goal_ = goal;
   }
   
   
@@ -490,6 +506,7 @@ protected:
   
 private:  
   PositionTask eetask_;
+  PositionTask ellbowtask_;
   PositionTask basetask_;
   
   // Don't you wish C++ templates allowed polymorphism on the
@@ -533,11 +550,15 @@ public:
     eegoal <<
       1.0,
       dimy - 1.0;
+    ellbowgoal <<
+      dimx * 0.5,
+      dimy * 0.5;
     basegoal <<
       dimx - 1.0,
       1.0;
     
     wpt_->setEEGoal(eegoal);
+    wpt_->setEllbowGoal(ellbowgoal);
     wpt_->setBaseGoal(basegoal);
     path_.push_back(wpt_);
     
@@ -552,6 +573,7 @@ public:
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
       (*ii)->setEEGoal(eegoal);
+      (*ii)->setEllbowGoal(ellbowgoal);
       (*ii)->setBaseGoal(basegoal);
       if ( ! (*ii)->update()) {
 	return false;
@@ -628,6 +650,10 @@ static gint cb_expose(GtkWidget * ww,
   
   cairo_set_source_rgba(cr, 0.6, 0.0, 0.0, 0.5);
   cairo_arc(cr, eegoal[0], eegoal[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill(cr);
+  
+  cairo_set_source_rgba(cr, 0.0, 0.0, 0.6, 0.5);
+  cairo_arc(cr, ellbowgoal[0], ellbowgoal[1], grab_radius, 0., 2. * M_PI);
   cairo_fill(cr);
   
   cairo_set_source_rgba(cr, 0.0, 0.6, 0.0, 0.5);
