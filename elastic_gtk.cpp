@@ -105,19 +105,28 @@ public:
   virtual bool init(Model const & model)
   {
     step_hint_ = 0.1;
-    gpoint_ = model.frame(node_) * point_;
+    Eigen::Vector3d tmp1, tmp2;
+    tmp1 << point_[0], point_[1], 0.0;
+    tmp2 = model.frame(node_) * tmp1;
+    gpoint_.resize(2);
+    gpoint_ << tmp2[0], tmp2[1];
     goal_ = gpoint_;
     delta_ = Vector::Zero(point_.size());
-    model.computeJx(node_, point_, Jacobian_);
+    Matrix tmp3(model.computeJx(node_, gpoint_));
+    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
     return true;
   }
   
   
   virtual bool update(Model const & model)
   {
-    gpoint_ = model.frame(node_) * point_;
+    Eigen::Vector3d tmp1, tmp2;
+    tmp1 << point_[0], point_[1], 0.0;
+    tmp2 = model.frame(node_) * tmp1;
+    gpoint_ << tmp2[0], tmp2[1];
     delta_ = goal_ - gpoint_;
-    model.computeJx(node_, gpoint_, Jacobian_);
+    Matrix tmp3(model.computeJx(node_, gpoint_));
+    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
     return true;
   }
   
@@ -146,16 +155,53 @@ public:
   }
   
   
-  virtual Transform const & frame(size_t node) const
+  virtual Transform frame(size_t node) const
   {
-    errx (EXIT_FAILURE, "implement Robot::frame()");
-    return Transform::Identity();
+    Transform tf(Transform::Identity());
+    switch (node) {
+    case 0:
+      tf.translation() << state_[0], state_[1], 0.0;
+      break;
+    case 1:
+      tf.translation() << pos_a_[0], pos_a_[1], 0.0;
+      tf.linear() << c2_, -s2_, 0.0, s2_, c2_, 0.0, 0.0, 0.0, 1.0;
+      break;
+    case 2:
+      tf.translation() << pos_b_[0], pos_b_[1], 0.0;
+      tf.linear() << c23_, -s23_, 0.0, s23_, c23_, 0.0, 0.0, 0.0, 1.0;
+      break;
+    case 3:
+      tf.translation() << pos_c_[0], pos_c_[1], 0.0;
+      tf.linear() << c234_, -s234_, 0.0, s234_, c234_, 0.0, 0.0, 0.0, 1.0;
+      break;
+    default:
+      errx (EXIT_FAILURE, "Robot::frame() called on invalid node %zu", node);
+    }
+    return tf;
   }
   
   
-  virtual void computeJx(size_t node, Vector const & gpoint, Matrix & Jacobian) const
+  virtual Matrix computeJx(size_t node, Vector const & gpoint) const
   {
-    errx (EXIT_FAILURE, "implement Robot::computeJx()");
+    Matrix Jx(Matrix::Zero(3, 5));
+    Vector delta;
+    switch (node) {
+    case 3:
+      delta = gpoint - pos_c_;
+      Jx.block(0, 4, 3, 1) << -delta[1], delta[0], 1.0;
+    case 2:
+      delta = gpoint - pos_b_;
+      Jx.block(0, 3, 3, 1) << -delta[1], delta[0], 1.0;
+    case 1:
+      delta = gpoint - pos_a_;
+      Jx.block(0, 2, 3, 1) << -delta[1], delta[0], 1.0;
+    case 0:
+      Jx.block(0, 0, 2, 2) = Matrix::Identity(2, 2);
+      break;
+    default:
+      errx (EXIT_FAILURE, "Robot::computeJx() called on invalid node %zu", node);
+    }
+    return Jx;
   }
   
   
@@ -189,14 +235,22 @@ public:
     }
     state_ = state;
     
-    ac2_ = len_a_ * cos(state_[2]);
-    as2_ = len_a_ * sin(state_[2]);
+    c2_ = cos(state_[2]);
+    s2_ = sin(state_[2]);
+    ac2_ = len_a_ * c2_;
+    as2_ = len_a_ * s2_;
+    
     q23_ = state_[2] + state_[3];
-    bc23_ = len_b_ * cos(q23_);
-    bs23_ = len_b_ * sin(q23_);
+    c23_ = cos(q23_);
+    s23_ = sin(q23_);
+    bc23_ = len_b_ * c23_;
+    bs23_ = len_b_ * s23_;
+    
     q234_ = q23_ + state_[4];
-    cc234_ = len_c_ * cos(q234_);
-    cs234_ = len_c_ * sin(q234_);
+    c234_ = cos(q234_);
+    s234_ = sin(q234_);
+    cc234_ = len_c_ * c234_;
+    cs234_ = len_c_ * s234_;
     
     pos_a_ <<
       state_[0] + ac2_,
@@ -269,6 +323,12 @@ public:
   Vector pos_b_;
   Vector pos_c_;
   
+  double c2_;
+  double s2_;
+  double c23_;
+  double s23_;
+  double c234_;
+  double s234_;
   double q23_;
   double q234_;
   double ac2_;
@@ -286,7 +346,7 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
   Waypoint()
-    : eetask_(4, Vector::Zero(2)),
+    : eetask_(3, Vector::Zero(2)),
       basetask_(0, Vector::Zero(2))
   {
     tasks_.push_back(&eetask_);

@@ -40,9 +40,9 @@
 namespace kinematic_elastic {
   
   
-  void stack (Vector const & v1,
-	      Vector const & v2,
-	      Vector & vv)
+  void stackVector (Vector const & v1,
+		    Vector const & v2,
+		    Vector & vv)
   {
     vv.resize(v1.size() + v2.size());
     vv.block(0,         0, v1.size(), 1) = v1;
@@ -50,9 +50,9 @@ namespace kinematic_elastic {
   }
   
   
-  void stack (Matrix const & m1,
-	      Matrix const & m2,
-	      Matrix & mm)
+  void stackMatrix (Matrix const & m1,
+		    Matrix const & m2,
+		    Matrix & mm)
   {
     mm.resize(m1.rows() + m2.rows(), m1.cols());
     mm.block(0, 0, m1.rows(), m1.cols()) = m1;

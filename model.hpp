@@ -48,8 +48,8 @@ namespace kinematic_elastic {
   {
   public:
     virtual bool update(Vector const & state) = 0;
-    virtual Transform const & frame(size_t node) const = 0;
-    virtual void computeJx(size_t node, Vector const & gpoint, Matrix & Jacobian) const = 0;
+    virtual Transform frame(size_t node) const = 0;
+    virtual Matrix computeJx(size_t node, Vector const & gpoint) const = 0;
   };
   
 }

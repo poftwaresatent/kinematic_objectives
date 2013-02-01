@@ -67,7 +67,7 @@ namespace kinematic_elastic {
 	}
       }
       size_t const ndof((*begin)->Jacobian_.cols());
-      delta_.resize(ndof);
+      delta_.resize(ttnrows);
       Jacobian_.resize(ttnrows, ndof);
       for (size_t row(0); begin != end; row += (*begin++)->Jacobian_.rows()) {
 	delta_.block(   row, 0, (*begin)->Jacobian_.rows(),    1) = (*begin)->delta_;
