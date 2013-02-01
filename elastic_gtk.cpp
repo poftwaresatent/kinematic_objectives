@@ -165,15 +165,15 @@ public:
       tf.translation() << state_[0], state_[1], 0.0;
       break;
     case 1:
-      tf.translation() << pos_a_[0], pos_a_[1], 0.0;
+      tf.translation() << state_[0], state_[1], 0.0;
       tf.linear() << c2_, -s2_, 0.0, s2_, c2_, 0.0, 0.0, 0.0, 1.0;
       break;
     case 2:
-      tf.translation() << pos_b_[0], pos_b_[1], 0.0;
+      tf.translation() << pos_a_[0], pos_a_[1], 0.0;
       tf.linear() << c23_, -s23_, 0.0, s23_, c23_, 0.0, 0.0, 0.0, 1.0;
       break;
     case 3:
-      tf.translation() << pos_c_[0], pos_c_[1], 0.0;
+      tf.translation() << pos_b_[0], pos_b_[1], 0.0;
       tf.linear() << c234_, -s234_, 0.0, s234_, c234_, 0.0, 0.0, 0.0, 1.0;
       break;
     default:
@@ -356,6 +356,8 @@ public:
       ellbowtask_(1, Vector::Zero(2)),
       basetask_(0, Vector::Zero(2))
   {
+    eetask_.point_ << robot_.len_c_, 0.0;
+    ellbowtask_.point_ << robot_.len_a_, 0.0;
     tasks_.push_back(&eetask_);
     tasks_.push_back(&ellbowtask_);
     tasks_.push_back(&basetask_);
