@@ -34,24 +34,67 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_ALGORITHM_HPP
-#define KINEMATIC_ELASTIC_ALGORITHM_HPP
-
-#include "kinematic_elastic.hpp"
+#include "task.hpp"
+#include <iostream>
 
 
 namespace kinematic_elastic {
   
-  class JointLimits;
-  class TaskData;
+  
+  void dump (Vector const & state,
+	     tasklist_t const & tasklist,
+	     Vector const & dq)
+  {
+    for (ssize_t ii(0); ii < state.size(); ++ii) {
+      cout << state[ii] << "  ";
+    }
+    for (size_t ii(0); ii < tasklist.size(); ++ii) {
+      cout << "  ";
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << tasklist[ii]->xcur[jj] << "  ";
+      }
+    }
+    cout << "  ";
+    for (ssize_t ii(0); ii < dq.size(); ++ii) {
+      cout << dq[ii] << "  ";
+    }
+    cout << "\n";
+  }
   
   
-  Vector algorithm (JointLimits const & joint_limits,
-		    Vector const & state,
-		    vector<TaskData *> const & tasklist,
-		    ostream * dbgos = 0,
-		    char const * dbgpre = "");
-  
-}
+  void dbg (Vector const & state,
+	    tasklist_t const & tasklist,
+	    Vector const & dq)
+  {
+    cout << "==================================================\n"
+	 << "state:";
+    for (ssize_t ii(0); ii < state.size(); ++ii) {
+      cout << "\t" << state[ii];
+    }
+    for (size_t ii(0); ii < tasklist.size(); ++ii) {
+      cout << "\ntask " << ii << "\n";
+      cout << "  current:";
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << "\t" << tasklist[ii]->xcur[jj];
+      }
+      cout << "\n  desired:";
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << "\t" << tasklist[ii]->xdes[jj];
+      }
+      cout << "\n  delta:";
+      for (size_t jj(0); jj < tasklist[ii]->ndim; ++jj) {
+	cout << "\t" << tasklist[ii]->dx[jj];
+      }
+      cout << "\n  Jacobian:";	// hardcoded for 1xN matrices
+      for (ssize_t jj(0); jj < state.size(); ++jj) {
+	cout << "\t" << tasklist[ii]->Jx(0, jj);
+      }
+    }
+    cout << "\ndelta_q:";
+    for (ssize_t ii(0); ii < dq.size(); ++ii) {
+      cout << "\t" << dq[ii];
+    }
+    cout << "\n";
+  }
 
-#endif // KINEMATIC_ELASTIC_ALGORITHM_HPP
+}

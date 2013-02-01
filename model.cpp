@@ -35,79 +35,8 @@
 /* Author: Roland Philippsen */
 
 #include "model.hpp"
-#include <limits>
-
-#include <iostream>		// dbg only
 
 
 namespace kinematic_elastic {
-  
-  
-  Model::
-  Model (size_t ndof)
-    : joint_limits_(ndof, 4)
-  {
-    for (size_t ii(0); ii < ndof; ++ii) {
-      size_t jj(0);
-      for (; jj < 2; ++jj) {
-	joint_limits_(ii, jj) = -numeric_limits<double>::max();
-      }
-      for (; jj < 4; ++jj) {
-	joint_limits_(ii, jj) =  numeric_limits<double>::max();
-      }
-    }
-  }
-  
-  
-  bool Model::
-  checkJointLimits (Vector const & state)
-    const
-  {
-    for (ssize_t ii(0); ii < state.size(); ++ii) {
-      // Another subtlety: decide to lock joints based on soft limit,
-      // but lock them to hard limit.
-      if (state[ii] < joint_limits_(ii, 1)) {
-	return false;
-      }
-      if (state[ii] > joint_limits_(ii, 2)) {
-	return false;
-      }
-    }
-    return true;
-  }
-  
-  
-  void Model::
-  createJointLimitTask (Vector const & state,
-			task_s & jl,
-			vector<size_t> & locked)
-    const
-  {
-    jl.b_max = numeric_limits<double>::max();
-    
-    vector<double> cur, des;
-    locked.clear();
-    for (ssize_t ii(0); ii < state.size(); ++ii) {
-      if (state[ii] < joint_limits_(ii, 1)) {
-	locked.push_back(ii);
-	cur.push_back(state[ii]);
-	des.push_back(joint_limits_(ii, 0));
-      }
-      else if (state[ii] > joint_limits_(ii, 2)) {
-	locked.push_back(ii);
-	cur.push_back(state[ii]);
-	des.push_back(joint_limits_(ii, 3));
-      }
-    }
-    
-    jl.ndim = locked.size();
-    jl.xcur = Vector::Map(&cur[0], jl.ndim);
-    jl.xdes = Vector::Map(&des[0], jl.ndim);
-    jl.dx = jl.xdes - jl.xcur;
-    jl.Jx = Matrix::Zero(jl.ndim, state.size());
-    for (size_t ii(0); ii < jl.ndim; ++ii) {
-      jl.Jx(ii, locked[ii]) = 1.0;
-    }
-  }
   
 }

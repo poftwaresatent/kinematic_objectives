@@ -91,8 +91,8 @@ list (APPEND SRCS
   kinematic_elastic.cpp
   task.cpp
   model.cpp
+  joint_limits.cpp
   algorithm.cpp
-  mistry_algorithm.cpp
   pseudo_inverse.cpp
   print.cpp
   )

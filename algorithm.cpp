@@ -37,6 +37,8 @@
 #include "algorithm.hpp"
 #include "pseudo_inverse.hpp"
 #include "print.hpp"
+#include "task.hpp"
+#include "joint_limits.hpp"
 #include <Eigen/LU>
 #include <iostream>
 
@@ -47,20 +49,20 @@ namespace kinematic_elastic {
   /**
      \pre tl must not be empty, and tl[0] must be non-singular.
   */
-  static Vector compute_dq (tasklist_t const & tl,
+  static Vector compute_dq (vector<TaskData*> const & tl,
 			    ostream * dbgos,
 			    char const * dbgpre)
   {
     Matrix Ja_inv;
-    pseudo_inverse_nonsingular (tl[0]->Jx, Ja_inv);
-    Vector dq(Ja_inv * tl[0]->dx);
+    pseudo_inverse_nonsingular (tl[0]->Jacobian_, Ja_inv);
+    Vector dq(Ja_inv * tl[0]->delta_);
     
     if (dbgos) {
       *dbgos << dbgpre << "primary task:\n";
       string pre (dbgpre);
       pre += "  ";
-      print (tl[0]->dx, *dbgos, "dxa",    pre);
-      print (tl[0]->Jx, *dbgos, "Ja",     pre);
+      print (tl[0]->delta_, *dbgos, "dxa",    pre);
+      print (tl[0]->Jacobian_, *dbgos, "Ja",     pre);
       print (Ja_inv,    *dbgos, "Ja_inv", pre);
       print (dq,        *dbgos, "dq",     pre);
     }
@@ -73,21 +75,21 @@ namespace kinematic_elastic {
     }
     
     Matrix Jb_inv;
-    pseudo_inverse_damped (tl[1]->Jx, 1.0 / tl[1]->b_max, Jb_inv);
-    size_t const ndof(tl[0]->Jx.cols());
-    Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * tl[0]->Jx);
-    dq +=  Na * Jb_inv * tl[1]->dx;
+    pseudo_inverse_damped (tl[1]->Jacobian_, 1.0 / tl[1]->step_hint_, Jb_inv);
+    size_t const ndof(tl[0]->Jacobian_.cols());
+    Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * tl[0]->Jacobian_);
+    dq +=  Na * Jb_inv * tl[1]->delta_;
     
     if (dbgos) {
       Matrix Na_times_Jb_inv(Na * Jb_inv);
-      Vector dqb(Na_times_Jb_inv * tl[1]->dx);
+      Vector dqb(Na_times_Jb_inv * tl[1]->delta_);
       
       *dbgos << dbgpre << "secondary task:\n";
       string pre (dbgpre);
       pre += "  ";
       print (Na,              *dbgos, "Na", pre);
-      print (tl[1]->dx,       *dbgos, "dxb", pre);
-      print (tl[1]->Jx,       *dbgos, "Jb", pre);
+      print (tl[1]->delta_,       *dbgos, "dxb", pre);
+      print (tl[1]->Jacobian_,       *dbgos, "Jb", pre);
       print (Jb_inv,          *dbgos, "Jb_inv", pre);
       print (Na_times_Jb_inv, *dbgos, "Na * Jb_inv", pre);
       print (dqb,             *dbgos, "Na * Jb_inv * dxb", pre);
@@ -101,18 +103,18 @@ namespace kinematic_elastic {
       return dq;
     }
     
-    Matrix Nb(Matrix::Identity(ndof, ndof) - Jb_inv * tl[1]->Jx);
+    Matrix Nb(Matrix::Identity(ndof, ndof) - Jb_inv * tl[1]->Jacobian_);
     Matrix Jc_inv;
-    pseudo_inverse_damped (tl[2]->Jx, 1.0 / tl[2]->b_max, Jc_inv);
-    dq += Na * Nb * Jc_inv * tl[2]->dx;
+    pseudo_inverse_damped (tl[2]->Jacobian_, 1.0 / tl[2]->step_hint_, Jc_inv);
+    dq += Na * Nb * Jc_inv * tl[2]->delta_;
     
     if (dbgos) {
       *dbgos << dbgpre << "remainder:\n";
       string pre (dbgpre);
       pre += "  ";
       print (Nb,        *dbgos, "Nb",     pre);
-      print (tl[2]->dx, *dbgos, "dxc",    pre);
-      print (tl[2]->Jx, *dbgos, "Jc",     pre);
+      print (tl[2]->delta_, *dbgos, "dxc",    pre);
+      print (tl[2]->Jacobian_, *dbgos, "Jc",     pre);
       print (Jc_inv,    *dbgos, "Jc_inv", pre);
       print (dq,        *dbgos, "dq",     pre);
       *dbgos << dbgpre << "DONE\n";
@@ -122,9 +124,9 @@ namespace kinematic_elastic {
   }
   
   
-  Vector algorithm (Model const & model,
+  Vector algorithm (JointLimits const & joint_limits,
 		    Vector const & state,
-		    tasklist_t const & tasklist,
+		    vector<TaskData*> const & tasklist,
 		    ostream * dbgos,
 		    char const * dbgpre)
   {
@@ -132,15 +134,15 @@ namespace kinematic_elastic {
     Vector dq(Vector::Zero(ndof));
     
     if ( ! tasklist.empty()) {
-      tasklist_t tl;
-      task_s tmp1, tmp2;
+      vector<TaskData*> tl;
+      TaskData tmp1, tmp2;
       tl.push_back(tasklist[0]);
       if (tasklist.size() > 1) {
-	tmp1 = stack(tasklist, 0, 2);
+	tmp1.stack(tasklist.begin(), tasklist.begin() + 2);
 	tl.push_back(&tmp1);
       }
       if (tasklist.size() > 3) {
-	tmp2 = stack(tasklist, 2, tasklist.size() - 2);
+	tmp2.stack(tasklist.begin() + 2, tasklist.end());
 	tl.push_back(&tmp2);
       }
       else if (tasklist.size() == 3) {
@@ -150,21 +152,21 @@ namespace kinematic_elastic {
     }
     
     Vector const next_state(state + dq);
-    if (model.checkJointLimits(next_state)) {
+    if (joint_limits.check(next_state)) {
       if (dbgos) {
 	*dbgos << dbgpre << "joint limit check passed\n";
       }
       return dq;
     }
     
-    task_s t_lim;
+    TaskData t_lim;
     vector<size_t> locked;
     // Now here's an intricate point: need to lock based on what we
     // would get AFTER this iteration.
-    model.createJointLimitTask(next_state, t_lim, locked);
+    joint_limits.createTask(next_state, t_lim, locked);
     
     if (tasklist.empty()) {
-      tasklist_t tl;
+      vector<TaskData*> tl;
       tl.push_back(&t_lim);
       dq = compute_dq(tl, dbgos, dbgpre);
       if (dbgos) {
@@ -181,10 +183,10 @@ namespace kinematic_elastic {
       string pre (dbgpre);
       pre += "  ";
       *dbgos << dbgpre << "try removing joints from the primary task...\n";
-      print (t_lim.Jx, *dbgos, "J_lim", pre);
+      print (t_lim.Jacobian_, *dbgos, "J_lim", pre);
     }
     
-    Matrix J_try(tasklist[0]->Jx);
+    Matrix J_try(tasklist[0]->Jacobian_);
     for (size_t ii(0); ii < locked.size(); ++ii) {
       J_try.block(0, locked[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
       if (dbgos) {
@@ -196,11 +198,11 @@ namespace kinematic_elastic {
       if (dbgos) {
 	*dbgos << dbgpre << "primary task remains achievable with locked joints\n";
       }
-      tasklist_t tl;
-      task_s tmp1, tmp2;
-      tmp1 = stack(t_lim, *tasklist[0]);
+      vector<TaskData*> tl;
+      TaskData tmp1, tmp2;
+      tmp1.stack(t_lim, *tasklist[0]);
       // grr, spurious extra work... and maybe not even necessary
-      stack(t_lim.Jx, J_try, tmp1.Jx);
+      stackMatrix(t_lim.Jacobian_, J_try, tmp1.Jacobian_);
       tl.push_back(&tmp1);
       if (tasklist.size() > 1) {
 	// Now this is a bit of an open question. Ideally we should
@@ -227,7 +229,7 @@ namespace kinematic_elastic {
 	// first trial, so why not just reuse that? But beware of
 	// future changes, this code is highly experimental at the
 	// moment.
-	tmp2 = stack(tasklist, 2, tasklist.size() - 2);
+	tmp2.stack(tasklist.begin() + 2, tasklist.end());
 	tl.push_back(&tmp2);
       }
       else if (tasklist.size() == 3) {
@@ -253,13 +255,13 @@ namespace kinematic_elastic {
     // have" category and keep the (original) primary "please try as
     // hard as you can."
     
-    tasklist_t tl;
-    task_s tmp;
+    vector<TaskData*> tl;
+    TaskData tmp;
     tl.push_back(&t_lim);
     tl.push_back(tasklist[0]);
     if (tasklist.size() > 1) {
       if (tasklist.size() > 2) {
-	tmp = stack(tasklist, 1, tasklist.size() - 1);
+	tmp.stack(tasklist.begin() + 1, tasklist.end());
 	tl.push_back(&tmp);
       }
       else {

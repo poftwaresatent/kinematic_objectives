@@ -34,24 +34,51 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_ALGORITHM_HPP
-#define KINEMATIC_ELASTIC_ALGORITHM_HPP
+#ifndef KINEMATIC_ELASTIC_JOINT_LIMITS_HPP
+#define KINEMATIC_ELASTIC_JOINT_LIMITS_HPP
 
 #include "kinematic_elastic.hpp"
 
 
 namespace kinematic_elastic {
+
+  using namespace std;
   
-  class JointLimits;
   class TaskData;
   
   
-  Vector algorithm (JointLimits const & joint_limits,
-		    Vector const & state,
-		    vector<TaskData *> const & tasklist,
-		    ostream * dbgos = 0,
-		    char const * dbgpre = "");
+  class JointLimits
+  {
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    
+    void init(size_t ndof);
+    
+    /**
+       \return True if all joints are within soft joint limits.
+    */
+    bool check(Vector const & state) const;
+    
+    /**
+       For every joint that lies outside hard joint limits, create a
+       task that brings it back to the corresponding soft limit. All
+       such tasks are stacked into one TaskData instance, and the list
+       of violating joint indices is returned as well. If there are no
+       joints that violate their hard joint limits, the task and
+       locked list will be empty.
+    */
+    void createTask (Vector const & state, TaskData & jl, vector<size_t> & locked) const;
+    
+    /**
+       Nx4 matrix, one row per joint, where
+       - col[0] is the lower hard limit
+       - col[1] is the lower soft limit
+       - col[2] is the upper soft limit
+       - col[3] is the upper hard limit
+    */
+    Matrix limits_;
+  };
   
 }
 
-#endif // KINEMATIC_ELASTIC_ALGORITHM_HPP
+#endif // KINEMATIC_ELASTIC_JOINT_LIMITS_HPP

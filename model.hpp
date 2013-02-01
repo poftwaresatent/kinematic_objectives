@@ -37,34 +37,19 @@
 #ifndef KINEMATIC_ELASTIC_MODEL_HPP
 #define KINEMATIC_ELASTIC_MODEL_HPP
 
-#include "task.hpp"
+#include "kinematic_elastic.hpp"
+#include <vector>
 
 
 namespace kinematic_elastic {
   
+  
   class Model
   {
   public:
-    
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    explicit Model (size_t ndof);
-    
-    /**
-       \return True if all joints are within (hard) joint limits.
-    */
-    bool checkJointLimits (Vector const & state) const;
-    
-    void createJointLimitTask (Vector const & state, task_s & jl, vector<size_t> & locked) const;
-
-    //protected: or something...
-    
-    // Nx4 matrix, one row per joint, where
-    // col[0] = lower hard limit
-    // col[1] = lower soft limit
-    // col[2] = upper soft limit
-    // col[3] = upper hard limit
-    Matrix joint_limits_;
+    virtual bool update(Vector const & state) = 0;
+    virtual Transform const & frame(size_t node) const = 0;
+    virtual void computeJx(size_t node, Vector const & gpoint, Matrix & Jacobian) const = 0;
   };
   
 }

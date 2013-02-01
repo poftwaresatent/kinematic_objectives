@@ -39,22 +39,24 @@
 
 #include <Eigen/Core>
 #include <Eigen/StdVector>
+#include <Eigen/Geometry>
 
 
 namespace kinematic_elastic {
   
   typedef Eigen::VectorXd Vector;
   typedef Eigen::MatrixXd Matrix;
+  typedef Eigen::Isometry3d Transform;
   
   using namespace std;
   
-  void stack (Vector const & v1,
-	      Vector const & v2,
-	      Vector & vv);
+  void stackVector (Vector const & v1,
+		    Vector const & v2,
+		    Vector & vv);
   
-  void stack (Matrix const & m1,
-	      Matrix const & m2,
-	      Matrix & mm);
+  void stackMatrix (Matrix const & m1,
+		    Matrix const & m2,
+		    Matrix & mm);
   
 }
 

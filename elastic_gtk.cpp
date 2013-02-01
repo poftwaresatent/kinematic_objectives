@@ -1,41 +1,43 @@
 /*********************************************************************
-* Software License Agreement (BSD License)
-*
-*  Copyright (c) 2013, Willow Garage, Inc.
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions
-*  are met:
-*
-*   * Redistributions of source code must retain the above copyright
-*     notice, this list of conditions and the following disclaimer.
-*   * Redistributions in binary form must reproduce the above
-*     copyright notice, this list of conditions and the following
-*     disclaimer in the documentation and/or other materials provided
-*     with the distribution.
-*   * Neither the name of the Willow Garage nor the names of its
-*     contributors may be used to endorse or promote products derived
-*     from this software without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-*  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-*  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-*  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-*  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-*  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-*  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-*  POSSIBILITY OF SUCH DAMAGE.
-*********************************************************************/
+ * Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2013, Willow Garage, Inc.
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of the Willow Garage nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *********************************************************************/
 
 /* Author: Roland Philippsen */
 
-#include "mistry_algorithm.hpp"
 #include "algorithm.hpp"
+#include "task.hpp"
+#include "model.hpp"
+#include "joint_limits.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -57,14 +59,13 @@ static bool verbose(false);
 static int play(0);
 static Vector eegoal(2);
 static Vector basegoal(2);
-static Vector lasergoal(2);
-static Vector * handle[] = { &eegoal, &basegoal, &lasergoal, 0 };
+static Vector * handle[] = { &eegoal, &basegoal, 0 };
 static Vector * grabbed(0);
 static double grab_radius(0.2);
 static Vector grab_offset(2);
 
 
-static inline double bound (double lower, double value, double upper)
+static inline double bound(double lower, double value, double upper)
 {
   if (value < lower) {
     value = lower;
@@ -76,7 +77,7 @@ static inline double bound (double lower, double value, double upper)
 }
 
 
-static inline double normangle (double phi)
+static inline double normangle(double phi)
 {
   phi = fmod(phi, 2.0 * M_PI);
   if (phi > M_PI) {
@@ -89,15 +90,52 @@ static inline double normangle (double phi)
 }
 
 
+class PositionTask
+  : public Task
+{
+public:
+  PositionTask(size_t node,
+	       Vector const & point)
+    : node_(node),
+      point_(point)
+  {
+  }
+  
+  
+  virtual bool init(Model const & model)
+  {
+    step_hint_ = 0.1;
+    gpoint_ = model.frame(node_) * point_;
+    goal_ = gpoint_;
+    delta_ = Vector::Zero(point_.size());
+    model.computeJx(node_, point_, Jacobian_);
+    return true;
+  }
+  
+  
+  virtual bool update(Model const & model)
+  {
+    gpoint_ = model.frame(node_) * point_;
+    delta_ = goal_ - gpoint_;
+    model.computeJx(node_, gpoint_, Jacobian_);
+    return true;
+  }
+  
+  size_t node_;
+  Vector point_;
+  Vector gpoint_;
+  Vector goal_;
+};
+
+  
 class Robot
   : public Model
 {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
-  explicit Robot (Vector const & state)
-    : Model(5),
-      radius_(0.5),
+  Robot()
+    : radius_(0.5),
       len_a_(0.8),
       len_b_(0.6),
       len_c_(0.3),
@@ -105,6 +143,26 @@ public:
       pos_b_(2),
       pos_c_(2)
   {
+  }
+  
+  
+  virtual Transform const & frame(size_t node) const
+  {
+    errx (EXIT_FAILURE, "implement Robot::frame()");
+    return Transform::Identity();
+  }
+  
+  
+  virtual void computeJx(size_t node, Vector const & gpoint, Matrix & Jacobian) const
+  {
+    errx (EXIT_FAILURE, "implement Robot::computeJx()");
+  }
+  
+  
+  bool init(Vector const & state)
+  {
+    joint_limits_.init(5);
+    
     // // yet another subtlety: soft limits must not be too close to hard
     // // limits, otherwise we get jitter from the joint-limit avoidance
     // // algorithm.
@@ -119,13 +177,15 @@ public:
     // joint_limits_(4, 2) =  119.0 * deg;
     // joint_limits_(4, 3) =  120.0 * deg;
     
-    update(state);
+    return update(state);
   }
   
-  void update (Vector const & state)
+  
+  virtual bool update(Vector const & state)
   {
     if (state.size() != 5) {
-      errx (EXIT_FAILURE, "only NDOF=5 allowed for now...");
+      cerr << "Robot::update(): only NDOF=5 allowed for now...\n";
+      return false;
     }
     state_ = state;
     
@@ -147,52 +207,57 @@ public:
     pos_c_ <<
       pos_b_[0] + cc234_,
       pos_b_[1] + cs234_;
+    
+    return true;
   }
   
-  void draw (cairo_t * cr, double pixelsize)
+  
+  void draw(cairo_t * cr, double pixelsize) const
   {
-    cairo_save (cr);
+    cairo_save(cr);
     
     // translucent disk for base
-    cairo_set_source_rgba (cr, 0.7, 0.7, 0.7, 0.5);
-    cairo_arc (cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
-    cairo_fill (cr);
+    cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 0.5);
+    cairo_arc(cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
+    cairo_fill(cr);
     
     // thick circle outline for base
-    cairo_set_source_rgb (cr, 0.2, 0.2, 0.2);
-    cairo_set_line_width (cr, 3.0 / pixelsize);
-    cairo_arc (cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
-    cairo_stroke (cr);
+    cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
+    cairo_set_line_width(cr, 3.0 / pixelsize);
+    cairo_arc(cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
+    cairo_stroke(cr);
     
     // thin arcs for arm joint limits
-    cairo_set_source_rgb (cr, 0.5, 0.5, 1.0);
-    cairo_set_line_width (cr, 1.0 / pixelsize);
-    cairo_move_to (cr, pos_a_[0], pos_a_[1]);
-    cairo_arc (cr, pos_a_[0], pos_a_[1], 0.1,
-	       bound(-2.0*M_PI, state_[2] + joint_limits_(3, 0), 2.0*M_PI),
-	       bound(-2.0*M_PI, state_[2] + joint_limits_(3, 3), 2.0*M_PI));
-    cairo_line_to (cr, pos_a_[0], pos_a_[1]);
-    cairo_stroke (cr);
-    cairo_move_to (cr, pos_b_[0], pos_b_[1]);
-    cairo_arc (cr, pos_b_[0], pos_b_[1], 0.1,
-	       bound(-2.0*M_PI, q23_ + joint_limits_(4, 0), 2.0*M_PI),
-	       bound(-2.0*M_PI, q23_ + joint_limits_(4, 3), 2.0*M_PI));
-    cairo_line_to (cr, pos_b_[0], pos_b_[1]);
-    cairo_stroke (cr);
+    cairo_set_source_rgb(cr, 0.5, 0.5, 1.0);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_move_to(cr, pos_a_[0], pos_a_[1]);
+    cairo_arc(cr, pos_a_[0], pos_a_[1], 0.1,
+	      bound(-2.0*M_PI, state_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
+	      bound(-2.0*M_PI, state_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
+    cairo_line_to(cr, pos_a_[0], pos_a_[1]);
+    cairo_stroke(cr);
+    cairo_move_to(cr, pos_b_[0], pos_b_[1]);
+    cairo_arc(cr, pos_b_[0], pos_b_[1], 0.1,
+	      bound(-2.0*M_PI, q23_ + joint_limits_.limits_(4, 0), 2.0*M_PI),
+	      bound(-2.0*M_PI, q23_ + joint_limits_.limits_(4, 3), 2.0*M_PI));
+    cairo_line_to(cr, pos_b_[0], pos_b_[1]);
+    cairo_stroke(cr);
     
     // thick line for arms
-    cairo_set_source_rgb (cr, 0.2, 0.2, 0.2);
-    cairo_set_line_width (cr, 3.0 / pixelsize);
-    cairo_move_to (cr, state_[0], state_[1]);
-    cairo_line_to (cr, pos_a_[0], pos_a_[1]);
-    cairo_line_to (cr, pos_b_[0], pos_b_[1]);
-    cairo_line_to (cr, pos_c_[0], pos_c_[1]);
-    cairo_stroke (cr);
+    cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
+    cairo_set_line_width(cr, 3.0 / pixelsize);
+    cairo_move_to(cr, state_[0], state_[1]);
+    cairo_line_to(cr, pos_a_[0], pos_a_[1]);
+    cairo_line_to(cr, pos_b_[0], pos_b_[1]);
+    cairo_line_to(cr, pos_c_[0], pos_c_[1]);
+    cairo_stroke(cr);
     
     cairo_restore(cr);
   }
 
   //protected: or whatnot...
+  
+  JointLimits joint_limits_;
   
   double const radius_;
   double const len_a_;
@@ -220,120 +285,151 @@ class Waypoint
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
-  explicit Waypoint (Vector const & state)
-    : model_(state),
-      eetask_(5, 2, 0.1),
-      basetask_(5, 2, 0.1),
-      lasertask_(5, 1, 0.05)
+  Waypoint()
+    : eetask_(4, Vector::Zero(2)),
+      basetask_(0, Vector::Zero(2))
   {
-    task_.push_back(&lasertask_);
-    task_.push_back(&eetask_);
-    task_.push_back(&basetask_);
-    
-    basetask_.Jx <<
-      1, 0, 0, 0, 0,
-      0, 1, 0, 0, 0;
-    
-    update(state);
-    for (size_t ii(0); ii < task_.size(); ++ii) {
-      task_[ii]->xdes = task_[ii]->xcur;
-      task_[ii]->dx = Vector::Zero(task_[ii]->ndim);
-    }
+    tasks_.push_back(&eetask_);
+    tasks_.push_back(&basetask_);
   }
   
-  void draw (cairo_t * cr, double pixelsize)
+  
+  ~Waypoint()
   {
-    model_.draw(cr, pixelsize);
+  }
+  
+  
+  void draw(cairo_t * cr, double pixelsize)
+  {
+    robot_.draw(cr, pixelsize); // XXXX quickly hacked cast
     
-    cairo_save (cr);
+    cairo_save(cr);
     
     // thin line for end effector task
-    cairo_set_source_rgb (cr, 1.0, 0.4, 0.4);
-    cairo_set_line_width (cr, 1.0 / pixelsize);
-    cairo_move_to (cr, eetask_.xcur[0], eetask_.xcur[1]);
-    cairo_line_to (cr, eetask_.xdes[0], eetask_.xdes[1]);
-    cairo_stroke (cr);
+    cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_move_to(cr, eetask_.gpoint_[0], eetask_.gpoint_[1]);
+    cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
+    cairo_stroke(cr);
     
     // thin line for base task
-    cairo_set_source_rgb (cr, 0.4, 1.0, 0.4);
-    cairo_move_to (cr, basetask_.xcur[0], basetask_.xcur[1]);
-    cairo_line_to (cr, basetask_.xdes[0], basetask_.xdes[1]);
-    cairo_stroke (cr);
+    cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
+    cairo_move_to(cr, basetask_.gpoint_[0], basetask_.gpoint_[1]);
+    cairo_line_to(cr, basetask_.goal_[0], basetask_.goal_[1]);
+    cairo_stroke(cr);
     
-    // thin line for laser task
-    cairo_set_source_rgb (cr, 0.4, 0.4, 1.0);
-    cairo_move_to (cr, model_.pos_c_[0], model_.pos_c_[1]);
-    double const dx(3.0 * cos(lasertask_.xdes[0]));
-    double const dy(3.0 * sin(lasertask_.xdes[0]));
-    cairo_line_to (cr, model_.pos_c_[0] + dx, model_.pos_c_[1] + dy);
-    cairo_stroke (cr);
+    // // thin line for laser task
+    // cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
+    // cairo_move_to(cr, model_.pos_c_[0], model_.pos_c_[1]);
+    // double const dx(3.0 * cos(lasertask_.goal_[0]));
+    // double const dy(3.0 * sin(lasertask_.goal_[0]));
+    // cairo_line_to(cr, model_.pos_c_[0] + dx, model_.pos_c_[1] + dy);
+    // cairo_stroke(cr);
     
-    cairo_restore (cr);
+    cairo_restore(cr);
   }
   
-  void setEEGoal (Vector const & goal)
+  
+  void setEEGoal(Vector const & goal)
   {
-    eetask_.xdes = goal;
-    eetask_.dx = eetask_.xdes - eetask_.xcur;
+    eetask_.goal_ = goal;
   }
   
-  void setBaseGoal (Vector const & goal)
+  
+  void setBaseGoal(Vector const & goal)
   {
-    basetask_.xdes = goal;
-    basetask_.dx = basetask_.xdes - basetask_.xcur;
+    basetask_.goal_ = goal;
   }
   
-  void setLaserGoal (Vector const & goalpoint)
+  
+  // void setLaserGoal(Vector const & goalpoint)
+  // {
+  //   Vector dg(goalpoint - model_.pos_c_);
+  //   lasertask_.goal_ << atan2(dg[1], dg[0]);
+  //   lasertask_.dx << normangle(lasertask_.goal_[0] - lasertask_.xcur[0]);
+  // }
+  
+  
+  bool init(Vector const & state)
   {
-    Vector dg(goalpoint - model_.pos_c_);
-    lasertask_.xdes << atan2(dg[1], dg[0]);
-    lasertask_.dx << normangle(lasertask_.xdes[0] - lasertask_.xcur[0]);
+    if ( ! robot_.init(state)) {
+      cerr << "Waypoint::init(): robot_.init() failed\n";
+      return false;
+    }
+    for (size_t ii(0); ii < tasks_.size(); ++ii) {
+      if ( ! ((Task*)tasks_[ii])->init(robot_)) {
+	cerr << "Waypoint::init(): tasks_[" << ii << "]->init() failed\n";
+	return false;
+      }
+    }
+    next_state_ = state;
+    return true;
   }
   
-  void update (Vector const & state)
+  
+  bool update()
   {
-    model_.update(state);
+    ostream * dbgos(0);
+    if (verbose) {
+      dbgos = &cout;
+      cout << "--------------------------------------------------\n"
+	   << "Waypoint::update()\n";
+    }
     
-    eetask_.xcur = model_.pos_c_;
-    eetask_.dx = eetask_.xdes - eetask_.xcur;
-    eetask_.Jx <<
-      1,
-      0,
-      -model_.as2_ - model_.bs23_ - model_.cs234_,
-      -model_.bs23_ - model_.cs234_,
-      -model_.cs234_,
-      0,
-      1,
-      model_.ac2_ + model_.bc23_ + model_.cc234_,
-      model_.bc23_ + model_.cc234_,
-      model_.cc234_;
+    if ( ! robot_.update(next_state_)) {
+      cerr << "Waypoint::update(): robot_.update() failed\n";
+      return false;
+    }
     
-    basetask_.xcur << state[0], state[1];
-    basetask_.dx = basetask_.xdes - basetask_.xcur;
+    for (size_t ii(0); ii < tasks_.size(); ++ii) {
+      if ( ! ((Task*)tasks_[ii])->update(robot_)) {
+	cerr << "Waypoint::update(): tasks_[" << ii << "]->update() failed\n";
+	return false;
+      }
+    }
     
-    lasertask_.xcur << model_.q234_;
-    lasertask_.dx << normangle(lasertask_.xdes[0] - lasertask_.xcur[0]);
-    // strictly speaking, the Jacobian of the laser task also has
-    // entries for the base... but for now just treat it as a moving
-    // goal when the base moves, even if the laser target point has
-    // not moved.
-    lasertask_.Jx <<
-      0, 0, 1, 1, 1;
+    Vector const dq(algorithm(robot_.joint_limits_,
+			      next_state_, // that's now the current state, btw
+			      tasks_,
+			      dbgos,
+			      "  "));
+    next_state_ += dq;
+    
+    return true;
+    
+    // eetask_.Jx <<
+    //   1,
+    //   0,
+    //   -model_.as2_ - model_.bs23_ - model_.cs234_,
+    //   -model_.bs23_ - model_.cs234_,
+    //   -model_.cs234_,
+    //   0,
+    //   1,
+    //   model_.ac2_ + model_.bc23_ + model_.cc234_,
+    //   model_.bc23_ + model_.cc234_,
+    //   model_.cc234_;
+    
+    // lasertask_.xcur << model_.q234_;
+    // lasertask_.dx << normangle(lasertask_.goal_[0] - lasertask_.xcur[0]);
+    // // strictly speaking, the Jacobian of the laser task also has
+    // // entries for the base... but for now just treat it as a moving
+    // // goal when the base moves, even if the laser target point has
+    // // not moved.
+    // lasertask_.Jx <<
+    //   0, 0, 1, 1, 1;
   }
   
-  Model const & getModel () const { return model_; }
-  
-  Vector const & getState () const { return model_.state_; }
-  
-  tasklist_t const getTasks () const { return task_; }
-  
+protected:
+  Robot robot_;
+  Vector next_state_;
   
 private:  
-  Robot model_;
-  task_s eetask_;
-  task_s basetask_;
-  task_s lasertask_;
-  tasklist_t task_;
+  PositionTask eetask_;
+  PositionTask basetask_;
+  
+  // Don't you wish C++ templates allowed polymorphism on the
+  // collection level based on polymorphism at the item level?
+  vector<TaskData*> tasks_;
 };
 
 
@@ -344,12 +440,12 @@ class Elastic
 public:
   typedef list<Waypoint *> path_t;
 
-  ~Elastic ()
+  ~Elastic()
   {
     clear();
   }
   
-  void clear ()
+  void clear()
   {
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
       delete *ii;
@@ -357,9 +453,17 @@ public:
     path_.clear();
   }
   
-  void init ()
+  
+  bool init(Vector const & state)
   {
     clear();
+    
+    wpt_ = new Waypoint();
+    if ( ! wpt_->init(state)) {
+      delete wpt_;
+      wpt_ = 0;
+      return false;
+    }
     
     eegoal <<
       1.0,
@@ -367,45 +471,31 @@ public:
     basegoal <<
       dimx - 1.0,
       1.0;
-    lasergoal <<
-      dimx - 1.0,
-      dimy - 1.0;
     
-    Vector posture(5);
-    posture <<
-      dimx / 2.0,
-      dimy / 2.0,
-      80.0 * deg,
-      - 40.0 * deg,
-      25.0 * deg;
-    
-    wpt_ = new Waypoint(posture);
     wpt_->setEEGoal(eegoal);
     wpt_->setBaseGoal(basegoal);
-    wpt_->setLaserGoal(lasergoal);
-    path_.push_back (wpt_);
+    path_.push_back(wpt_);
+    
+    return true;
   }
   
-  void update ()
+  
+  bool update()
   {
-    ostream * dbgos(0);
     if (verbose) {
-      dbgos = &cout;
       cout << "\n**************************************************\n";
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      if (verbose) {
-	cout << "--------------------------------------------------\n";
-      }
       (*ii)->setEEGoal(eegoal);
       (*ii)->setBaseGoal(basegoal);
-      (*ii)->setLaserGoal(lasergoal);
-      Vector dq(algorithm((*ii)->getModel(), (*ii)->getState(), (*ii)->getTasks(), dbgos, "  "));
-      (*ii)->update ((*ii)->getState() + dq);
+      if ( ! (*ii)->update()) {
+	return false;
+      }
     }
+    return true;
   }
   
-  void draw (cairo_t * cr, double pixelsize)
+  void draw(cairo_t * cr, double pixelsize)
   {
     for (path_t::reverse_iterator ii(path_.rbegin()); ii != path_.rend(); ++ii) {
       (*ii)->draw(cr, pixelsize);
@@ -421,14 +511,14 @@ private:
 static Elastic elastic;
 
 
-static void update ()
+static void update()
 {
-  elastic.update ();
-  gtk_widget_queue_draw (gw);
+  elastic.update();
+  gtk_widget_queue_draw(gw);
 }
 
 
-static void cb_play (GtkWidget * ww, gpointer data)
+static void cb_play(GtkWidget * ww, gpointer data)
 {
   if (play) {
     play = 0;
@@ -439,59 +529,59 @@ static void cb_play (GtkWidget * ww, gpointer data)
 }
 
 
-static void cb_next (GtkWidget * ww, gpointer data)
+static void cb_next(GtkWidget * ww, gpointer data)
 {
   if (play) {
     play = 0;
   }
   else {
-    update ();
+    update();
   }    
 }
 
 
-static void cb_quit (GtkWidget * ww, gpointer data)
+static void cb_quit(GtkWidget * ww, gpointer data)
 {
   gtk_main_quit();
 }
 
 
-static gint cb_expose (GtkWidget * ww,
-		       GdkEventExpose * ee,
-		       gpointer data)
+static gint cb_expose(GtkWidget * ww,
+		      GdkEventExpose * ee,
+		      gpointer data)
 {
-  cairo_t * cr = gdk_cairo_create (ee->window);
+  cairo_t * cr = gdk_cairo_create(ee->window);
   
-  cairo_set_source_rgb (cr, 1.0, 1.0, 1.0);
-  cairo_rectangle (cr, 0, 0, gw_width, gw_height);
-  cairo_fill (cr);
+  cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+  cairo_rectangle(cr, 0, 0, gw_width, gw_height);
+  cairo_fill(cr);
   
-  cairo_translate (cr, gw_x0, gw_y0);
-  cairo_scale (cr, gw_sx, gw_sy);
+  cairo_translate(cr, gw_x0, gw_y0);
+  cairo_scale(cr, gw_sx, gw_sy);
   
   elastic.draw(cr, gw_sx);
   
-  cairo_set_source_rgba (cr, 0.6, 0.0, 0.0, 0.5);
-  cairo_arc (cr, eegoal[0], eegoal[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill (cr);
+  cairo_set_source_rgba(cr, 0.6, 0.0, 0.0, 0.5);
+  cairo_arc(cr, eegoal[0], eegoal[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill(cr);
   
-  cairo_set_source_rgba (cr, 0.0, 0.6, 0.0, 0.5);
-  cairo_arc (cr, basegoal[0], basegoal[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill (cr);
+  cairo_set_source_rgba(cr, 0.0, 0.6, 0.0, 0.5);
+  cairo_arc(cr, basegoal[0], basegoal[1], grab_radius, 0., 2. * M_PI);
+  cairo_fill(cr);
   
-  cairo_set_source_rgba (cr, 0.0, 0.0, 0.6, 0.5);
-  cairo_arc (cr, lasergoal[0], lasergoal[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill (cr);
+  // cairo_set_source_rgba(cr, 0.0, 0.0, 0.6, 0.5);
+  // cairo_arc(cr, lasergoal[0], lasergoal[1], grab_radius, 0., 2. * M_PI);
+  // cairo_fill(cr);
   
-  cairo_destroy (cr);
+  cairo_destroy(cr);
   
   return TRUE;
 }
 
 
-static gint cb_size_allocate (GtkWidget * ww,
-			      GtkAllocation * aa,
-			      gpointer data)
+static gint cb_size_allocate(GtkWidget * ww,
+			     GtkAllocation * aa,
+			     gpointer data)
 {
   gw_width = aa->width;
   gw_height = aa->height;
@@ -517,9 +607,9 @@ static gint cb_size_allocate (GtkWidget * ww,
 }
 
 
-static gint cb_click (GtkWidget * ww,
-		      GdkEventButton * bb,
-		      gpointer data)
+static gint cb_click(GtkWidget * ww,
+		     GdkEventButton * bb,
+		     gpointer data)
 {
   if (bb->type == GDK_BUTTON_PRESS) {
     Vector point(2);
@@ -542,101 +632,108 @@ static gint cb_click (GtkWidget * ww,
 }
 
 
-static gint cb_motion (GtkWidget * ww,
-		       GdkEventMotion * ee)
+static gint cb_motion(GtkWidget * ww,
+		      GdkEventMotion * ee)
 {
   int mx, my;
   GdkModifierType modifier;
-  gdk_window_get_pointer (ww->window, &mx, &my, &modifier);
+  gdk_window_get_pointer(ww->window, &mx, &my, &modifier);
   
   if (0 != grabbed) {
     Vector point(2);
     point << (mx - gw_x0) / (double) gw_sx, (my - gw_y0) / (double) gw_sy;
     *grabbed = point + grab_offset;
-    gtk_widget_queue_draw (gw);
+    gtk_widget_queue_draw(gw);
   }
   
   return TRUE;
 }
 
 
-static gint idle (gpointer data)
+static gint idle(gpointer data)
 {
   if (play) {
-    update ();
+    update();
   }
   return TRUE;
 }
 
 
-static void init_gui (int * argc, char *** argv)
+static void init_gui(int * argc, char *** argv)
 {
   GtkWidget *window, *vbox, *hbox, *btn;
   
-  gtk_init (argc, argv);
+  gtk_init(argc, argv);
   
-  window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   
-  vbox = gtk_vbox_new (FALSE, 0);
-  gtk_container_add (GTK_CONTAINER (window), vbox);
-  gtk_widget_show (vbox);
+  vbox = gtk_vbox_new(FALSE, 0);
+  gtk_container_add(GTK_CONTAINER (window), vbox);
+  gtk_widget_show(vbox);
   
-  gw = gtk_drawing_area_new ();
-  g_signal_connect (gw, "expose_event", G_CALLBACK (cb_expose), NULL);
-  g_signal_connect (gw, "size_allocate", G_CALLBACK (cb_size_allocate), NULL);
-  g_signal_connect (gw, "button_press_event", G_CALLBACK (cb_click), NULL);
-  g_signal_connect (gw, "motion_notify_event", G_CALLBACK (cb_motion), NULL);
-  gtk_widget_set_events (gw,
-			 GDK_BUTTON_PRESS_MASK |
-			 GDK_BUTTON_RELEASE_MASK |
-			 GDK_BUTTON_MOTION_MASK);
+  gw = gtk_drawing_area_new();
+  g_signal_connect(gw, "expose_event", G_CALLBACK (cb_expose), NULL);
+  g_signal_connect(gw, "size_allocate", G_CALLBACK (cb_size_allocate), NULL);
+  g_signal_connect(gw, "button_press_event", G_CALLBACK (cb_click), NULL);
+  g_signal_connect(gw, "motion_notify_event", G_CALLBACK (cb_motion), NULL);
+  gtk_widget_set_events(gw,
+			GDK_BUTTON_PRESS_MASK |
+			GDK_BUTTON_RELEASE_MASK |
+			GDK_BUTTON_MOTION_MASK);
   
-  gtk_widget_show (gw);
+  gtk_widget_show(gw);
   
-  gtk_widget_set_size_request (gw, gw_width, gw_height);
-  gtk_box_pack_start (GTK_BOX (vbox), gw, TRUE, TRUE, 0);
+  gtk_widget_set_size_request(gw, gw_width, gw_height);
+  gtk_box_pack_start(GTK_BOX (vbox), gw, TRUE, TRUE, 0);
   
-  hbox = gtk_hbox_new (TRUE, 3);
-  gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, TRUE, 0);
-  gtk_widget_show (hbox);
+  hbox = gtk_hbox_new(TRUE, 3);
+  gtk_box_pack_start(GTK_BOX (vbox), hbox, FALSE, TRUE, 0);
+  gtk_widget_show(hbox);
   
-  // btn = gtk_button_new_with_label ("reset");
-  // g_signal_connect (btn, "clicked", G_CALLBACK (cb_reset), NULL);
-  // gtk_box_pack_start (GTK_BOX (hbox), btn, TRUE, TRUE, 0);
-  // gtk_widget_show (btn);
+  // btn = gtk_button_new_with_label("reset");
+  // g_signal_connect(btn, "clicked", G_CALLBACK (cb_reset), NULL);
+  // gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
+  // gtk_widget_show(btn);
   
-  btn = gtk_button_new_with_label ("play");
-  g_signal_connect (btn, "clicked", G_CALLBACK (cb_play), NULL);
-  gtk_box_pack_start (GTK_BOX (hbox), btn, TRUE, TRUE, 0);
-  gtk_widget_show (btn);
+  btn = gtk_button_new_with_label("play");
+  g_signal_connect(btn, "clicked", G_CALLBACK (cb_play), NULL);
+  gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
+  gtk_widget_show(btn);
   
-  btn = gtk_button_new_with_label ("next");
-  g_signal_connect (btn, "clicked", G_CALLBACK (cb_next), NULL);
-  gtk_box_pack_start (GTK_BOX (hbox), btn, TRUE, TRUE, 0);
-  gtk_widget_show (btn);
+  btn = gtk_button_new_with_label("next");
+  g_signal_connect(btn, "clicked", G_CALLBACK (cb_next), NULL);
+  gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
+  gtk_widget_show(btn);
   
-  btn = gtk_button_new_with_label ("quit");
-  g_signal_connect (btn, "clicked", G_CALLBACK (cb_quit), NULL);
-  gtk_box_pack_start (GTK_BOX (hbox), btn, TRUE, TRUE, 0);
-  gtk_widget_show (btn);
+  btn = gtk_button_new_with_label("quit");
+  g_signal_connect(btn, "clicked", G_CALLBACK (cb_quit), NULL);
+  gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
+  gtk_widget_show(btn);
   
-  gtk_idle_add (idle, 0);
+  gtk_idle_add(idle, 0);
   
-  gtk_widget_show (window);
+  gtk_widget_show(window);
 }
 
 
-int main (int argc, char ** argv)
+int main(int argc, char ** argv)
 {
-  init_gui (&argc, &argv);
+  init_gui(&argc, &argv);
   
   if ((argc > 1) && (0 == strcmp("-v", argv[1]))) {
     verbose = true;
   }
   
-  elastic.init ();
+  Vector posture(5);
+  posture <<
+    dimx / 2.0,
+    dimy / 2.0,
+    80.0 * deg,
+    - 40.0 * deg,
+    25.0 * deg;
+  elastic.init(posture);
   
-  gtk_main ();
+  gtk_main();
   
   return 0;
 }

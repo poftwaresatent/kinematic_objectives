@@ -38,41 +38,58 @@
 #define KINEMATIC_ELASTIC_TASK_HPP
 
 #include "kinematic_elastic.hpp"
-#include <iosfwd>
+#include <limits>
 
 
 namespace kinematic_elastic {
   
+  class Model;
   
-  struct task_s {
+  
+  class TaskData
+  {
+  public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    task_s();
-    task_s(size_t ndof, size_t ndim, double b_max);
+    TaskData();
     
-    Vector xcur;
-    Vector xdes;
-    Vector dx;			// xdes - xcur
-    Matrix Jx;
-    double b_max;
-    size_t ndim;
+    void stack(TaskData const & t1, TaskData const & t2);
+    
+    template<typename iterator_t>
+    void stack(iterator_t begin, iterator_t end)
+    {
+      size_t ttnrows(0);
+      step_hint_ = numeric_limits<double>::max();
+      for (iterator_t ii(begin); ii != end; ++ii) {
+	ttnrows += (*ii)->Jacobian_.rows();
+	if (step_hint_ > (*ii)->step_hint_) {
+	  step_hint_ = (*ii)->step_hint_;
+	}
+      }
+      size_t const ndof((*begin)->Jacobian_.cols());
+      delta_.resize(ndof);
+      Jacobian_.resize(ttnrows, ndof);
+      for (size_t row(0); begin != end; row += (*begin++)->Jacobian_.rows()) {
+	delta_.block(   row, 0, (*begin)->Jacobian_.rows(),    1) = (*begin)->delta_;
+	Jacobian_.block(row, 0, (*begin)->Jacobian_.rows(), ndof) = (*begin)->Jacobian_;
+      }
+    }
+    
+    Vector delta_;		// desired - current
+    Matrix Jacobian_;
+    double step_hint_;
   };
   
-  typedef vector<task_s *> tasklist_t;
   
-  
-  task_s stack(task_s const & t1, task_s const & t2);
-  
-  task_s stack(tasklist_t const & tl, size_t first, size_t count);
-  
-  
-  void dump (Vector const & state,
-	     tasklist_t const & tasklist,
-	     Vector const & dq);
-  
-  void dbg (Vector const & state,
-	    tasklist_t const & tasklist,
-	    Vector const & dq);
+  class Task
+    : public TaskData
+  {
+  public:
+    virtual ~Task();
+    
+    virtual bool init(Model const & model) = 0;
+    virtual bool update(Model const & model) = 0;
+  };
   
 }
 
