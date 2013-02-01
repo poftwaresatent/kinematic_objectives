@@ -38,6 +38,7 @@
 #include "task.hpp"
 #include "model.hpp"
 #include "joint_limits.hpp"
+#include "print.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -187,19 +188,23 @@ public:
     Vector delta;
     switch (node) {
     case 3:
-      delta = gpoint - pos_c_;
+      delta = gpoint - pos_b_;
       Jx.block(0, 4, 3, 1) << -delta[1], delta[0], 1.0;
     case 2:
-      delta = gpoint - pos_b_;
+      delta = gpoint - pos_a_;
       Jx.block(0, 3, 3, 1) << -delta[1], delta[0], 1.0;
     case 1:
-      delta = gpoint - pos_a_;
+      delta = gpoint - state_.block(0, 0, 2, 1);
       Jx.block(0, 2, 3, 1) << -delta[1], delta[0], 1.0;
     case 0:
       Jx.block(0, 0, 2, 2) = Matrix::Identity(2, 2);
       break;
     default:
       errx (EXIT_FAILURE, "Robot::computeJx() called on invalid node %zu", node);
+    }
+    if (verbose) {
+      cout << "Robot::computeJx(" << node << ", [" << gpoint[0] << "  " << gpoint[1] << "])\n";
+      print(Jx, cout, "", "  ");
     }
     return Jx;
   }
