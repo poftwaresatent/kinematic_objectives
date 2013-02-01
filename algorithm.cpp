@@ -124,11 +124,11 @@ namespace kinematic_elastic {
   }
   
   
-  Vector algorithm (JointLimits const & joint_limits,
-		    Vector const & state,
-		    vector<TaskData*> const & tasklist,
-		    ostream * dbgos,
-		    char const * dbgpre)
+  Vector algorithm1 (JointLimits const & joint_limits,
+		     Vector const & state,
+		     vector<TaskData*> const & tasklist,
+		     ostream * dbgos,
+		     char const * dbgpre)
   {
     size_t const ndof(state.size());
     Vector dq(Vector::Zero(ndof));
@@ -266,6 +266,134 @@ namespace kinematic_elastic {
       }
       else {
 	tl.push_back(tasklist[1]);
+      }
+    }
+    dq = compute_dq(tl, dbgos, dbgpre);
+    if (dbgos) {
+      *dbgos << dbgpre << "joint limits take precedence over primary task\n";
+    }
+    return dq;
+  }
+  
+  
+  Vector algorithm2 (JointLimits const & joint_limits,
+		     Vector const & state,
+		     vector<TaskData*> const & tasklist,
+		     ostream * dbgos,
+		     char const * dbgpre)
+  {
+    size_t const ndof(state.size());
+    Vector dq(Vector::Zero(ndof));
+    
+    if ( ! tasklist.empty()) {
+      vector<TaskData*> tl;
+      TaskData tmp;
+      tl.push_back(tasklist[0]);
+      if (tasklist.size() > 1) {
+	tl.push_back(tasklist[1]);
+      }
+      if (tasklist.size() > 2) {
+	if (tasklist.size() == 3) {
+	  tl.push_back(tasklist[2]);
+	}
+	else {
+	  tmp.stack(tasklist.begin() + 2, tasklist.end());
+	  tl.push_back(&tmp);
+	}
+      }
+      dq = compute_dq(tl, dbgos, dbgpre);
+    }
+    
+    Vector const next_state(state + dq);
+    if (joint_limits.check(next_state)) {
+      if (dbgos) {
+	*dbgos << dbgpre << "joint limit check passed\n";
+      }
+      return dq;
+    }
+    
+    TaskData t_lim;
+    vector<size_t> locked;
+    // Now here's an intricate point: need to lock based on what we
+    // would get AFTER this iteration.
+    joint_limits.createTask(next_state, t_lim, locked);
+    
+    if (tasklist.empty()) {
+      vector<TaskData*> tl;
+      tl.push_back(&t_lim);
+      dq = compute_dq(tl, dbgos, dbgpre);
+      if (dbgos) {
+	*dbgos << dbgpre << "joint limits adjusted, but empty task list\n";
+      }
+      return dq;
+    }
+    
+    // Try stacking the joint limits on top of the primary task. That
+    // means knocking out the locked joints from the primary task's
+    // Jacobian, too.
+    
+    if (dbgos) {
+      string pre (dbgpre);
+      pre += "  ";
+      *dbgos << dbgpre << "try removing joints from the primary task...\n";
+      print (t_lim.Jacobian_, *dbgos, "J_lim", pre);
+    }
+    
+    Matrix J_try(tasklist[0]->Jacobian_);
+    for (size_t ii(0); ii < locked.size(); ++ii) {
+      J_try.block(0, locked[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
+      if (dbgos) {
+	*dbgos << dbgpre << "  joint " << locked[ii] << " is locked!\n";
+      }
+    }
+    Eigen::FullPivLU<Matrix> plu(J_try * J_try.transpose());
+    if (plu.isInvertible()) {
+      if (dbgos) {
+	*dbgos << dbgpre << "primary task remains achievable with locked joints\n";
+      }
+      vector<TaskData*> tl;
+      TaskData tmp1, tmp2;
+      tmp1.stack(t_lim, *tasklist[0]);
+      // grr, spurious extra work... and maybe not even necessary
+      stackMatrix(t_lim.Jacobian_, J_try, tmp1.Jacobian_);
+      tl.push_back(&tmp1);
+      if (tasklist.size() > 1) {
+	tl.push_back(tasklist[1]);
+      }
+      if (tasklist.size() > 2) {
+	if (tasklist.size() == 3) {
+	  tl.push_back(tasklist[2]);
+	}
+	else {
+	  tmp2.stack(tasklist.begin() + 2, tasklist.end());
+	  tl.push_back(&tmp2);
+	}
+      }
+      // We could also knock the locked joints from the other tasks,
+      // but the null-space projection "should" take care of it anyway
+      // from tl[1] onward.
+      dq = compute_dq(tl, dbgos, dbgpre);
+      if (dbgos) {
+	*dbgos << dbgpre << "joint limits merged into primary task\n";
+      }
+      return dq;
+    }
+    
+    // Well, that didn't work, which means that the primary task
+    // cannot be achieved due to joint limits. The best we can do is
+    // prepend the joint limits to the task list.
+    
+    vector<TaskData*> tl;
+    TaskData tmp;
+    tl.push_back(&t_lim);
+    tl.push_back(tasklist[0]);
+    if (tasklist.size() > 1) {
+      if (tasklist.size() == 2) {
+	tl.push_back(tasklist[1]);
+      }
+      else {
+	tmp.stack(tasklist.begin() + 1, tasklist.end());
+	tl.push_back(&tmp);
       }
     }
     dq = compute_dq(tl, dbgos, dbgpre);

@@ -453,11 +453,11 @@ public:
       }
     }
     
-    Vector const dq(algorithm(robot_.joint_limits_,
-			      next_state_, // that's now the current state, btw
-			      tasks_,
-			      dbgos,
-			      "  "));
+    Vector const dq(algorithm2(robot_.joint_limits_,
+			       next_state_, // that's now the current state, btw
+			       tasks_,
+			       dbgos,
+			       "  "));
     next_state_ += dq;
     
     return true;

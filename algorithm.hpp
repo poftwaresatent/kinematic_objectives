@@ -46,11 +46,23 @@ namespace kinematic_elastic {
   class TaskData;
   
   
-  Vector algorithm (JointLimits const & joint_limits,
-		    Vector const & state,
-		    vector<TaskData *> const & tasklist,
-		    ostream * dbgos = 0,
-		    char const * dbgpre = "");
+  /**
+     Fanciful stacking of primary and secondary.
+  */
+  Vector algorithm1 (JointLimits const & joint_limits,
+		     Vector const & state,
+		     vector<TaskData *> const & tasklist,
+		     ostream * dbgos = 0,
+		     char const * dbgpre = "");
+  
+  /**
+     Straight-up primary and secondary, with all the rest stacked into the third level.
+  */
+  Vector algorithm2 (JointLimits const & joint_limits,
+		     Vector const & state,
+		     vector<TaskData *> const & tasklist,
+		     ostream * dbgos = 0,
+		     char const * dbgpre = "");
   
 }
 
