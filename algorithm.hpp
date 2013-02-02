@@ -65,14 +65,6 @@ namespace kinematic_elastic {
 		     vector<TaskData *> const & tasklist,
 		     ostream * dbgos = 0,
 		     char const * dbgpre = "");
-
-  // Vector algorithm3 (JointLimits & joint_limits,
-  // 		     Vector const & position,
-  // 		     Vector const & velocity,
-  // 		     vector<TaskData *> const & constraints,
-  // 		     vector<TaskData *> const & objectives,
-  // 		     ostream * dbgos = 0,
-  // 		     char const * dbgpre = "");
   
 }
 

@@ -217,28 +217,6 @@ public:
   }
   
   
-  void init(Vector const & state)
-  {
-    joint_limits_.init(5);
-    
-    // yet another subtlety: soft limits must not be too close to hard
-    // limits, otherwise we get jitter from the joint-limit avoidance
-    // algorithm.
-    
-    joint_limits_.limits_(3, 0) = -120.0 * deg;
-    joint_limits_.limits_(3, 1) = -119.0 * deg;
-    joint_limits_.limits_(3, 2) =  119.0 * deg;
-    joint_limits_.limits_(3, 3) =  120.0 * deg;
-    
-    joint_limits_.limits_(4, 0) = -120.0 * deg;
-    joint_limits_.limits_(4, 1) = -119.0 * deg;
-    joint_limits_.limits_(4, 2) =  119.0 * deg;
-    joint_limits_.limits_(4, 3) =  120.0 * deg;
-    
-    update(state);
-  }
-  
-  
   virtual void update(Vector const & state)
   {
     if (state.size() != 5) {
@@ -290,22 +268,6 @@ public:
     cairo_arc(cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
     cairo_stroke(cr);
     
-    // thin arcs for arm joint limits
-    cairo_set_source_rgb(cr, 0.5, 0.5, 1.0);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
-    cairo_move_to(cr, pos_a_[0], pos_a_[1]);
-    cairo_arc(cr, pos_a_[0], pos_a_[1], 0.1,
-	      bound(-2.0*M_PI, state_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
-	      bound(-2.0*M_PI, state_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
-    cairo_line_to(cr, pos_a_[0], pos_a_[1]);
-    cairo_stroke(cr);
-    cairo_move_to(cr, pos_b_[0], pos_b_[1]);
-    cairo_arc(cr, pos_b_[0], pos_b_[1], 0.1,
-	      bound(-2.0*M_PI, q23_ + joint_limits_.limits_(4, 0), 2.0*M_PI),
-	      bound(-2.0*M_PI, q23_ + joint_limits_.limits_(4, 3), 2.0*M_PI));
-    cairo_line_to(cr, pos_b_[0], pos_b_[1]);
-    cairo_stroke(cr);
-    
     // thick line for arms
     cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
     cairo_set_line_width(cr, 3.0 / pixelsize);
@@ -319,8 +281,6 @@ public:
   }
 
   //protected: or whatnot...
-  
-  JointLimits joint_limits_;
   
   double const radius_;
   double const len_a_;
@@ -364,6 +324,22 @@ public:
     tasks_.push_back(&eetask_);
     tasks_.push_back(&ellbowtask_);
     tasks_.push_back(&basetask_);
+    
+    joint_limits_.init(5);
+    
+    // yet another subtlety: soft limits must not be too close to hard
+    // limits, otherwise we get jitter from the joint-limit avoidance
+    // algorithm.
+    
+    joint_limits_.limits_(3, 0) = -120.0 * deg;
+    joint_limits_.limits_(3, 1) = -119.0 * deg;
+    joint_limits_.limits_(3, 2) =  119.0 * deg;
+    joint_limits_.limits_(3, 3) =  120.0 * deg;
+    
+    joint_limits_.limits_(4, 0) = -120.0 * deg;
+    joint_limits_.limits_(4, 1) = -119.0 * deg;
+    joint_limits_.limits_(4, 2) =  119.0 * deg;
+    joint_limits_.limits_(4, 3) =  120.0 * deg;
   }
   
   
@@ -374,9 +350,25 @@ public:
   
   void draw(cairo_t * cr, double pixelsize)
   {
-    robot_.draw(cr, pixelsize); // XXXX quickly hacked cast
+    robot_.draw(cr, pixelsize);
     
     cairo_save(cr);
+    
+    // thin arcs for arm joint limits
+    cairo_set_source_rgb(cr, 0.5, 0.5, 1.0);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
+    cairo_arc(cr, robot_.pos_a_[0], robot_.pos_a_[1], 0.1,
+	      bound(-2.0*M_PI, robot_.state_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
+	      bound(-2.0*M_PI, robot_.state_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
+    cairo_line_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
+    cairo_stroke(cr);
+    cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
+    cairo_arc(cr, robot_.pos_b_[0], robot_.pos_b_[1], 0.1,
+	      bound(-2.0*M_PI, robot_.q23_ + joint_limits_.limits_(4, 0), 2.0*M_PI),
+	      bound(-2.0*M_PI, robot_.q23_ + joint_limits_.limits_(4, 3), 2.0*M_PI));
+    cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
+    cairo_stroke(cr);
     
     // thin line for end effector task
     cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
@@ -385,7 +377,7 @@ public:
     cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
     cairo_stroke(cr);
     
-    // thin line for ellbox task
+    // thin line for ellbow task
     cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
     cairo_set_line_width(cr, 1.0 / pixelsize);
     cairo_move_to(cr, ellbowtask_.gpoint_[0], ellbowtask_.gpoint_[1]);
@@ -438,7 +430,8 @@ public:
   
   bool init(Vector const & state)
   {
-    robot_.init(state);
+    robot_.update(state);
+    
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
       if ( ! ((Task*)tasks_[ii])->init(robot_)) {
 	cerr << "Waypoint::init(): tasks_[" << ii << "]->init() failed\n";
@@ -446,6 +439,7 @@ public:
       }
     }
     next_state_ = state;
+    
     return true;
   }
   
@@ -468,7 +462,7 @@ public:
       }
     }
     
-    Vector const dq(algorithm2(robot_.joint_limits_,
+    Vector const dq(algorithm2(joint_limits_,
 			       next_state_, // that's now the current state, btw
 			       tasks_,
 			       dbgos,
@@ -502,6 +496,8 @@ public:
 protected:
   Robot robot_;
   Vector next_state_;
+  
+  JointLimits joint_limits_;
   
 private:  
   PositionTask eetask_;
