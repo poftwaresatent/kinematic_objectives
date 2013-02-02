@@ -381,15 +381,15 @@ public:
     // limits, otherwise we get jitter from the joint-limit avoidance
     // algorithm.
     
-    // joint_limits_.limits_(3, 0) = -120.0 * deg;
-    // joint_limits_.limits_(3, 1) = -119.0 * deg;
-    // joint_limits_.limits_(3, 2) =  119.0 * deg;
-    // joint_limits_.limits_(3, 3) =  120.0 * deg;
+    joint_limits_.limits_(3, 0) = -120.0 * deg;
+    joint_limits_.limits_(3, 1) = -119.0 * deg;
+    joint_limits_.limits_(3, 2) =  119.0 * deg;
+    joint_limits_.limits_(3, 3) =  120.0 * deg;
     
-    // joint_limits_.limits_(4, 0) = -120.0 * deg;
-    // joint_limits_.limits_(4, 1) = -119.0 * deg;
-    // joint_limits_.limits_(4, 2) =  119.0 * deg;
-    // joint_limits_.limits_(4, 3) =  120.0 * deg;
+    joint_limits_.limits_(4, 0) = -120.0 * deg;
+    joint_limits_.limits_(4, 1) = -119.0 * deg;
+    joint_limits_.limits_(4, 2) =  119.0 * deg;
+    joint_limits_.limits_(4, 3) =  120.0 * deg;
   }
   
   
