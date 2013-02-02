@@ -58,7 +58,6 @@ namespace kinematic_elastic {
     locked_joints_.clear();
     delta_.resize(0);
     Jacobian_.resize(0, 0);
-    step_hint_ = numeric_limits<double>::max();
   }
   
   

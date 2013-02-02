@@ -51,20 +51,14 @@ namespace kinematic_elastic {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    TaskData();
-    
     void stack(TaskData const & t1, TaskData const & t2);
     
     template<typename iterator_t>
     void stack(iterator_t begin, iterator_t end)
     {
       size_t ttnrows(0);
-      step_hint_ = numeric_limits<double>::max();
       for (iterator_t ii(begin); ii != end; ++ii) {
 	ttnrows += (*ii)->Jacobian_.rows();
-	if (step_hint_ > (*ii)->step_hint_) {
-	  step_hint_ = (*ii)->step_hint_;
-	}
       }
       size_t const ndof((*begin)->Jacobian_.cols());
       delta_.resize(ttnrows);
@@ -75,9 +69,8 @@ namespace kinematic_elastic {
       }
     }
     
-    Vector delta_;		// desired - current
+    Vector delta_; // basically this is "desired - current" but may be different for objectives
     Matrix Jacobian_;
-    double step_hint_;
   };
   
   

@@ -41,15 +41,15 @@
 
 namespace kinematic_elastic {
   
-  void pseudo_inverse_nonsingular (Matrix const & mx,
-				   Matrix & inv);
+  void pseudo_inverse_nonsingular(Matrix const & mx,
+				  Matrix & inv);
   
-  void pseudo_inverse_moore_penrose (Matrix const & mx,
-				     Matrix & inv);
+  void pseudo_inverse_moore_penrose(Matrix const & mx,
+				    Matrix & inv);
   
-  void pseudo_inverse_damped (Matrix const & mx,
-			      double lambda,
-			      Matrix & inv);
+  void pseudo_inverse_damped(Matrix const & mx,
+			     double lambda,
+			     Matrix & inv);
   
   /**
      Uses the scheme in [Baerlocher 2001] to determine damping factor
@@ -57,14 +57,14 @@ namespace kinematic_elastic {
      parameter. See equations (4.17) and figure 4.7. He computes
      d_damp as dx.norm()/b_max where b_max is a fixed parameter.
   */
-  void pseudo_inverse_baerlocher (Matrix const & mx,
-				  double d_damp,
-				  Matrix & inv,
-				  Matrix & delta_projector,
-				  Matrix * dbgU,
-				  Vector * dbgsigma,
-				  Matrix * dbgV,
-				  Vector * dbgdamping);
+  void pseudo_inverse_baerlocher(Matrix const & mx,
+				 double d_damp,
+				 Matrix & inv,
+				 Matrix & delta_projector,
+				 Matrix * dbgU,
+				 Vector * dbgsigma,
+				 Matrix * dbgV,
+				 Vector * dbgdamping);
   
 }
 

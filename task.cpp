@@ -40,24 +40,11 @@
 namespace kinematic_elastic {
   
   
-  TaskData::
-  TaskData()
-    : step_hint_(numeric_limits<double>::max())
-  {
-  }
-  
-  
   void TaskData::
   stack(TaskData const & t1, TaskData const & t2)
   {
     stackVector(t1.delta_, t2.delta_, delta_);
     stackMatrix(t1.Jacobian_, t2.Jacobian_, Jacobian_);
-    if (t1.step_hint_ < t2.step_hint_) {
-      step_hint_ = t1.step_hint_;
-    }
-    else {
-      step_hint_ = t2.step_hint_;
-    }
   }
   
 }

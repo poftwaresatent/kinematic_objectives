@@ -105,7 +105,6 @@ public:
   
   virtual bool init(Model const & model)
   {
-    step_hint_ = 0.05;		// XXXX trouble if this gets mixed with different units... which it will.
     goal_ = model.getPosition();
     delta_ = Vector::Zero(goal_.size());
     Jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
@@ -140,7 +139,6 @@ public:
   
   virtual bool init(Model const & model)
   {
-    step_hint_ = 0.1;
     Eigen::Vector3d tmp1, tmp2;
     tmp1 << point_[0], point_[1], 0.0;
     tmp2 = model.frame(node_) * tmp1;
@@ -383,15 +381,15 @@ public:
     // limits, otherwise we get jitter from the joint-limit avoidance
     // algorithm.
     
-    joint_limits_.limits_(3, 0) = -120.0 * deg;
-    joint_limits_.limits_(3, 1) = -119.0 * deg;
-    joint_limits_.limits_(3, 2) =  119.0 * deg;
-    joint_limits_.limits_(3, 3) =  120.0 * deg;
+    // joint_limits_.limits_(3, 0) = -120.0 * deg;
+    // joint_limits_.limits_(3, 1) = -119.0 * deg;
+    // joint_limits_.limits_(3, 2) =  119.0 * deg;
+    // joint_limits_.limits_(3, 3) =  120.0 * deg;
     
-    joint_limits_.limits_(4, 0) = -120.0 * deg;
-    joint_limits_.limits_(4, 1) = -119.0 * deg;
-    joint_limits_.limits_(4, 2) =  119.0 * deg;
-    joint_limits_.limits_(4, 3) =  120.0 * deg;
+    // joint_limits_.limits_(4, 0) = -120.0 * deg;
+    // joint_limits_.limits_(4, 1) = -119.0 * deg;
+    // joint_limits_.limits_(4, 2) =  119.0 * deg;
+    // joint_limits_.limits_(4, 3) =  120.0 * deg;
   }
   
   
@@ -528,64 +526,63 @@ public:
     }
     
     Vector ddq, dq, qq;
-    ddq = algorithm_unconstrained(timestep_,
-				  objectives_,
+    ddq = algorithm_unconstrained(objectives_,
 				  dbgos,
 				  "  ");
     dq = next_velocity_ + timestep_ * ddq; // note: here, next_velocity_ is the current velocity
     qq = next_position_ + timestep_ * dq;  // note, likewise, next_position_ is the current position
     
     if (verbose) {
-      print (ddq, cout, "non-constrained acceleration", "  ");
-      print (dq, cout, "resulting non-constrained velocity", "  ");
-      print (qq, cout, "resulting non-constrained position", "  ");
+      print (ddq, cout, "unconstrained acceleration", "  ");
+      print (dq, cout, "resulting unconstrained velocity", "  ");
+      print (qq, cout, "resulting unconstrained position", "  ");
     }
     
-    //    robot_dirty_.update(qq, dq);
+    robot_dirty_.update(qq, dq);
     bool need_constraints(false);
-    // for (size_t ii(0); ii < constraints_.size(); ++ii) {
-    //   if ( ! (constraints_[ii])->update(robot_dirty_)) {
-    // 	cerr << "Waypoint::update(): constraints_[" << ii << "]->update() failed\n";
-    // 	return false;
-    //   }
-    //   if (constraints_[ii]->isActive()) {
-    // 	if (verbose) {
-    // 	  cout << "constraint [" << ii << "] is active\n";
-    // 	}
-    // 	need_constraints = true;
-    //   }
-    // }
+    for (size_t ii(0); ii < constraints_.size(); ++ii) {
+      if ( ! (constraints_[ii])->update(robot_dirty_)) {
+    	cerr << "Waypoint::update(): constraints_[" << ii << "]->update() failed\n";
+    	return false;
+      }
+      if (constraints_[ii]->isActive()) {
+    	if (verbose) {
+    	  cout << "constraint [" << ii << "] is active\n";
+    	}
+    	need_constraints = true;
+      }
+    }
     
-    // if ( ! need_constraints) {
-    //   if (verbose) {
-    // 	cout << "all constraints are inactive\n";
-    //   }
+    if ( ! need_constraints) {
+      if (verbose) {
+    	cout << "all constraints are inactive\n";
+      }
       next_position_ = qq;
       next_velocity_ = dq;
       return true;
-    // }
+    }
     
-    // if (verbose) {
-    //   cout << "--------------------------------------------------\n"
-    // 	   << "recomputing with constraints enabled\n";
-    // }
+    if (verbose) {
+      cout << "--------------------------------------------------\n"
+    	   << "recomputing with constraints enabled\n";
+    }
     
-    // ddq = algorithm(timestep_,
-    // 		    robot_clean_,
-    // 		    &constraints_,
-    // 		    objectives_,
-    // 		    dbgos,
-    // 		    "  ");
-    // next_velocity_ += timestep_ * ddq; // again: next_velocity_ is the current velocity here
-    // next_position_ += timestep_ * next_velocity_;  // and next_position_ is the current position
+    ddq = algorithm_constrained(timestep_,
+				next_velocity_, // yes: next_velocity_ is the current velocity here
+				ddq,
+				constraints_,
+				dbgos,
+				"  ");
+    next_velocity_ += timestep_ * ddq; // and again: next_velocity_ is the current velocity here
+    next_position_ += timestep_ * next_velocity_;  // same goes for next_position_: it is the current one
     
-    // if (verbose) {
-    //   print (ddq, cout, "constrained acceleration", "  ");
-    //   print (next_velocity_, cout, "resulting constrained velocity", "  ");
-    //   print (next_position_, cout, "resulting constrained position", "  ");
-    // }
+    if (verbose) {
+      print (ddq, cout, "constrained acceleration", "  ");
+      print (next_velocity_, cout, "resulting constrained velocity", "  ");
+      print (next_position_, cout, "resulting constrained position", "  ");
+    }
     
-    // return true;
+    return true;
   }
   
 protected:
@@ -647,7 +644,7 @@ public:
       dimx - 1.0,
       dimy - 1.0;
     basegoal <<
-      dimx - 1.0,
+      1.0,
       1.0;
     
     wpt_->setEEGoal(eegoal);
