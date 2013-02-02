@@ -60,29 +60,26 @@ namespace kinematic_elastic {
   void pseudo_inverse_moore_penrose (Matrix const & mx,
 				     Matrix & inv)
   {
-    Eigen::JacobiSVD<Matrix> svd(mx, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    if (0 == svd.nonzeroSingularValues()) {
-      inv = Matrix::Zero(mx.cols(), mx.rows());
+    if (mx.rows() > mx.cols()) {
+      // apparently in this case it is cheaper to use the transpose...
+      Matrix tmp;
+      pseudo_inverse_moore_penrose(mx.transpose(), tmp);
+      inv = tmp.transpose();
       return;
     }
     
-    double thresh(numeric_limits<double>::epsilon() * svd.singularValues()[0]);
-    if (mx.rows() > mx.cols()) {
-      thresh *= mx.rows();
-    }
-    else {
-      thresh *= mx.cols();
-    }
-    
-    Vector rec(Vector::Zero(svd.singularValues().size()));
+    Eigen::JacobiSVD<Matrix> svd(mx, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    double const thresh(mx.cols() * numeric_limits<double>::epsilon() * svd.singularValues()[0]);
+    inv = Matrix::Zero(mx.cols(), mx.rows());
     for (ssize_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
       if (svd.singularValues()[ii] <= thresh) {
-	break;
+	return;
       }
-      rec[ii] = 1.0 / svd.singularValues()[ii];
+      inv
+	+= (1.0 / svd.singularValues()[ii])
+	*  svd.matrixV().col(ii)
+	*  svd.matrixU().col(ii).transpose();
     }
-    
-    inv = svd.matrixV() * rec.asDiagonal() * svd.matrixU().transpose();
   }
   
   

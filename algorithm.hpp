@@ -47,12 +47,17 @@ namespace kinematic_elastic {
   class Objective;
   
   
-  Vector algorithm(double timestep,
-		   Model const & model,
-		   vector<Constraint *> const * constraints,
-		   vector<Objective *> const & objectives,
-		   ostream * dbgos = 0,
-		   char const * dbgpre = "");
+  Vector algorithm_unconstrained(double timestep,
+				 vector<Objective *> const & objectives,
+				 ostream * dbgos = 0,
+				 char const * dbgpre = "");
+  
+  // Vector algorithm(double timestep,
+  // 		   Model const & model,
+  // 		   vector<Constraint *> const * constraints,
+  // 		   vector<Objective *> const & objectives,
+  // 		   ostream * dbgos = 0,
+  // 		   char const * dbgpre = "");
   
 }
 

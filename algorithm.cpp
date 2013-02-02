@@ -45,84 +45,190 @@
 
 namespace kinematic_elastic {
   
+  typedef Eigen::FullPivLU<Matrix> PLU;
   
-  /**
-     \pre alpha must be non-null and non-singular.
-  */
-  static Vector compute_dq (TaskData * alpha,
-			    TaskData * beta,
-			    TaskData * gamma,
-			    ostream * dbgos,
-			    char const * dbgpre)
+  
+  Vector algorithm_unconstrained(double timestep,
+				 vector<Objective *> const & objectives,
+				 ostream * dbgos,
+				 char const * dbgpre)
   {
+    Vector const & xa(objectives[0]->delta_);
+    Matrix const & Ja(objectives[0]->Jacobian_);
     Matrix Ja_inv;
-    pseudo_inverse_nonsingular (alpha->Jacobian_, Ja_inv);
-    Vector dq(Ja_inv * alpha->delta_);
+    {
+      PLU plu(Ja * Ja.transpose());
+      if (plu.isInvertible()) {
+	if (dbgos) {
+	  *dbgos << dbgpre << "good: primary task is invertible\n";
+	}
+	Ja_inv = Ja.transpose() * plu.inverse();
+      }
+      else {
+	if (dbgos) {
+	  *dbgos << dbgpre << "bad: using damped pseudo-inverse for primary task\n";
+	}
+	pseudo_inverse_damped(Ja, 1.0 / objectives[0]->step_hint_, Ja_inv);
+      }
+    }
+    
+    Vector ddq(Ja_inv * xa);
     
     if (dbgos) {
       *dbgos << dbgpre << "primary task:\n";
       string pre (dbgpre);
       pre += "  ";
-      print (alpha->delta_, *dbgos, "dxa",    pre);
-      print (alpha->Jacobian_, *dbgos, "Ja",     pre);
-      print (Ja_inv,    *dbgos, "Ja_inv", pre);
-      print (dq,        *dbgos, "dq",     pre);
+      print(xa, *dbgos, "xa", pre);
+      print(Ja, *dbgos, "Ja", pre);
+      print(Ja_inv, *dbgos, "Ja_inv", pre);
+      print(ddq, *dbgos, "ddq", pre);
     }
     
-    if (0 == beta) {
+    if (1 == objectives.size()) {
       if (dbgos) {
-	*dbgos << dbgpre << "DONE (single task)\n";
+	*dbgos << dbgpre << "that's all, just a single primary task\n";
       }
-      return dq;
+      return ddq;
+    }
+    
+    size_t const ndof(Ja.cols());
+    Matrix const Na(Matrix::Identity(ndof, ndof) - Ja_inv * Ja);
+    size_t ii(1);
+    Vector xb(objectives[ii]->delta_);
+    Matrix Jb(objectives[ii]->Jacobian_);
+    double scale(objectives[ii]->step_hint_);
+    for (++ii; ii < objectives.size(); ++ii) {
+      ssize_t const prev(xb.size());
+      Vector xwtf(xb);
+      Matrix Jwtf(Jb);
+      xb.resize(prev + objectives[ii]->delta_.size());
+      xb.block(0, 0, prev, 1) = xwtf;
+      xb.block(prev, 0, objectives[ii]->delta_.size(), 1) = objectives[ii]->delta_;
+      Jb.resize(prev + objectives[ii]->Jacobian_.rows(), ndof);
+      Jb.block(0, 0, prev, ndof) = Jwtf;
+      Jb.block(prev, 0,  objectives[ii]->Jacobian_.rows(), ndof) = objectives[ii]->Jacobian_;
+      if (objectives[ii]->step_hint_ < scale) {
+	scale = objectives[ii]->step_hint_;
+      }
     }
     
     Matrix Jb_inv;
-    pseudo_inverse_damped (beta->Jacobian_, 1.0 / beta->step_hint_, Jb_inv);
-    size_t const ndof(alpha->Jacobian_.cols());
-    Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * alpha->Jacobian_);
-    dq +=  Na * Jb_inv * beta->delta_;
+    PLU plu(Jb * Jb.transpose());
+    if (plu.isInvertible()) {
+      if (dbgos) {
+	*dbgos << dbgpre << "nice, the secondary task is also invertible\n";
+      }
+      Jb_inv = Jb.transpose() * plu.inverse();
+    }
+    else {
+      if (dbgos) {
+	*dbgos << dbgpre << "using damped pseudo-inverse for secondary task\n";
+      }
+      ////      pseudo_inverse_damped(Jb, 1.0 / scale, Jb_inv);
+      pseudo_inverse_moore_penrose(Jb, Jb_inv);
+    }
+    
+    ddq += Na * Jb_inv * xb;
     
     if (dbgos) {
-      Matrix Na_times_Jb_inv(Na * Jb_inv);
-      Vector dqb(Na_times_Jb_inv * beta->delta_);
-      
       *dbgos << dbgpre << "secondary task:\n";
       string pre (dbgpre);
       pre += "  ";
-      print (Na,              *dbgos, "Na", pre);
-      print (beta->delta_,       *dbgos, "dxb", pre);
-      print (beta->Jacobian_,       *dbgos, "Jb", pre);
-      print (Jb_inv,          *dbgos, "Jb_inv", pre);
-      print (Na_times_Jb_inv, *dbgos, "Na * Jb_inv", pre);
-      print (dqb,             *dbgos, "Na * Jb_inv * dxb", pre);
-      print (dq,              *dbgos, "dq", pre);
+      print(xb, *dbgos, "xb", pre);
+      print(Jb, *dbgos, "Jb", pre);
+      print(Jb_inv, *dbgos, "Jb_inv", pre);
+      print(Na, *dbgos, "Na", pre);
+      Matrix tmp;
+      tmp = Jb_inv * xb;
+      print(tmp, *dbgos, "Jb_inv * xb", pre);
+      tmp = Na * Jb_inv;
+      print(tmp, *dbgos, "Na * Jb_inv", pre);
+      tmp = Na * Jb_inv * xb;
+      print(tmp, *dbgos, "Na * Jb_inv * xb", pre);
+      print(ddq, *dbgos, "updated ddq", pre);
     }
     
-    if (0 == gamma) {
-      if (dbgos) {
-	*dbgos << dbgpre << "DONE (two tasks)\n";
-      }
-      return dq;
-    }
-    
-    Matrix Nb(Matrix::Identity(ndof, ndof) - Jb_inv * beta->Jacobian_);
-    Matrix Jc_inv;
-    pseudo_inverse_damped (gamma->Jacobian_, 1.0 / gamma->step_hint_, Jc_inv);
-    dq += Na * Nb * Jc_inv * gamma->delta_;
-    
-    if (dbgos) {
-      *dbgos << dbgpre << "remainder:\n";
-      string pre (dbgpre);
-      pre += "  ";
-      print (Nb,        *dbgos, "Nb",     pre);
-      print (gamma->delta_, *dbgos, "dxc",    pre);
-      print (gamma->Jacobian_, *dbgos, "Jc",     pre);
-      print (Jc_inv,    *dbgos, "Jc_inv", pre);
-      print (dq,        *dbgos, "dq",     pre);
-      *dbgos << dbgpre << "DONE\n";
-    }
-    
-    return dq;
+    return ddq;
   }
+  
+  
+  // /**
+  //    \pre alpha must be non-null and non-singular.
+  // */
+  // static Vector compute_dq (Matrix const & Ja,
+  // 			    Matrix const & Ja_inv,
+  // 			    Vector const & dxa_,
+  // 			    TaskData * beta,
+  // 			    TaskData * gamma,
+  // 			    ostream * dbgos,
+  // 			    char const * dbgpre)
+  // {
+  //   Vector dq(Ja_inv * alpha->delta_);
+    
+  //   if (dbgos) {
+  //     *dbgos << dbgpre << "primary task:\n";
+  //     string pre (dbgpre);
+  //     pre += "  ";
+  //     print (alpha->delta_, *dbgos, "dxa",    pre);
+  //     print (alpha->Jacobian_, *dbgos, "Ja",     pre);
+  //     print (Ja_inv,    *dbgos, "Ja_inv", pre);
+  //     print (dq,        *dbgos, "dq",     pre);
+  //   }
+    
+  //   if (0 == beta) {
+  //     if (dbgos) {
+  // 	*dbgos << dbgpre << "DONE (single task)\n";
+  //     }
+  //     return dq;
+  //   }
+    
+  //   Matrix Jb_inv;
+  //   pseudo_inverse_damped (beta->Jacobian_, 1.0 / beta->step_hint_, Jb_inv);
+  //   size_t const ndof(alpha->Jacobian_.cols());
+  //   Matrix Na(Matrix::Identity(ndof, ndof) - Ja_inv * alpha->Jacobian_);
+  //   dq +=  Na * Jb_inv * beta->delta_;
+    
+  //   if (dbgos) {
+  //     Matrix Na_times_Jb_inv(Na * Jb_inv);
+  //     Vector dqb(Na_times_Jb_inv * beta->delta_);
+      
+  //     *dbgos << dbgpre << "secondary task:\n";
+  //     string pre (dbgpre);
+  //     pre += "  ";
+  //     print (Na,              *dbgos, "Na", pre);
+  //     print (beta->delta_,       *dbgos, "dxb", pre);
+  //     print (beta->Jacobian_,       *dbgos, "Jb", pre);
+  //     print (Jb_inv,          *dbgos, "Jb_inv", pre);
+  //     print (Na_times_Jb_inv, *dbgos, "Na * Jb_inv", pre);
+  //     print (dqb,             *dbgos, "Na * Jb_inv * dxb", pre);
+  //     print (dq,              *dbgos, "dq", pre);
+  //   }
+    
+  //   if (0 == gamma) {
+  //     if (dbgos) {
+  // 	*dbgos << dbgpre << "DONE (two tasks)\n";
+  //     }
+  //     return dq;
+  //   }
+    
+  //   Matrix Nb(Matrix::Identity(ndof, ndof) - Jb_inv * beta->Jacobian_);
+  //   Matrix Jc_inv;
+  //   pseudo_inverse_damped (gamma->Jacobian_, 1.0 / gamma->step_hint_, Jc_inv);
+  //   dq += Na * Nb * Jc_inv * gamma->delta_;
+    
+  //   if (dbgos) {
+  //     *dbgos << dbgpre << "remainder:\n";
+  //     string pre (dbgpre);
+  //     pre += "  ";
+  //     print (Nb,        *dbgos, "Nb",     pre);
+  //     print (gamma->delta_, *dbgos, "dxc",    pre);
+  //     print (gamma->Jacobian_, *dbgos, "Jc",     pre);
+  //     print (Jc_inv,    *dbgos, "Jc_inv", pre);
+  //     print (dq,        *dbgos, "dq",     pre);
+  //     *dbgos << dbgpre << "DONE\n";
+  //   }
+    
+  //   return dq;
+  // }
   
 }

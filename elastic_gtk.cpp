@@ -92,6 +92,38 @@ static inline double normangle(double phi)
 }
 
 
+class PostureTask
+  : public Objective
+{
+public:
+  PostureTask()
+    : kp_(0.0),
+      kd_(10.0)
+  {
+  }
+  
+  
+  virtual bool init(Model const & model)
+  {
+    step_hint_ = 0.05;		// XXXX trouble if this gets mixed with different units... which it will.
+    goal_ = model.getPosition();
+    delta_ = Vector::Zero(goal_.size());
+    Jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
+    return true;
+  }
+  
+  virtual bool update(Model const & model)
+  {
+    delta_ = kp_ * (goal_ - model.getPosition()) - kd_ * model.getVelocity();
+    return true;
+  }
+
+  double kp_;
+  double kd_;
+  Vector goal_;
+};
+
+
 class PositionTask
   : public Objective
 {
@@ -330,7 +362,7 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
   Waypoint()
-    : timestep_(1e-2),
+    : timestep_(1e-3),
       eetask_(3, Vector::Zero(2)),
       ellbowtask_(1, Vector::Zero(2)),
       basetask_(0, Vector::Zero(2))
@@ -341,8 +373,9 @@ public:
     eetask_.point_ << robot_clean_.len_c_, 0.0;
     ellbowtask_.point_ << robot_clean_.len_a_, 0.0;
     objectives_.push_back(&eetask_);
-    objectives_.push_back(&ellbowtask_);
+    ////    objectives_.push_back(&ellbowtask_);
     objectives_.push_back(&basetask_);
+    objectives_.push_back(&posture_);
     
     // yet another subtlety: soft limits must not be too close to hard
     // limits, otherwise we get jitter from the joint-limit avoidance
@@ -394,12 +427,12 @@ public:
     cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
     cairo_stroke(cr);
     
-    // thin line for ellbow task
-    cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
-    cairo_move_to(cr, ellbowtask_.gpoint_[0], ellbowtask_.gpoint_[1]);
-    cairo_line_to(cr, ellbowtask_.goal_[0], ellbowtask_.goal_[1]);
-    cairo_stroke(cr);
+    // // thin line for ellbow task
+    // cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
+    // cairo_set_line_width(cr, 1.0 / pixelsize);
+    // cairo_move_to(cr, ellbowtask_.gpoint_[0], ellbowtask_.gpoint_[1]);
+    // cairo_line_to(cr, ellbowtask_.goal_[0], ellbowtask_.goal_[1]);
+    // cairo_stroke(cr);
     
     // thin line for base task
     cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
@@ -493,12 +526,10 @@ public:
     }
     
     Vector ddq, dq, qq;
-    ddq = algorithm(timestep_,
-		    robot_clean_,
-		    0,
-		    objectives_,
-		    dbgos,
-		    "  ");
+    ddq = algorithm_unconstrained(timestep_,
+				  objectives_,
+				  dbgos,
+				  "  ");
     dq = next_velocity_ + timestep_ * ddq; // note: here, next_velocity_ is the current velocity
     qq = next_position_ + timestep_ * dq;  // note, likewise, next_position_ is the current position
     
@@ -508,51 +539,51 @@ public:
       print (qq, cout, "resulting non-constrained position", "  ");
     }
     
-    robot_dirty_.update(qq, dq);
+    //    robot_dirty_.update(qq, dq);
     bool need_constraints(false);
-    for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      if ( ! (constraints_[ii])->update(robot_dirty_)) {
-	cerr << "Waypoint::update(): constraints_[" << ii << "]->update() failed\n";
-	return false;
-      }
-      if (constraints_[ii]->isActive()) {
-	if (verbose) {
-	  cout << "constraint [" << ii << "] is active\n";
-	}
-	need_constraints = true;
-      }
-    }
+    // for (size_t ii(0); ii < constraints_.size(); ++ii) {
+    //   if ( ! (constraints_[ii])->update(robot_dirty_)) {
+    // 	cerr << "Waypoint::update(): constraints_[" << ii << "]->update() failed\n";
+    // 	return false;
+    //   }
+    //   if (constraints_[ii]->isActive()) {
+    // 	if (verbose) {
+    // 	  cout << "constraint [" << ii << "] is active\n";
+    // 	}
+    // 	need_constraints = true;
+    //   }
+    // }
     
-    if ( ! need_constraints) {
-      if (verbose) {
-	cout << "all constraints are inactive\n";
-      }
+    // if ( ! need_constraints) {
+    //   if (verbose) {
+    // 	cout << "all constraints are inactive\n";
+    //   }
       next_position_ = qq;
       next_velocity_ = dq;
       return true;
-    }
+    // }
     
-    if (verbose) {
-      cout << "--------------------------------------------------\n"
-	   << "recomputing with constraints enabled\n";
-    }
+    // if (verbose) {
+    //   cout << "--------------------------------------------------\n"
+    // 	   << "recomputing with constraints enabled\n";
+    // }
     
-    ddq = algorithm(timestep_,
-		    robot_clean_,
-		    &constraints_,
-		    objectives_,
-		    dbgos,
-		    "  ");
-    next_velocity_ += timestep_ * ddq; // again: next_velocity_ is the current velocity here
-    next_position_ += timestep_ * next_velocity_;  // and next_position_ is the current position
+    // ddq = algorithm(timestep_,
+    // 		    robot_clean_,
+    // 		    &constraints_,
+    // 		    objectives_,
+    // 		    dbgos,
+    // 		    "  ");
+    // next_velocity_ += timestep_ * ddq; // again: next_velocity_ is the current velocity here
+    // next_position_ += timestep_ * next_velocity_;  // and next_position_ is the current position
     
-    if (verbose) {
-      print (ddq, cout, "constrained acceleration", "  ");
-      print (next_velocity_, cout, "resulting constrained velocity", "  ");
-      print (next_position_, cout, "resulting constrained position", "  ");
-    }
+    // if (verbose) {
+    //   print (ddq, cout, "constrained acceleration", "  ");
+    //   print (next_velocity_, cout, "resulting constrained velocity", "  ");
+    //   print (next_position_, cout, "resulting constrained position", "  ");
+    // }
     
-    return true;
+    // return true;
   }
   
 protected:
@@ -568,6 +599,7 @@ protected:
   PositionTask eetask_;
   PositionTask ellbowtask_;
   PositionTask basetask_;
+  PostureTask posture_;
   
   vector<Constraint *> constraints_;
   vector<Objective *> objectives_;
