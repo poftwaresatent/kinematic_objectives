@@ -62,9 +62,10 @@ namespace kinematic_elastic {
   }
   
   
-  void JointLimits::
-  update(Vector const & position, Vector const & velocity)
+  bool JointLimits::
+  update(Model const & model)
   {
+    Vector const & position(model.getPosition());
     vector<double> delta;
     locked_joints_.clear();
     
@@ -84,6 +85,8 @@ namespace kinematic_elastic {
     for (size_t ii(0); ii < delta.size(); ++ii) {
       Jacobian_(ii, locked_joints_[ii]) = 1.0;
     }
+    
+    return true;
   }
   
   

@@ -92,30 +92,13 @@ namespace kinematic_elastic {
   };
   
   
-  class PositionController
-    : public Objective
-  {
-  public:
-    PositionController();
-    
-    void configure(double kp, double kd);
-    
-    Vector computePD(Vector const & pos_act,
-		     Vector const & vel_act,
-		     Vector const & pos_des) const;
-    
-    double kp_;
-    double kd_;
-  };
-  
-  
   class Constraint
     : public TaskData
   {
   public:
     virtual ~Constraint() {}
     
-    virtual void update(Vector const & position, Vector const & velocity) = 0;
+    virtual bool update(Model const & model) = 0;
     virtual bool isActive() const = 0;
   };
   

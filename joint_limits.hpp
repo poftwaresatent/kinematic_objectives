@@ -57,7 +57,7 @@ namespace kinematic_elastic {
        their hard joint limits, the task and locked list will be
        empty.
     */
-    virtual void update(Vector const & position, Vector const & velocity);
+    virtual bool update(Model const & model);
     
     virtual bool isActive() const;
     
