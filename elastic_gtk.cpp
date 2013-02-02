@@ -372,8 +372,10 @@ public:
     
     eetask_.point_ << robot_clean_.len_c_, 0.0;
     ellbowtask_.point_ << robot_clean_.len_a_, 0.0;
+    ellbowtask_.kp_ = 400.0;
+    ellbowtask_.kd_ = 40.0;
     objectives_.push_back(&eetask_);
-    ////    objectives_.push_back(&ellbowtask_);
+    objectives_.push_back(&ellbowtask_);
     objectives_.push_back(&basetask_);
     objectives_.push_back(&posture_);
     
@@ -427,12 +429,12 @@ public:
     cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
     cairo_stroke(cr);
     
-    // // thin line for ellbow task
-    // cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-    // cairo_set_line_width(cr, 1.0 / pixelsize);
-    // cairo_move_to(cr, ellbowtask_.gpoint_[0], ellbowtask_.gpoint_[1]);
-    // cairo_line_to(cr, ellbowtask_.goal_[0], ellbowtask_.goal_[1]);
-    // cairo_stroke(cr);
+    // thin line for ellbow task
+    cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_move_to(cr, ellbowtask_.gpoint_[0], ellbowtask_.gpoint_[1]);
+    cairo_line_to(cr, ellbowtask_.goal_[0], ellbowtask_.goal_[1]);
+    cairo_stroke(cr);
     
     // thin line for base task
     cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
@@ -642,8 +644,8 @@ public:
       1.0,
       dimy - 1.0;
     ellbowgoal <<
-      dimx * 0.5,
-      dimy * 0.5;
+      dimx - 1.0,
+      dimy - 1.0;
     basegoal <<
       dimx - 1.0,
       1.0;
