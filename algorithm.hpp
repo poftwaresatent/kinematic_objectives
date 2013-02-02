@@ -47,22 +47,32 @@ namespace kinematic_elastic {
   
   
   /**
-     Fanciful stacking of primary and secondary.
+     Delta-position domain with fanciful stacking of primary and
+     secondary.
   */
-  Vector algorithm1 (JointLimits const & joint_limits,
+  Vector algorithm1 (JointLimits & joint_limits,
 		     Vector const & state,
 		     vector<TaskData *> const & tasklist,
 		     ostream * dbgos = 0,
 		     char const * dbgpre = "");
   
   /**
-     Straight-up primary and secondary, with all the rest stacked into the third level.
+     Delta-position domain with straight-up primary and secondary,
+     all the rest stacked into the third level.
   */
-  Vector algorithm2 (JointLimits const & joint_limits,
+  Vector algorithm2 (JointLimits & joint_limits,
 		     Vector const & state,
 		     vector<TaskData *> const & tasklist,
 		     ostream * dbgos = 0,
 		     char const * dbgpre = "");
+
+  // Vector algorithm3 (JointLimits & joint_limits,
+  // 		     Vector const & position,
+  // 		     Vector const & velocity,
+  // 		     vector<TaskData *> const & constraints,
+  // 		     vector<TaskData *> const & objectives,
+  // 		     ostream * dbgos = 0,
+  // 		     char const * dbgpre = "");
   
 }
 

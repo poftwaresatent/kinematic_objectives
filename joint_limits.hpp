@@ -37,37 +37,29 @@
 #ifndef KINEMATIC_ELASTIC_JOINT_LIMITS_HPP
 #define KINEMATIC_ELASTIC_JOINT_LIMITS_HPP
 
-#include "kinematic_elastic.hpp"
+#include "task.hpp"
 
 
 namespace kinematic_elastic {
-
-  using namespace std;
-  
-  class TaskData;
-  
   
   class JointLimits
+    : public TaskData
   {
   public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
     void init(size_t ndof);
     
     /**
-       \return True if all joints are within soft joint limits.
-    */
-    bool check(Vector const & state) const;
-    
-    /**
        For every joint that lies outside hard joint limits, create a
-       task that brings it back to the corresponding soft limit. All
-       such tasks are stacked into one TaskData instance, and the list
-       of violating joint indices is returned as well. If there are no
-       joints that violate their hard joint limits, the task and
-       locked list will be empty.
+       task dimension that brings it back to the corresponding soft
+       limit. All such dimensions are stacked into our TaskData
+       fields. Furthermore, the list of violating joint indices is
+       placed in locked_joints_. If there are no joints that violate
+       their hard joint limits, the task and locked list will be
+       empty.
     */
-    void createTask (Vector const & state, TaskData & jl, vector<size_t> & locked) const;
+    void update(Vector const & state);
+    
+    bool isActive() const;
     
     /**
        Nx4 matrix, one row per joint, where
@@ -77,6 +69,8 @@ namespace kinematic_elastic {
        - col[3] is the upper hard limit
     */
     Matrix limits_;
+    
+    vector<size_t> locked_joints_;
   };
   
 }

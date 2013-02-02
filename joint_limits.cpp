@@ -35,7 +35,7 @@
 /* Author: Roland Philippsen */
 
 #include "joint_limits.hpp"
-#include "task.hpp"
+#include "model.hpp"
 #include <limits>
 
 
@@ -55,51 +55,43 @@ namespace kinematic_elastic {
 	limits_(ii, jj) =  numeric_limits<double>::max();
       }
     }
-  }
-  
-  
-  bool JointLimits::
-  check(Vector const & state)
-    const
-  {
-    for (ssize_t ii(0); ii < state.size(); ++ii) {
-      if (state[ii] < limits_(ii, 1)) {
-	return false;
-      }
-      if (state[ii] > limits_(ii, 2)) {
-	return false;
-      }
-    }
-    return true;
+    locked_joints_.clear();
+    delta_.resize(0);
+    Jacobian_.resize(0, 0);
+    step_hint_ = numeric_limits<double>::max();
   }
   
   
   void JointLimits::
-  createTask(Vector const & state,
-	     TaskData & jl,
-	     vector<size_t> & locked)
-    const
+  update(Vector const & state)
   {
-    jl.step_hint_ = numeric_limits<double>::max();
-    
     vector<double> delta;
-    locked.clear();
+    locked_joints_.clear();
+    
     for (ssize_t ii(0); ii < state.size(); ++ii) {
       if (state[ii] < limits_(ii, 1)) {
-	locked.push_back(ii);
+	locked_joints_.push_back(ii);
 	delta.push_back(limits_(ii, 0) - state[ii]);
       }
       else if (state[ii] > limits_(ii, 2)) {
-	locked.push_back(ii);
+	locked_joints_.push_back(ii);
 	delta.push_back(limits_(ii, 3) - state[ii]);
       }
     }
     
-    jl.delta_ = Vector::Map(&delta[0], delta.size());
-    jl.Jacobian_ = Matrix::Zero(delta.size(), state.size());
+    delta_ = Vector::Map(&delta[0], delta.size());
+    Jacobian_ = Matrix::Zero(delta.size(), state.size());
     for (size_t ii(0); ii < delta.size(); ++ii) {
-      jl.Jacobian_(ii, locked[ii]) = 1.0;
+      Jacobian_(ii, locked_joints_[ii]) = 1.0;
     }
+  }
+  
+  
+  bool JointLimits::
+  isActive()
+    const
+  {
+    return ! locked_joints_.empty();
   }
   
 }

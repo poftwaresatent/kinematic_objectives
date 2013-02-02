@@ -91,6 +91,23 @@ namespace kinematic_elastic {
     virtual bool update(Model const & model) = 0;
   };
   
+  
+  class Objective
+    : public Task
+  {
+  public:
+    Objective();
+    
+    void configure(double kp, double kd); // XXXX to do: add maxvel and saturation method
+    
+    Vector computePD(Vector const & pos_act,
+		     Vector const & vel_act,
+		     Vector const & pos_des) const; // XXXX to do: maybe allow vel_des also?
+    
+    double kp_;
+    double kd_;
+  };
+  
 }
 
 #endif // KINEMATIC_ELASTIC_TASK_HPP

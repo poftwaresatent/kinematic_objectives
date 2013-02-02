@@ -157,6 +157,12 @@ public:
   }
   
   
+  virtual Vector const & getState() const
+  {
+    return state_;
+  }
+  
+  
   virtual Transform frame(size_t node) const
   {
     Transform tf(Transform::Identity());
@@ -211,7 +217,7 @@ public:
   }
   
   
-  bool init(Vector const & state)
+  void init(Vector const & state)
   {
     joint_limits_.init(5);
     
@@ -229,15 +235,14 @@ public:
     joint_limits_.limits_(4, 2) =  119.0 * deg;
     joint_limits_.limits_(4, 3) =  120.0 * deg;
     
-    return update(state);
+    update(state);
   }
   
   
-  virtual bool update(Vector const & state)
+  virtual void update(Vector const & state)
   {
     if (state.size() != 5) {
-      cerr << "Robot::update(): only NDOF=5 allowed for now...\n";
-      return false;
+      errx (EXIT_FAILURE, "Robot::update(): state has %zu DOF (but needs 5)", (size_t) state.size());
     }
     state_ = state;
     
@@ -267,8 +272,6 @@ public:
     pos_c_ <<
       pos_b_[0] + cc234_,
       pos_b_[1] + cs234_;
-    
-    return true;
   }
   
   
@@ -435,10 +438,7 @@ public:
   
   bool init(Vector const & state)
   {
-    if ( ! robot_.init(state)) {
-      cerr << "Waypoint::init(): robot_.init() failed\n";
-      return false;
-    }
+    robot_.init(state);
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
       if ( ! ((Task*)tasks_[ii])->init(robot_)) {
 	cerr << "Waypoint::init(): tasks_[" << ii << "]->init() failed\n";
@@ -459,10 +459,7 @@ public:
 	   << "Waypoint::update()\n";
     }
     
-    if ( ! robot_.update(next_state_)) {
-      cerr << "Waypoint::update(): robot_.update() failed\n";
-      return false;
-    }
+    robot_.update(next_state_);
     
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
       if ( ! ((Task*)tasks_[ii])->update(robot_)) {

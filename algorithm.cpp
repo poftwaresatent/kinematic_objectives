@@ -124,7 +124,7 @@ namespace kinematic_elastic {
   }
   
   
-  Vector algorithm1 (JointLimits const & joint_limits,
+  Vector algorithm1 (JointLimits & joint_limits,
 		     Vector const & state,
 		     vector<TaskData*> const & tasklist,
 		     ostream * dbgos,
@@ -152,22 +152,17 @@ namespace kinematic_elastic {
     }
     
     Vector const next_state(state + dq);
-    if (joint_limits.check(next_state)) {
+    joint_limits.update(next_state);
+    if ( ! joint_limits.isActive()) {
       if (dbgos) {
 	*dbgos << dbgpre << "joint limit check passed\n";
       }
       return dq;
     }
     
-    TaskData t_lim;
-    vector<size_t> locked;
-    // Now here's an intricate point: need to lock based on what we
-    // would get AFTER this iteration.
-    joint_limits.createTask(next_state, t_lim, locked);
-    
     if (tasklist.empty()) {
       vector<TaskData*> tl;
-      tl.push_back(&t_lim);
+      tl.push_back(&joint_limits);
       dq = compute_dq(tl, dbgos, dbgpre);
       if (dbgos) {
 	*dbgos << dbgpre << "joint limits adjusted, but empty task list\n";
@@ -183,14 +178,16 @@ namespace kinematic_elastic {
       string pre (dbgpre);
       pre += "  ";
       *dbgos << dbgpre << "try removing joints from the primary task...\n";
-      print (t_lim.Jacobian_, *dbgos, "J_lim", pre);
+      print (joint_limits.Jacobian_, *dbgos, "J_lim", pre);
     }
     
     Matrix J_try(tasklist[0]->Jacobian_);
-    for (size_t ii(0); ii < locked.size(); ++ii) {
-      J_try.block(0, locked[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
+    // XXXX it should also work without knocking the columns to zero,
+    // just because of the nullspace of the joint_limits.Jacobian_.
+    for (size_t ii(0); ii < joint_limits.locked_joints_.size(); ++ii) {
+      J_try.block(0, joint_limits.locked_joints_[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
       if (dbgos) {
-	*dbgos << dbgpre << "  joint " << locked[ii] << " is locked!\n";
+	*dbgos << dbgpre << "  joint " << joint_limits.locked_joints_[ii] << " is locked!\n";
       }
     }
     Eigen::FullPivLU<Matrix> plu(J_try * J_try.transpose());
@@ -200,15 +197,15 @@ namespace kinematic_elastic {
       }
       vector<TaskData*> tl;
       TaskData tmp1, tmp2;
-      tmp1.stack(t_lim, *tasklist[0]);
+      tmp1.stack(joint_limits, *tasklist[0]);
       // grr, spurious extra work... and maybe not even necessary
-      stackMatrix(t_lim.Jacobian_, J_try, tmp1.Jacobian_);
+      stackMatrix(joint_limits.Jacobian_, J_try, tmp1.Jacobian_);
       tl.push_back(&tmp1);
       if (tasklist.size() > 1) {
 	// Now this is a bit of an open question. Ideally we should
 	// select a set of tasks that are somewhat likely to be not
 	// overly conflicting. Reasonable heuristics are either:
-	//  A: t_lim, tasklist[0], tasklist[1]
+	//  A: joint_limits, tasklist[0], tasklist[1]
 	//     but that is likely to kill tasklist[1] entirely.
 	//  B: tasklist[0], tasklist[1]
 	//     i.e. try to achieve both (ignoring joint limits, which
@@ -257,7 +254,7 @@ namespace kinematic_elastic {
     
     vector<TaskData*> tl;
     TaskData tmp;
-    tl.push_back(&t_lim);
+    tl.push_back(&joint_limits);
     tl.push_back(tasklist[0]);
     if (tasklist.size() > 1) {
       if (tasklist.size() > 2) {
@@ -276,7 +273,7 @@ namespace kinematic_elastic {
   }
   
   
-  Vector algorithm2 (JointLimits const & joint_limits,
+  Vector algorithm2 (JointLimits & joint_limits,
 		     Vector const & state,
 		     vector<TaskData*> const & tasklist,
 		     ostream * dbgos,
@@ -305,22 +302,17 @@ namespace kinematic_elastic {
     }
     
     Vector const next_state(state + dq);
-    if (joint_limits.check(next_state)) {
+    joint_limits.update(next_state);
+    if ( ! joint_limits.isActive()) {
       if (dbgos) {
 	*dbgos << dbgpre << "joint limit check passed\n";
       }
       return dq;
     }
     
-    TaskData t_lim;
-    vector<size_t> locked;
-    // Now here's an intricate point: need to lock based on what we
-    // would get AFTER this iteration.
-    joint_limits.createTask(next_state, t_lim, locked);
-    
     if (tasklist.empty()) {
       vector<TaskData*> tl;
-      tl.push_back(&t_lim);
+      tl.push_back(&joint_limits);
       dq = compute_dq(tl, dbgos, dbgpre);
       if (dbgos) {
 	*dbgos << dbgpre << "joint limits adjusted, but empty task list\n";
@@ -336,14 +328,14 @@ namespace kinematic_elastic {
       string pre (dbgpre);
       pre += "  ";
       *dbgos << dbgpre << "try removing joints from the primary task...\n";
-      print (t_lim.Jacobian_, *dbgos, "J_lim", pre);
+      print (joint_limits.Jacobian_, *dbgos, "J_lim", pre);
     }
     
     Matrix J_try(tasklist[0]->Jacobian_);
-    for (size_t ii(0); ii < locked.size(); ++ii) {
-      J_try.block(0, locked[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
+    for (size_t ii(0); ii < joint_limits.locked_joints_.size(); ++ii) {
+      J_try.block(0, joint_limits.locked_joints_[ii], J_try.rows(), 1) = Vector::Zero(J_try.rows());
       if (dbgos) {
-	*dbgos << dbgpre << "  joint " << locked[ii] << " is locked!\n";
+	*dbgos << dbgpre << "  joint " << joint_limits.locked_joints_[ii] << " is locked!\n";
       }
     }
     Eigen::FullPivLU<Matrix> plu(J_try * J_try.transpose());
@@ -353,9 +345,9 @@ namespace kinematic_elastic {
       }
       vector<TaskData*> tl;
       TaskData tmp1, tmp2;
-      tmp1.stack(t_lim, *tasklist[0]);
+      tmp1.stack(joint_limits, *tasklist[0]);
       // grr, spurious extra work... and maybe not even necessary
-      stackMatrix(t_lim.Jacobian_, J_try, tmp1.Jacobian_);
+      stackMatrix(joint_limits.Jacobian_, J_try, tmp1.Jacobian_);
       tl.push_back(&tmp1);
       if (tasklist.size() > 1) {
 	tl.push_back(tasklist[1]);
@@ -385,7 +377,7 @@ namespace kinematic_elastic {
     
     vector<TaskData*> tl;
     TaskData tmp;
-    tl.push_back(&t_lim);
+    tl.push_back(&joint_limits);
     tl.push_back(tasklist[0]);
     if (tasklist.size() > 1) {
       if (tasklist.size() == 2) {
