@@ -69,13 +69,13 @@ namespace kinematic_elastic {
     locked_joints_.clear();
     
     for (ssize_t ii(0); ii < position.size(); ++ii) {
-      if (position[ii] < limits_(ii, 1)) {
+      if (position[ii] < limits_(ii, 0)) {
 	locked_joints_.push_back(ii);
-	delta.push_back(limits_(ii, 0) - position[ii]);
+	delta.push_back(limits_(ii, 1) - position[ii]);
       }
-      else if (position[ii] > limits_(ii, 2)) {
+      else if (position[ii] > limits_(ii, 3)) {
 	locked_joints_.push_back(ii);
-	delta.push_back(limits_(ii, 3) - position[ii]);
+	delta.push_back(limits_(ii, 2) - position[ii]);
       }
     }
     
