@@ -81,31 +81,42 @@ namespace kinematic_elastic {
   };
   
   
-  class Task
+  class Objective
     : public TaskData
   {
   public:
-    virtual ~Task();
+    virtual ~Objective() {}
     
     virtual bool init(Model const & model) = 0;
     virtual bool update(Model const & model) = 0;
   };
   
   
-  class Objective
-    : public Task
+  class PositionController
+    : public Objective
   {
   public:
-    Objective();
+    PositionController();
     
-    void configure(double kp, double kd); // XXXX to do: add maxvel and saturation method
+    void configure(double kp, double kd);
     
     Vector computePD(Vector const & pos_act,
 		     Vector const & vel_act,
-		     Vector const & pos_des) const; // XXXX to do: maybe allow vel_des also?
+		     Vector const & pos_des) const;
     
     double kp_;
     double kd_;
+  };
+  
+  
+  class Constraint
+    : public TaskData
+  {
+  public:
+    virtual ~Constraint() {}
+    
+    virtual void update(Vector const & position, Vector const & velocity) = 0;
+    virtual bool isActive() const = 0;
   };
   
 }

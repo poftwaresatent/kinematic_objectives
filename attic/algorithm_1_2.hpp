@@ -34,30 +34,38 @@
 
 /* Author: Roland Philippsen */
 
-#include "task.hpp"
+#ifndef KINEMATIC_ELASTIC_ALGORITHM_HPP
+#define KINEMATIC_ELASTIC_ALGORITHM_HPP
+
+#include "kinematic_elastic.hpp"
 
 
 namespace kinematic_elastic {
   
-  
-  TaskData::
-  TaskData()
-    : step_hint_(numeric_limits<double>::max())
-  {
-  }
+  class JointLimits;
+  class TaskData;
   
   
-  void TaskData::
-  stack(TaskData const & t1, TaskData const & t2)
-  {
-    stackVector(t1.delta_, t2.delta_, delta_);
-    stackMatrix(t1.Jacobian_, t2.Jacobian_, Jacobian_);
-    if (t1.step_hint_ < t2.step_hint_) {
-      step_hint_ = t1.step_hint_;
-    }
-    else {
-      step_hint_ = t2.step_hint_;
-    }
-  }
+  /**
+     Delta-position domain with fanciful stacking of primary and
+     secondary.
+  */
+  Vector algorithm1 (JointLimits & joint_limits,
+		     Vector const & state,
+		     vector<TaskData *> const & tasklist,
+		     ostream * dbgos = 0,
+		     char const * dbgpre = "");
+  
+  /**
+     Delta-position domain with straight-up primary and secondary,
+     all the rest stacked into the third level.
+  */
+  Vector algorithm2 (JointLimits & joint_limits,
+		     Vector const & state,
+		     vector<TaskData *> const & tasklist,
+		     ostream * dbgos = 0,
+		     char const * dbgpre = "");
   
 }
+
+#endif // KINEMATIC_ELASTIC_ALGORITHM_HPP

@@ -157,9 +157,15 @@ public:
   }
   
   
-  virtual Vector const & getState() const
+  virtual Vector const & getPosition() const
   {
-    return state_;
+    return position_;
+  }
+  
+  
+  virtual Vector const & getVelocity() const
+  {
+    return velocity_;
   }
   
   
@@ -168,10 +174,10 @@ public:
     Transform tf(Transform::Identity());
     switch (node) {
     case 0:
-      tf.translation() << state_[0], state_[1], 0.0;
+      tf.translation() << position_[0], position_[1], 0.0;
       break;
     case 1:
-      tf.translation() << state_[0], state_[1], 0.0;
+      tf.translation() << position_[0], position_[1], 0.0;
       tf.linear() << c2_, -s2_, 0.0, s2_, c2_, 0.0, 0.0, 0.0, 1.0;
       break;
     case 2:
@@ -201,7 +207,7 @@ public:
       delta = gpoint - pos_a_;
       Jx.block(0, 3, 3, 1) << -delta[1], delta[0], 1.0;
     case 1:
-      delta = gpoint - state_.block(0, 0, 2, 1);
+      delta = gpoint - position_.block(0, 0, 2, 1);
       Jx.block(0, 2, 3, 1) << -delta[1], delta[0], 1.0;
     case 0:
       Jx.block(0, 0, 2, 2) = Matrix::Identity(2, 2);
@@ -217,33 +223,37 @@ public:
   }
   
   
-  virtual void update(Vector const & state)
+  virtual void update(Vector const & position, Vector const & velocity)
   {
-    if (state.size() != 5) {
-      errx (EXIT_FAILURE, "Robot::update(): state has %zu DOF (but needs 5)", (size_t) state.size());
+    if (position.size() != 5) {
+      errx (EXIT_FAILURE, "Robot::update(): position has %zu DOF (but needs 5)", (size_t) position.size());
     }
-    state_ = state;
+    if (velocity.size() != 5) {
+      errx (EXIT_FAILURE, "Robot::update(): velocity has %zu DOF (but needs 5)", (size_t) velocity.size());
+    }
+    position_ = position;
+    velocity_ = velocity;
     
-    c2_ = cos(state_[2]);
-    s2_ = sin(state_[2]);
+    c2_ = cos(position_[2]);
+    s2_ = sin(position_[2]);
     ac2_ = len_a_ * c2_;
     as2_ = len_a_ * s2_;
     
-    q23_ = state_[2] + state_[3];
+    q23_ = position_[2] + position_[3];
     c23_ = cos(q23_);
     s23_ = sin(q23_);
     bc23_ = len_b_ * c23_;
     bs23_ = len_b_ * s23_;
     
-    q234_ = q23_ + state_[4];
+    q234_ = q23_ + position_[4];
     c234_ = cos(q234_);
     s234_ = sin(q234_);
     cc234_ = len_c_ * c234_;
     cs234_ = len_c_ * s234_;
     
     pos_a_ <<
-      state_[0] + ac2_,
-      state_[1] + as2_;
+      position_[0] + ac2_,
+      position_[1] + as2_;
     pos_b_ <<
       pos_a_[0] + bc23_,
       pos_a_[1] + bs23_;
@@ -259,19 +269,19 @@ public:
     
     // translucent disk for base
     cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 0.5);
-    cairo_arc(cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
+    cairo_arc(cr, position_[0], position_[1], radius_, 0., 2. * M_PI);
     cairo_fill(cr);
     
     // thick circle outline for base
     cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
     cairo_set_line_width(cr, 3.0 / pixelsize);
-    cairo_arc(cr, state_[0], state_[1], radius_, 0., 2. * M_PI);
+    cairo_arc(cr, position_[0], position_[1], radius_, 0., 2. * M_PI);
     cairo_stroke(cr);
     
     // thick line for arms
     cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
     cairo_set_line_width(cr, 3.0 / pixelsize);
-    cairo_move_to(cr, state_[0], state_[1]);
+    cairo_move_to(cr, position_[0], position_[1]);
     cairo_line_to(cr, pos_a_[0], pos_a_[1]);
     cairo_line_to(cr, pos_b_[0], pos_b_[1]);
     cairo_line_to(cr, pos_c_[0], pos_c_[1]);
@@ -287,7 +297,7 @@ public:
   double const len_b_;
   double const len_c_;
   
-  Vector state_;
+  Vector position_;
   Vector pos_a_;
   Vector pos_b_;
   Vector pos_c_;
@@ -359,8 +369,8 @@ public:
     cairo_set_line_width(cr, 1.0 / pixelsize);
     cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
     cairo_arc(cr, robot_.pos_a_[0], robot_.pos_a_[1], 0.1,
-	      bound(-2.0*M_PI, robot_.state_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
-	      bound(-2.0*M_PI, robot_.state_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
+	      bound(-2.0*M_PI, robot_.position_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
+	      bound(-2.0*M_PI, robot_.position_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
     cairo_line_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
     cairo_stroke(cr);
     cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
@@ -428,9 +438,9 @@ public:
   // }
   
   
-  bool init(Vector const & state)
+  bool init(Vector const & position, Vector const & velocity)
   {
-    robot_.update(state);
+    robot_.update(position, velocity);
     
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
       if ( ! ((Task*)tasks_[ii])->init(robot_)) {
@@ -438,7 +448,8 @@ public:
 	return false;
       }
     }
-    next_state_ = state;
+    next_position_ = position;
+    next_velocity_ = velocity;
     
     return true;
   }
@@ -453,7 +464,7 @@ public:
 	   << "Waypoint::update()\n";
     }
     
-    robot_.update(next_state_);
+    robot_.update(next_position_, next_velocity_);
     
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
       if ( ! ((Task*)tasks_[ii])->update(robot_)) {
@@ -462,40 +473,22 @@ public:
       }
     }
     
-    Vector const dq(algorithm2(joint_limits_,
-			       next_state_, // that's now the current state, btw
+    Vector const ddq(algorithm(timestep_,
+			       robot_,
+			       joint_limits_,
 			       tasks_,
 			       dbgos,
 			       "  "));
-    next_state_ += dq;
+    next_velocity_ += timestep_ * ddq;
+    next_position_ += timestep_ * next_velocity_;
     
     return true;
-    
-    // eetask_.Jx <<
-    //   1,
-    //   0,
-    //   -model_.as2_ - model_.bs23_ - model_.cs234_,
-    //   -model_.bs23_ - model_.cs234_,
-    //   -model_.cs234_,
-    //   0,
-    //   1,
-    //   model_.ac2_ + model_.bc23_ + model_.cc234_,
-    //   model_.bc23_ + model_.cc234_,
-    //   model_.cc234_;
-    
-    // lasertask_.xcur << model_.q234_;
-    // lasertask_.dx << normangle(lasertask_.goal_[0] - lasertask_.xcur[0]);
-    // // strictly speaking, the Jacobian of the laser task also has
-    // // entries for the base... but for now just treat it as a moving
-    // // goal when the base moves, even if the laser target point has
-    // // not moved.
-    // lasertask_.Jx <<
-    //   0, 0, 1, 1, 1;
   }
   
 protected:
   Robot robot_;
-  Vector next_state_;
+  Vector next_position_;
+  Vector next_velocity_;
   
   JointLimits joint_limits_;
   

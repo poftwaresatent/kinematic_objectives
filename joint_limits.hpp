@@ -43,7 +43,7 @@
 namespace kinematic_elastic {
   
   class JointLimits
-    : public TaskData
+    : public Constraint
   {
   public:
     void init(size_t ndof);
@@ -57,9 +57,9 @@ namespace kinematic_elastic {
        their hard joint limits, the task and locked list will be
        empty.
     */
-    void update(Vector const & state);
+    virtual void update(Vector const & position, Vector const & velocity);
     
-    bool isActive() const;
+    virtual bool isActive() const;
     
     /**
        Nx4 matrix, one row per joint, where

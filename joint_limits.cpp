@@ -63,24 +63,24 @@ namespace kinematic_elastic {
   
   
   void JointLimits::
-  update(Vector const & state)
+  update(Vector const & position, Vector const & velocity)
   {
     vector<double> delta;
     locked_joints_.clear();
     
-    for (ssize_t ii(0); ii < state.size(); ++ii) {
-      if (state[ii] < limits_(ii, 1)) {
+    for (ssize_t ii(0); ii < position.size(); ++ii) {
+      if (position[ii] < limits_(ii, 1)) {
 	locked_joints_.push_back(ii);
-	delta.push_back(limits_(ii, 0) - state[ii]);
+	delta.push_back(limits_(ii, 0) - position[ii]);
       }
-      else if (state[ii] > limits_(ii, 2)) {
+      else if (position[ii] > limits_(ii, 2)) {
 	locked_joints_.push_back(ii);
-	delta.push_back(limits_(ii, 3) - state[ii]);
+	delta.push_back(limits_(ii, 3) - position[ii]);
       }
     }
     
     delta_ = Vector::Map(&delta[0], delta.size());
-    Jacobian_ = Matrix::Zero(delta.size(), state.size());
+    Jacobian_ = Matrix::Zero(delta.size(), position.size());
     for (size_t ii(0); ii < delta.size(); ++ii) {
       Jacobian_(ii, locked_joints_[ii]) = 1.0;
     }

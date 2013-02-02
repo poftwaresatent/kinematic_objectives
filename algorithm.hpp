@@ -42,29 +42,17 @@
 
 namespace kinematic_elastic {
   
-  class JointLimits;
-  class TaskData;
+  class Model;
+  class Constraint;
+  class Objective;
   
   
-  /**
-     Delta-position domain with fanciful stacking of primary and
-     secondary.
-  */
-  Vector algorithm1 (JointLimits & joint_limits,
-		     Vector const & state,
-		     vector<TaskData *> const & tasklist,
-		     ostream * dbgos = 0,
-		     char const * dbgpre = "");
-  
-  /**
-     Delta-position domain with straight-up primary and secondary,
-     all the rest stacked into the third level.
-  */
-  Vector algorithm2 (JointLimits & joint_limits,
-		     Vector const & state,
-		     vector<TaskData *> const & tasklist,
-		     ostream * dbgos = 0,
-		     char const * dbgpre = "");
+  Vector algorithm(double timestep,
+		   Model const & model,
+		   vector<Constraint *> const & constraints,
+		   vector<Objective *> const & objectives,
+		   ostream * dbgos = 0,
+		   char const * dbgpre = "");
   
 }
 

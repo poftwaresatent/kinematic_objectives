@@ -47,8 +47,9 @@ namespace kinematic_elastic {
   class Model
   {
   public:
-    virtual void update(Vector const & state) = 0;
-    virtual Vector const & getState() const = 0;
+    virtual void update(Vector const & position, Vector const & velocity) = 0;
+    virtual Vector const & getPosition() const = 0;
+    virtual Vector const & getVelocity() const = 0;
     virtual Transform frame(size_t node) const = 0;
     virtual Matrix computeJx(size_t node, Vector const & gpoint) const = 0;
   };
