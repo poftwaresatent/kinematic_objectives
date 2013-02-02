@@ -118,8 +118,9 @@ namespace kinematic_elastic {
     Matrix Ja_inv;
     pseudo_inverse_moore_penrose(Ja, Ja_inv);
     double const t2(timestep * timestep);
-    Vector const dq(timestep * velocity);
-    Vector ddq((Ja_inv * xa - dq) / t2);
+    Vector const bias(timestep * velocity);
+    Vector const xa_bias(Ja * bias);
+    Vector ddq(Ja_inv * (xa - xa_bias) / t2);
     size_t const ndof(Ja.cols());
     Matrix const Na(Matrix::Identity(ndof, ndof) - Ja_inv * Ja);
     
@@ -127,11 +128,15 @@ namespace kinematic_elastic {
       *dbgos << dbgpre << "primary constraint:\n";
       string pre (dbgpre);
       pre += "  ";
+      print(bias, *dbgos, "bias", pre);
       print(xa, *dbgos, "xa", pre);
       print(Ja, *dbgos, "Ja", pre);
+      print(xa_bias, *dbgos, "xa_bias", pre);
+      Vector tmp(xa - xa_bias);
+      print(tmp, *dbgos, "xa - xa_bias", pre);
       print(Ja_inv, *dbgos, "Ja_inv", pre);
-      print(Vector(Ja_inv * xa), *dbgos, "Ja_inv * xa", pre);
-      print(dq, *dbgos, "timestep * velocity", pre);
+      tmp = Ja_inv * (xa - xa_bias);
+      print(tmp, *dbgos, "Ja_inv * (xa - xa_bias)", pre);
       print(ddq, *dbgos, "ddq", pre);
       print(Na, *dbgos, "Na", pre);
     }
@@ -155,8 +160,9 @@ namespace kinematic_elastic {
     Matrix Jb_inv;
     pseudo_inverse_moore_penrose(Jb, Jb_inv);
     Matrix const Nb(Matrix::Identity(ndof, ndof) - Jb_inv * Jb);
+    Vector const xb_bias(Jb * bias);
     
-    ddq += Na * ((Jb_inv * xb - dq) / t2 + Nb * ddq_unconstrained);
+    ddq += Na * (Jb_inv * (xb - xb_bias) / t2 + Nb * ddq_unconstrained);
     
     if (dbgos) {
       *dbgos << dbgpre << "secondary constraint:\n";
@@ -164,13 +170,23 @@ namespace kinematic_elastic {
       pre += "  ";
       print(xb, *dbgos, "xb", pre);
       print(Jb, *dbgos, "Jb", pre);
+      print(xb_bias, *dbgos, "xb_bias", pre);
+      Vector tmp(xb - xb_bias);
+      print(tmp, *dbgos, "xb - xb_bias", pre);
       print(Jb_inv, *dbgos, "Jb_inv", pre);
+      tmp = Jb_inv * (xb - xb_bias);
+      print(tmp, *dbgos, "Jb_inv * (xb - xb_bias)", pre);
       print(Nb, *dbgos, "Nb", pre);
-      print(Vector(Jb_inv * xb), *dbgos, "Jb_inv * xb", pre);
-      print(Vector((Jb_inv * xb - dq) / t2), *dbgos, "(Jb_inv * xb - dq) / t2", pre);
-      print(Vector(Nb * ddq_unconstrained), *dbgos, "Nb * ddq_unconstrained", pre);
-      print(Vector((Jb_inv * xb - dq) / t2 + Nb * ddq_unconstrained), *dbgos, "(Jb_inv * xb - dq) / t2 + Nb * ddq_unconstrained", pre);
-      print(Vector(Na * ((Jb_inv * xb - dq) / t2 + Nb * ddq_unconstrained)), *dbgos, "Na * ((Jb_inv * xb - dq) / t2 + Nb * ddq_unconstrained)", pre);
+      tmp = Jb_inv * (xb - xb_bias) / t2;
+      print(tmp, *dbgos, "Jb_inv * (xb - xb_bias) / t2", pre);
+      tmp = Nb * ddq_unconstrained;
+      print(tmp, *dbgos, "Nb * ddq_unconstrained", pre);
+      tmp = Na * Jb_inv * (xb - xb_bias) / t2;
+      print(tmp, *dbgos, "Na * Jb_inv * (xb - xb_bias) / t2", pre);
+      tmp = Na * Nb * ddq_unconstrained;
+      print(tmp, *dbgos, "Na * Nb * ddq_unconstrained", pre);
+      tmp = Na * (Jb_inv * (xb - xb_bias) / t2 + Nb * ddq_unconstrained);
+      print(tmp, *dbgos, "Na * (Jb_inv * (xb - xb_bias) / t2 + Nb * ddq_unconstrained)", pre);
       print(ddq, *dbgos, "updated ddq", pre);
     }
     
