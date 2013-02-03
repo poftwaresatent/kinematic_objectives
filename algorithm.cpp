@@ -46,7 +46,7 @@
 namespace kinematic_elastic {
   
   
-  Vector compute_objective_acceleration(vector<Objective *> const & objectives,
+  Vector compute_objective_acceleration(vector<TaskData *> const & objectives,
 					ostream * dbgos,
 					char const * dbgpre)
   {
@@ -107,7 +107,6 @@ namespace kinematic_elastic {
   
   
   void compute_constrained_velocity(double timestep,
-				    Vector const & delta_dq_obj,
 				    vector<Constraint *> const & constraints,
 				    Vector & dq_cons,
 				    Matrix & Nc,
@@ -135,15 +134,11 @@ namespace kinematic_elastic {
     }
     
     if (1 == constraints.size()) {
-      dq_cons += Na * delta_dq_obj;
       Nc = Na;
       if (dbgos) {
 	*dbgos << dbgpre << "no secondary constraint\n";
 	string pre (dbgpre);
 	pre += "  ";
-	print(delta_dq_obj, *dbgos, "delta_dq_obj", pre);
-	Vector tmp(Na * delta_dq_obj);
-	print(tmp, *dbgos, "Na * delta_dq_obj", pre);
 	print(dq_cons, *dbgos, "dq_cons", pre);
       }
       return;
@@ -157,7 +152,6 @@ namespace kinematic_elastic {
     pseudo_inverse_moore_penrose(Jb, Jb_inv);
     Matrix const Nb(Matrix::Identity(ndof, ndof) - Jb_inv * Jb);
     
-    dq_cons += Na * (Jb_inv * xb + Nb * delta_dq_obj);
     Nc = Na * Nb;
     
     if (dbgos) {
@@ -172,14 +166,8 @@ namespace kinematic_elastic {
       tmp = Jb_inv * xb;
       print(tmp, *dbgos, "Jb_inv * xb", pre);
       print(Nb, *dbgos, "Nb", pre);
-      tmp = Nb * delta_dq_obj;
-      print(tmp, *dbgos, "Nb * delta_dq_obj", pre);
       tmp = Na * Jb_inv * xb;
       print(tmp, *dbgos, "Na * Jb_inv * xb", pre);
-      tmp = Na * Nb * delta_dq_obj;
-      print(tmp, *dbgos, "Na * Nb * delta_dq_obj", pre);
-      tmp = Na * (Jb_inv * xb + Nb * delta_dq_obj);
-      print(tmp, *dbgos, "Na * (Jb_inv * xb + Nb * delta_dq_obj)", pre);
       print(dq_cons, *dbgos, "updated dq_cons", pre);
     }
   }

@@ -377,6 +377,10 @@ public:
     objectives_.push_back(&basetask_);
     objectives_.push_back(&posture_);
     
+    for (size_t ii(0); ii < objectives_.size(); ++ii) {
+      obj_wtf_.push_back(objectives_[ii]);
+    }
+    
     joint_limits_.limits_(3, 0) = -120.0 * deg;
     joint_limits_.limits_(3, 1) = -119.999 * deg;
     joint_limits_.limits_(3, 2) =  119.999 * deg;
@@ -512,7 +516,7 @@ public:
 	   << "trying without constraints first\n";
     }
     
-    Vector const ddq_obj(compute_objective_acceleration(objectives_, dbgos, "  "));
+    Vector ddq_obj(compute_objective_acceleration(obj_wtf_, dbgos, "  "));
     Vector dq_obj(robot_.getVelocity() + timestep_ * ddq_obj);
     Vector q_obj(robot_.getPosition() + timestep_ * dq_obj);
     
@@ -523,6 +527,7 @@ public:
     }
     
     Vector const oldpos(robot_.getPosition()); // will need this in case of constraints
+    Vector const oldvel(robot_.getVelocity()); // will need this in case of constraints
     robot_.update(q_obj, dq_obj);
     
     bool need_constraints(false);
@@ -553,8 +558,16 @@ public:
     
     Vector dq_cons;
     Matrix Nc;
-    compute_constrained_velocity(timestep_, timestep_ * ddq_obj, constraints_, dq_cons, Nc, dbgos, "  ");
-    robot_.update(oldpos + timestep_ * dq_cons, Nc * dq_cons);
+    compute_constrained_velocity(timestep_, constraints_, dq_cons, Nc, dbgos, "  ");
+    TaskData all_constraints;
+    all_constraints.stack(constraints_.begin(), constraints_.end());
+    TaskData constrained_primary;
+    constrained_primary.stack(all_constraints, *objectives_[0]);
+    obj_wtf_[0] = &constrained_primary;
+    Vector const dq_obj_cons(timestep_ * Nc * compute_objective_acceleration(obj_wtf_, dbgos, "  "));
+    obj_wtf_[0] = objectives_[0]; // restore
+    
+    robot_.update(oldpos + timestep_ * (dq_cons + dq_obj_cons), Nc * (oldvel + dq_cons));
     
     if (verbose) {
       print (dq_cons, cout, "velocity update to satisfy constraints", "  ");
@@ -578,6 +591,7 @@ protected:
   PostureTask posture_;
   
   vector<Constraint *> constraints_;
+  vector<TaskData *> obj_wtf_;
   vector<Objective *> objectives_;
 };
 

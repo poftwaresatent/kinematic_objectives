@@ -42,17 +42,15 @@
 
 namespace kinematic_elastic {
   
-  class Model;
+  class TaskData;
   class Constraint;
-  class Objective;
   
   
-  Vector compute_objective_acceleration(vector<Objective *> const & objectives,
+  Vector compute_objective_acceleration(vector<TaskData *> const & objectives,
 					ostream * dbgos = 0,
 					char const * dbgpre = "");
   
   void compute_constrained_velocity(double timestep,
-				    Vector const & delta_dq_obj,
 				    vector<Constraint *> const & constraints,
 				    Vector & dq_cons,
 				    Matrix & Nc,
