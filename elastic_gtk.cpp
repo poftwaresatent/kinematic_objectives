@@ -368,6 +368,10 @@ public:
     joint_limits_.init(5);
     constraints_.push_back(&joint_limits_);
     
+    for (size_t ii(0); ii < constraints_.size(); ++ii) {
+      constr_wtf_.push_back(constraints_[ii]);
+    }
+    
     eetask_.point_ << robot_.len_c_, 0.0;
     ellbowtask_.point_ << robot_.len_a_, 0.0;
     ellbowtask_.kp_ = 400.0;
@@ -556,16 +560,27 @@ public:
     	   << "recomputing with constraints enabled\n";
     }
     
+    // XXXX quick non-generic hack, will break if constr+primary is
+    // infeasible, and if there is more than one constraint task.
+    TaskData constrained_primary;
+    Vector const bak(eetask_.delta_);
+    eetask_.delta_ *= timestep_ * timestep_;
+    constrained_primary.stack(joint_limits_, eetask_);
+    constr_wtf_[0] = &constrained_primary; // never restore, gets overwritten next time anyway
+    
     Vector dq_cons;
     Matrix Nc;
-    compute_constrained_velocity(timestep_, constraints_, dq_cons, Nc, dbgos, "  ");
-    TaskData all_constraints;
-    all_constraints.stack(constraints_.begin(), constraints_.end());
-    TaskData constrained_primary;
-    constrained_primary.stack(all_constraints, *objectives_[0]);
-    obj_wtf_[0] = &constrained_primary;
+    compute_constrained_velocity(timestep_, constr_wtf_, dq_cons, Nc, dbgos, "  ");
+    
+    eetask_.delta_ = bak;
+    
+    // TaskData all_constraints;
+    // all_constraints.stack(constraints_.begin(), constraints_.end());
+    // TaskData constrained_primary;
+    // constrained_primary.stack(all_constraints, *objectives_[0]);
+    // obj_wtf_[0] = &constrained_primary;
     Vector const dq_obj_cons(timestep_ * Nc * compute_objective_acceleration(obj_wtf_, dbgos, "  "));
-    obj_wtf_[0] = objectives_[0]; // restore
+    // obj_wtf_[0] = objectives_[0]; // restore
     
     robot_.update(oldpos + timestep_ * (dq_cons + dq_obj_cons), Nc * (oldvel + dq_cons));
     
@@ -591,8 +606,10 @@ protected:
   PostureTask posture_;
   
   vector<Constraint *> constraints_;
-  vector<TaskData *> obj_wtf_;
   vector<Objective *> objectives_;
+  
+  vector<TaskData *> obj_wtf_;
+  vector<TaskData *> constr_wtf_;
 };
 
 

@@ -43,7 +43,6 @@
 namespace kinematic_elastic {
   
   class TaskData;
-  class Constraint;
   
   
   Vector compute_objective_acceleration(vector<TaskData *> const & objectives,
@@ -51,7 +50,7 @@ namespace kinematic_elastic {
 					char const * dbgpre = "");
   
   void compute_constrained_velocity(double timestep,
-				    vector<Constraint *> const & constraints,
+				    vector<TaskData *> const & constraints,
 				    Vector & dq_cons,
 				    Matrix & Nc,
 				    ostream * dbgos = 0,

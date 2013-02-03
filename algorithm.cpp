@@ -107,7 +107,7 @@ namespace kinematic_elastic {
   
   
   void compute_constrained_velocity(double timestep,
-				    vector<Constraint *> const & constraints,
+				    vector<TaskData *> const & constraints,
 				    Vector & dq_cons,
 				    Matrix & Nc,
 				    ostream * dbgos,
