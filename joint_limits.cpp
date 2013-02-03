@@ -65,15 +65,20 @@ namespace kinematic_elastic {
   update(Model const & model)
   {
     Vector const & position(model.getPosition());
+    Vector const & velocity(model.getVelocity());
     vector<double> delta;
     locked_joints_.clear();
     
     for (ssize_t ii(0); ii < position.size(); ++ii) {
-      if (position[ii] < limits_(ii, 1)) {
+      if ((position[ii] < limits_(ii, 0)) // violates lower hard limit
+	  || ((position[ii] < limits_(ii, 1)) // or is closing on it
+	      && (velocity[ii] < -1e-3))) {
 	locked_joints_.push_back(ii);
 	delta.push_back(limits_(ii, 0) - position[ii]);
       }
-      else if (position[ii] > limits_(ii, 2)) {
+      else if ((position[ii] > limits_(ii, 3)) // violates hard limit
+	       || ((position[ii] > limits_(ii, 2)) // or is closing on it
+		   && (velocity[ii] > 1e-3))) {
 	locked_joints_.push_back(ii);
 	delta.push_back(limits_(ii, 3) - position[ii]);
       }
