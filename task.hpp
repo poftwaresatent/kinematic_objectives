@@ -74,25 +74,16 @@ namespace kinematic_elastic {
   };
   
   
-  class Objective
+  class Task
     : public TaskData
   {
   public:
     virtual ~Objective() {}
     
-    virtual bool init(Model const & model) = 0;
-    virtual bool update(Model const & model) = 0;
-  };
-  
-  
-  class Constraint
-    : public TaskData
-  {
-  public:
-    virtual ~Constraint() {}
+    virtual bool init(Model const & model) { return true; }
+    virtual bool isActive() const { return true; }
     
     virtual bool update(Model const & model) = 0;
-    virtual bool isActive() const = 0;
   };
   
 }

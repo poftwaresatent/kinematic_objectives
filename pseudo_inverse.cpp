@@ -58,12 +58,13 @@ namespace kinematic_elastic {
     http://eigen.tuxfamily.org/index.php?title=FAQ
   */
   void pseudo_inverse_moore_penrose (Matrix const & mx,
-				     Matrix & inv)
+				     Matrix & inv,
+				     Matrix * dproj)
   {
     if (mx.rows() > mx.cols()) {
       // apparently in this case it is cheaper to use the transpose...
       Matrix tmp;
-      pseudo_inverse_moore_penrose(mx.transpose(), tmp);
+      pseudo_inverse_moore_penrose(mx.transpose(), tmp, dproj);
       inv = tmp.transpose();
       return;
     }
@@ -79,6 +80,19 @@ namespace kinematic_elastic {
 	+= (1.0 / svd.singularValues()[ii])
 	*  svd.matrixV().col(ii)
 	*  svd.matrixU().col(ii).transpose();
+    }
+    
+    if (dproj) {
+      // dropj is symmetric, so above we don't need to worry if we
+      // used the mx.transpose() trick
+      *dropj
+	= svd.matrixV().col(0)
+	* svd.matrixV().col(0).transpose();
+      for (index_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
+	*dropj
+	  += svd.matrixV().col(ii)
+	  * svd.matrixV().col(ii).transpose();
+      }
     }
   }
   

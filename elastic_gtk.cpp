@@ -59,9 +59,9 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 static Vector eegoal(2);
-static Vector ellbowgoal(2);
-static Vector basegoal(2);
-static Vector * handle[] = { &eegoal, &ellbowgoal, &basegoal, 0 };
+static Vector repulsor(2);
+static Vector attractor(2);
+static Vector * handle[] = { &eegoal, &repulsor, &attractor, 0 };
 static Vector * grabbed(0);
 static double grab_radius(0.2);
 static Vector grab_offset(2);
@@ -172,7 +172,160 @@ public:
   Vector goal_;
 };
 
+
+class JointDamping
+  : public Objective
+{
+public:
+  JointDamping()
+    : gain_(10.0)
+  {
+  }
   
+  virtual bool init(Model const & model)
+  {
+    Jacobian_ = Matrix::Identity(model.getPosition().size(), model.getPosition().size());
+    return true;
+  }
+  
+  virtual bool update(Model const & model)
+  {
+    delta_ = - gain_ * model.getVelocity();
+    return true;
+  }
+  
+  virtual bool isActive() const
+  {
+    return true;
+  }
+  
+  double gain_;
+};
+
+
+class Repulsion
+  : public Task
+{
+public:
+  Repulsion(size_t node,
+	    Vector const & point)
+    : gain_(100.0),
+      distance_(2.0),
+      node_(node),
+      point_(point)
+  {
+    repulsor_.resize(0);
+  }
+  
+  
+  virtual bool init(Model const & model)
+  {
+    return update(model);
+  }
+  
+  
+  virtual bool update(Model const & model)
+  {
+    if (0 == repulsor_.size()) {
+      Jacobian_.resize(0, 0);
+      return true;
+    }
+    Eigen::Vector3d tmp1, tmp2;
+    tmp1 << point_[0], point_[1], 0.0;
+    tmp2 = model.frame(node_) * tmp1;
+    gpoint_ << tmp2[0], tmp2[1];
+    delta_ = gpoint_ - repulsor_;
+    double const dist(delta_.norm());
+    if ((dist >= distance_) || (dist < 1e-9)) {
+      Jacobian_.resize(0, 0);
+      return true;
+    }
+    delta_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
+    Matrix tmp3(model.computeJx(node_, gpoint_));
+    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
+    return true;
+  }
+  
+  
+  virtual bool isActive() const
+  {
+    return Jacobian_.rows() > 0;
+  }
+  
+  
+  double gain_;
+  double distance_;
+  size_t node_;
+  Vector point_;
+  Vector gpoint_;
+  Vector repulsor_;
+};
+
+
+class Attraction
+  : public Task
+{
+public:
+  Attraction(size_t node,
+	    Vector const & point)
+    : gain_(100.0),
+      distance_(2.0),
+      node_(node),
+      point_(point)
+  {
+    attractor_.resize(0);
+  }
+  
+  
+  virtual bool init(Model const & model)
+  {
+    return update(model);
+  }
+  
+  
+  virtual bool update(Model const & model)
+  {
+    if (0 == attractor_.size()) {
+      Jacobian_.resize(0, 0);
+      return true;
+    }
+    Eigen::Vector3d tmp1, tmp2;
+    tmp1 << point_[0], point_[1], 0.0;
+    tmp2 = model.frame(node_) * tmp1;
+    gpoint_ << tmp2[0], tmp2[1];
+    delta_ = attractor_ - gpoint_;
+    double const dist(delta_.norm());
+    if (dist < 1e-9) {
+      Jacobian_.resize(0, 0);
+      return true;
+    }
+    if (dist < distance_) {
+      delta_ *= gain / distance_;
+    }
+    else {
+      delta_ *= gain_ / dist;
+    }
+    Matrix tmp3(model.computeJx(node_, gpoint_));
+    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
+    return true;
+  }
+  
+  
+  virtual bool isActive() const
+  {
+    return Jacobian_.rows() > 0;
+  }
+  
+  
+  double gain_;
+  double distance_;
+  size_t node_;
+  Vector point_;
+  Vector gpoint_;
+  Vector attractor_;
+};
+
+
 class Robot
   : public Model
 {
@@ -362,38 +515,33 @@ public:
   Waypoint()
     : timestep_(1e-3),
       eetask_(3, Vector::Zero(2)),
-      ellbowtask_(1, Vector::Zero(2)),
-      basetask_(0, Vector::Zero(2))
+      attract_base_(0, Vector::Zero(2)),
+      repulse_ellbow_(1, Vector::Zero(2)),
+      repulse_wrist_(2, Vector::Zero(2)),
   {
     joint_limits_.init(5);
-    constraints_.push_back(&joint_limits_);
-    
-    for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      constr_wtf_.push_back(constraints_[ii]);
-    }
-    
-    eetask_.point_ << robot_.len_c_, 0.0;
-    ellbowtask_.point_ << robot_.len_a_, 0.0;
-    ellbowtask_.kp_ = 400.0;
-    ellbowtask_.kd_ = 40.0;
-    objectives_.push_back(&eetask_);
-    objectives_.push_back(&ellbowtask_);
-    objectives_.push_back(&basetask_);
-    objectives_.push_back(&posture_);
-    
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      obj_wtf_.push_back(objectives_[ii]);
-    }
-    
     joint_limits_.limits_(3, 0) = -120.0 * deg;
     joint_limits_.limits_(3, 1) = -119.999 * deg;
     joint_limits_.limits_(3, 2) =  119.999 * deg;
     joint_limits_.limits_(3, 3) =  120.0 * deg;
-    
     joint_limits_.limits_(4, 0) = -120.0 * deg;
     joint_limits_.limits_(4, 1) = -119.999 * deg;
     joint_limits_.limits_(4, 2) =  119.999 * deg;
     joint_limits_.limits_(4, 3) =  120.0 * deg;
+    
+    constraints_.push_back(&joint_limits_);
+    
+    eetask_.point_ << robot_.len_c_, 0.0;
+    
+    tasks_.push_back(&eetask_);
+    
+    repulse_ellbow_.point_ << robot_.len_a_, 0.0;
+    repulse_wrist_.point_ << robot_.len_b_, 0.0;
+    
+    objectives_.push_back(&attract_base_);
+    objectives_.push_back(&repulse_ellbow_);
+    objectives_.push_back(&repulse_wrist_);
+    objectives_.push_back(&joint_damping_);
   }
   
   
@@ -462,29 +610,41 @@ public:
   }
   
   
-  void setEllbowGoal(Vector const & goal)
+  void setBaseAttractor(Vector const & attractor)
   {
-    ellbowtask_.goal_ = goal;
+    attract_base_.attractor_ = attractor;
   }
   
   
-  void setBaseGoal(Vector const & goal)
+  void setEllbowRepulsor(Vector const & repulsor)
   {
-    basetask_.goal_ = goal;
+    repulse_ellbow_.repulsor_ = repulsor;
   }
   
   
-  // void setLaserGoal(Vector const & goalpoint)
-  // {
-  //   Vector dg(goalpoint - model_.pos_c_);
-  //   lasertask_.goal_ << atan2(dg[1], dg[0]);
-  //   lasertask_.dx << normangle(lasertask_.goal_[0] - lasertask_.xcur[0]);
-  // }
+  void setWristRepulsor(Vector const & repulsor)
+  {
+    repulse_wrist_.repulsor_ = repulsor;
+  }
   
   
   bool init(Vector const & position, Vector const & velocity)
   {
     robot_.update(position, velocity);
+    
+    for (size_t ii(0); ii < constraints_.size(); ++ii) {
+      if ( ! (constraints_[ii])->init(robot_)) {
+	cerr << "Waypoint::init(): constraints_[" << ii << "]->init() failed\n";
+	return false;
+      }
+    }
+    
+    for (size_t ii(0); ii < tasks_.size(); ++ii) {
+      if ( ! (tasks_[ii])->init(robot_)) {
+	cerr << "Waypoint::init(): tasks_[" << ii << "]->init() failed\n";
+	return false;
+      }
+    }
     
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
       if ( ! (objectives_[ii])->init(robot_)) {
@@ -508,6 +668,13 @@ public:
       print (robot_.getVelocity(), cout, "current velocity", "  ");
     }
     
+    for (size_t ii(0); ii < tasks_.size(); ++ii) {
+      if ( ! (tasks_[ii])->update(robot_)) {
+	cerr << "Waypoint::update(): tasks_[" << ii << "]->update() failed\n";
+	return false;
+      }
+    }
+    
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
       if ( ! (objectives_[ii])->update(robot_)) {
 	cerr << "Waypoint::update(): objectives_[" << ii << "]->update() failed\n";
@@ -520,19 +687,56 @@ public:
 	   << "trying without constraints first\n";
     }
     
-    Vector ddq_obj(compute_objective_acceleration(obj_wtf_, dbgos, "  "));
-    Vector dq_obj(robot_.getVelocity() + timestep_ * ddq_obj);
-    Vector q_obj(robot_.getPosition() + timestep_ * dq_obj);
+    Vector ddq_t;
+    Matrix N_t;
+    perform_prioritization(tasks_, ddq_t, N_t, dbgos, "");
+    
+    Vector ddq_o(Vector::Zero(robot_.getPosition().size()));
+    for (size_t ii(0); ii < objectives_.size(); ++ii) {
+      if (objectives_[ii]->isActive()) {
+	ddq_o += objectives_[ii].Jacobian_ * objectives_[ii].delta_;
+      }
+    }
+    
+    Vector ddq_try(ddq_t + N_t * ddq_o);
+    Vector dq_try(robot_.getVelocity() + timestep_ * ddq_try);
+    Vector q_try(robot_.getPosition() + timestep_ * dq_try);
     
     if (verbose) {
-      print (ddq_obj, cout, "unconstrained acceleration", "  ");
-      print (dq_obj, cout, "resulting unconstrained velocity", "  ");
-      print (q_obj, cout, "resulting unconstrained position", "  ");
+      print (ddq_try, cout, "unconstrained acceleration", "  ");
+      print (dq_try, cout, "resulting unconstrained velocity", "  ");
+      print (q_try, cout, "resulting unconstrained position", "  ");
     }
     
     Vector const oldpos(robot_.getPosition()); // will need this in case of constraints
     Vector const oldvel(robot_.getVelocity()); // will need this in case of constraints
-    robot_.update(q_obj, dq_obj);
+    robot_.update(q_try, dq_try);
+    
+
+#error here
+    // update constraints based on free trial, if none triggers we're home free
+    //
+    // if any constraint triggers, compute the required delta_q via
+    // constraint priorization and grab the nullspace of all
+    // constraints
+    //
+    // re-update the robot with the corrected position and a velocity
+    // that got projected into the nullspace of the constraints. not
+    // sure if this should be N_c*dq_try or maybe
+    // N_c*oldvel... probably dq_try makes more sense.
+    //
+    // re-update the tasks and objectives (they may care about the
+    // changed position and velocity after all).
+    //
+    // re-run task priorization, but seed it with N_c.
+    //
+    // re-add the objectives.
+    //
+    // now we should be able to re-integrate form accelerations to
+    // velocities to positions, and that should result in velocities
+    // and positions that respect the constraints. to be proven with
+    // pen and paper first!
+    
     
     bool need_constraints(false);
     for (size_t ii(0); ii < constraints_.size(); ++ii) {
@@ -601,15 +805,14 @@ protected:
   JointLimits joint_limits_;
   
   PositionTask eetask_;
-  PositionTask ellbowtask_;
-  PositionTask basetask_;
-  PostureTask posture_;
   
-  vector<Constraint *> constraints_;
-  vector<Objective *> objectives_;
+  Attraction attract_base_;
+  Repulsion repulse_ellbow_;
+  Repulsion repulse_wrist_;
   
-  vector<TaskData *> obj_wtf_;
-  vector<TaskData *> constr_wtf_;
+  vector<Task *> constraints_;
+  vector<Task *> tasks_;
+  vector<Task *> objectives_;
 };
 
 

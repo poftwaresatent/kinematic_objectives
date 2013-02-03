@@ -43,7 +43,7 @@
 namespace kinematic_elastic {
   
   class JointLimits
-    : public Constraint
+    : public Task
   {
   public:
     void init(size_t ndof);
