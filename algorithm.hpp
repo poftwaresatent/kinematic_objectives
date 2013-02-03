@@ -47,16 +47,17 @@ namespace kinematic_elastic {
   class Objective;
   
   
-  Vector algorithm_unconstrained(vector<Objective *> const & objectives,
-				 ostream * dbgos = 0,
-				 char const * dbgpre = "");
+  Vector compute_objective_acceleration(vector<Objective *> const & objectives,
+					ostream * dbgos = 0,
+					char const * dbgpre = "");
   
-  Vector algorithm_constrained(double timestep,
-			       Vector const & velocity,
-			       Vector const & ddq_unconstrained,
-			       vector<Constraint *> const & constraints,
-			       ostream * dbgos = 0,
-			       char const * dbgpre = "");
+  void compute_constrained_velocity(double timestep,
+				    Vector const & dq_obj,
+				    vector<Constraint *> const & constraints,
+				    Vector & dq_cons,
+				    Vector & dq_proj,
+				    ostream * dbgos = 0,
+				    char const * dbgpre = "");
   
 }
 

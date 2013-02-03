@@ -368,8 +368,8 @@ public:
     joint_limits_.init(5);
     constraints_.push_back(&joint_limits_);
     
-    eetask_.point_ << robot_clean_.len_c_, 0.0;
-    ellbowtask_.point_ << robot_clean_.len_a_, 0.0;
+    eetask_.point_ << robot_.len_c_, 0.0;
+    ellbowtask_.point_ << robot_.len_a_, 0.0;
     ellbowtask_.kp_ = 400.0;
     ellbowtask_.kd_ = 40.0;
     objectives_.push_back(&eetask_);
@@ -377,18 +377,14 @@ public:
     objectives_.push_back(&basetask_);
     objectives_.push_back(&posture_);
     
-    // yet another subtlety: soft limits must not be too close to hard
-    // limits, otherwise we get jitter from the joint-limit avoidance
-    // algorithm.
-    
     joint_limits_.limits_(3, 0) = -120.0 * deg;
-    joint_limits_.limits_(3, 1) = -119.0 * deg;
-    joint_limits_.limits_(3, 2) =  119.0 * deg;
+    joint_limits_.limits_(3, 1) = -120.0 * deg;
+    joint_limits_.limits_(3, 2) =  120.0 * deg;
     joint_limits_.limits_(3, 3) =  120.0 * deg;
     
     joint_limits_.limits_(4, 0) = -120.0 * deg;
-    joint_limits_.limits_(4, 1) = -119.0 * deg;
-    joint_limits_.limits_(4, 2) =  119.0 * deg;
+    joint_limits_.limits_(4, 1) = -120.0 * deg;
+    joint_limits_.limits_(4, 2) =  120.0 * deg;
     joint_limits_.limits_(4, 3) =  120.0 * deg;
   }
   
@@ -400,24 +396,24 @@ public:
   
   void draw(cairo_t * cr, double pixelsize)
   {
-    robot_clean_.draw(cr, pixelsize);
+    robot_.draw(cr, pixelsize);
     
     cairo_save(cr);
     
     // thin arcs for arm joint limits
     cairo_set_source_rgb(cr, 0.5, 0.5, 1.0);
     cairo_set_line_width(cr, 1.0 / pixelsize);
-    cairo_move_to(cr, robot_clean_.pos_a_[0], robot_clean_.pos_a_[1]);
-    cairo_arc(cr, robot_clean_.pos_a_[0], robot_clean_.pos_a_[1], 0.1,
-	      bound(-2.0*M_PI, robot_clean_.position_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
-	      bound(-2.0*M_PI, robot_clean_.position_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
-    cairo_line_to(cr, robot_clean_.pos_a_[0], robot_clean_.pos_a_[1]);
+    cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
+    cairo_arc(cr, robot_.pos_a_[0], robot_.pos_a_[1], 0.1,
+	      bound(-2.0*M_PI, robot_.position_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
+	      bound(-2.0*M_PI, robot_.position_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
+    cairo_line_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
     cairo_stroke(cr);
-    cairo_move_to(cr, robot_clean_.pos_b_[0], robot_clean_.pos_b_[1]);
-    cairo_arc(cr, robot_clean_.pos_b_[0], robot_clean_.pos_b_[1], 0.1,
-	      bound(-2.0*M_PI, robot_clean_.q23_ + joint_limits_.limits_(4, 0), 2.0*M_PI),
-	      bound(-2.0*M_PI, robot_clean_.q23_ + joint_limits_.limits_(4, 3), 2.0*M_PI));
-    cairo_line_to(cr, robot_clean_.pos_b_[0], robot_clean_.pos_b_[1]);
+    cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
+    cairo_arc(cr, robot_.pos_b_[0], robot_.pos_b_[1], 0.1,
+	      bound(-2.0*M_PI, robot_.q23_ + joint_limits_.limits_(4, 0), 2.0*M_PI),
+	      bound(-2.0*M_PI, robot_.q23_ + joint_limits_.limits_(4, 3), 2.0*M_PI));
+    cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
     cairo_stroke(cr);
     
     // thin line for end effector task
@@ -480,16 +476,14 @@ public:
   
   bool init(Vector const & position, Vector const & velocity)
   {
-    robot_clean_.update(position, velocity);
+    robot_.update(position, velocity);
     
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if ( ! (objectives_[ii])->init(robot_clean_)) {
+      if ( ! (objectives_[ii])->init(robot_)) {
 	cerr << "Waypoint::init(): objectives_[" << ii << "]->init() failed\n";
 	return false;
       }
     }
-    next_position_ = position;
-    next_velocity_ = velocity;
     
     return true;
   }
@@ -502,19 +496,12 @@ public:
       dbgos = &cout;
       cout << "==================================================\n"
 	   << "Waypoint::update()\n";
-      print (next_position_, cout, "current position", "  ");
-      print (next_velocity_, cout, "current velocity", "  ");
+      print (robot_.getPosition(), cout, "current position", "  ");
+      print (robot_.getVelocity(), cout, "current velocity", "  ");
     }
     
-    // XXXX this is duplicate work in case no constraints were active
-    // in the previous update, but double-buffering is not quite so
-    // trivial if you also want to plot the situation as it was when
-    // you made the calculations (for ease of debugging).
-    //
-    robot_clean_.update(next_position_, next_velocity_);
-    
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if ( ! (objectives_[ii])->update(robot_clean_)) {
+      if ( ! (objectives_[ii])->update(robot_)) {
 	cerr << "Waypoint::update(): objectives_[" << ii << "]->update() failed\n";
 	return false;
       }
@@ -525,23 +512,22 @@ public:
 	   << "trying without constraints first\n";
     }
     
-    Vector ddq, dq, qq;
-    ddq = algorithm_unconstrained(objectives_,
-				  dbgos,
-				  "  ");
-    dq = next_velocity_ + timestep_ * ddq; // note: here, next_velocity_ is the current velocity
-    qq = next_position_ + timestep_ * dq;  // note, likewise, next_position_ is the current position
+    Vector const ddq_obj(compute_objective_acceleration(objectives_, dbgos, "  "));
+    Vector dq_obj(robot_.getVelocity() + timestep_ * ddq_obj);
+    Vector q_obj(robot_.getPosition() + timestep_ * dq_obj);
     
     if (verbose) {
-      print (ddq, cout, "unconstrained acceleration", "  ");
-      print (dq, cout, "resulting unconstrained velocity", "  ");
-      print (qq, cout, "resulting unconstrained position", "  ");
+      print (ddq_obj, cout, "unconstrained acceleration", "  ");
+      print (dq_obj, cout, "resulting unconstrained velocity", "  ");
+      print (q_obj, cout, "resulting unconstrained position", "  ");
     }
     
-    robot_dirty_.update(qq, dq);
+    Vector const oldpos(robot_.getPosition()); // will need this in case of constraints
+    robot_.update(q_obj, dq_obj);
+    
     bool need_constraints(false);
     for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      if ( ! (constraints_[ii])->update(robot_dirty_)) {
+      if ( ! (constraints_[ii])->update(robot_)) {
     	cerr << "Waypoint::update(): constraints_[" << ii << "]->update() failed\n";
     	return false;
       }
@@ -557,8 +543,6 @@ public:
       if (verbose) {
     	cout << "all constraints are inactive\n";
       }
-      next_position_ = qq;
-      next_velocity_ = dq;
       return true;
     }
     
@@ -567,19 +551,14 @@ public:
     	   << "recomputing with constraints enabled\n";
     }
     
-    ddq = algorithm_constrained(timestep_,
-				next_velocity_, // yes: next_velocity_ is the current velocity here
-				ddq,
-				constraints_,
-				dbgos,
-				"  ");
-    next_velocity_ += timestep_ * ddq; // and again: next_velocity_ is the current velocity here
-    next_position_ += timestep_ * next_velocity_;  // same goes for next_position_: it is the current one
+    Vector dq_cons, dq_proj;
+    compute_constrained_velocity(timestep_, dq_obj, constraints_, dq_cons, dq_proj, dbgos, "  ");
+    robot_.update(oldpos + timestep_ * dq_cons, dq_proj);
     
     if (verbose) {
-      print (ddq, cout, "constrained acceleration", "  ");
-      print (next_velocity_, cout, "resulting constrained velocity", "  ");
-      print (next_position_, cout, "resulting constrained position", "  ");
+      print (dq_cons, cout, "constrained velocity", "  ");
+      print (dq_proj, cout, "projected velocity", "  ");
+      print (robot_.getPosition(), cout, "resulting constrained position", "  ");
     }
     
     return true;
@@ -587,11 +566,7 @@ public:
   
 protected:
   double timestep_;
-  
-  Robot robot_clean_, robot_dirty_;
-  
-  Vector next_position_;
-  Vector next_velocity_;
+  Robot robot_;
   
   JointLimits joint_limits_;
   
