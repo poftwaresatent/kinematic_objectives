@@ -551,14 +551,16 @@ public:
     	   << "recomputing with constraints enabled\n";
     }
     
-    Vector dq_cons, dq_proj;
-    compute_constrained_velocity(timestep_, dq_obj, constraints_, dq_cons, dq_proj, dbgos, "  ");
-    robot_.update(oldpos + timestep_ * dq_cons, dq_proj);
+    Vector dq_cons;
+    Matrix Nc;
+    compute_constrained_velocity(timestep_, timestep_ * ddq_obj, constraints_, dq_cons, Nc, dbgos, "  ");
+    robot_.update(oldpos + timestep_ * dq_cons, Nc * dq_cons);
     
     if (verbose) {
-      print (dq_cons, cout, "constrained velocity", "  ");
-      print (dq_proj, cout, "projected velocity", "  ");
+      print (dq_cons, cout, "velocity update to satisfy constraints", "  ");
+      print (Nc, cout, "nullspace of constrains", "  ");
       print (robot_.getPosition(), cout, "resulting constrained position", "  ");
+      print (robot_.getVelocity(), cout, "resulting constrained velocity", "  ");
     }
     
     return true;

@@ -52,10 +52,10 @@ namespace kinematic_elastic {
 					char const * dbgpre = "");
   
   void compute_constrained_velocity(double timestep,
-				    Vector const & dq_obj,
+				    Vector const & delta_dq_obj,
 				    vector<Constraint *> const & constraints,
 				    Vector & dq_cons,
-				    Vector & dq_proj,
+				    Matrix & Nc,
 				    ostream * dbgos = 0,
 				    char const * dbgpre = "");
   
