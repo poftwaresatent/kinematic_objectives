@@ -574,8 +574,7 @@ public:
       cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
       cairo_set_line_width(cr, 1.0 / pixelsize);
       cairo_move_to(cr, repulse_ellbow_.gpoint_[0], repulse_ellbow_.gpoint_[1]);
-      cairo_move_to(cr, repulse_ellbow_.gpoint_[0] + repulse_ellbow_.delta_[0] / repulse_ellbow_.gain_, repulse_ellbow_.gpoint_[1] + repulse_ellbow_.delta_[1] / repulse_ellbow_.gain_);
-      ////      cairo_line_to(cr, repulse_ellbow_.repulsor_[0], repulse_ellbow_.repulsor_[1]);
+      cairo_line_to(cr, repulse_ellbow_.gpoint_[0] + repulse_ellbow_.delta_[0] / repulse_ellbow_.gain_, repulse_ellbow_.gpoint_[1] + repulse_ellbow_.delta_[1] / repulse_ellbow_.gain_);
       cairo_stroke(cr);
     }
     
@@ -584,8 +583,7 @@ public:
       cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
       cairo_set_line_width(cr, 1.0 / pixelsize);
       cairo_move_to(cr, repulse_wrist_.gpoint_[0], repulse_wrist_.gpoint_[1]);
-      cairo_move_to(cr, repulse_wrist_.gpoint_[0] + repulse_wrist_.delta_[0] / repulse_wrist_.gain_, repulse_wrist_.gpoint_[1] + repulse_wrist_.delta_[1] / repulse_wrist_.gain_);
-      ////      cairo_line_to(cr, repulse_wrist_.repulsor_[0], repulse_wrist_.repulsor_[1]);
+      cairo_line_to(cr, repulse_wrist_.gpoint_[0] + repulse_wrist_.delta_[0] / repulse_wrist_.gain_, repulse_wrist_.gpoint_[1] + repulse_wrist_.delta_[1] / repulse_wrist_.gain_);
       cairo_stroke(cr);
     }
     
@@ -594,8 +592,7 @@ public:
       cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
       cairo_set_line_width(cr, 1.0 / pixelsize);
       cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
-      cairo_move_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
-      ////      cairo_line_to(cr, attract_base_.attractor_[0], attract_base_.attractor_[1]);
+      cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
       cairo_stroke(cr);
     }
     
