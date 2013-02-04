@@ -503,7 +503,7 @@ public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
   Waypoint()
-    : timestep_(1e-3),
+    : timestep_(1e-2),
       eetask_(3, Vector::Zero(2)),
       attract_base_(0, Vector::Zero(2)),
       repulse_ellbow_(1, Vector::Zero(2)),
@@ -681,18 +681,8 @@ public:
       }
     }
     
-    //// Matrix the_true_task_nullspace(Matrix::Identity(ndof, ndof));
-    //// for (size_t ii(0); ii < tasks_.size(); ++ii) {
-    ////   Matrix Jinv;
-    ////   pseudo_inverse_moore_penrose(tasks_[ii]->Jacobian_, Jinv);
-    ////   Matrix Ni(Matrix::Identity(ndof, ndof) - Jinv * tasks_[ii]->Jacobian_);
-    ////   the_true_task_nullspace = the_true_task_nullspace * Ni;
-    //// }
-    ////
-    //// Vector qdd_res(qdd_t + the_true_task_nullspace * qdd_o);
-    
     Vector qdd_res(qdd_t + N_t * qdd_o);
-    Vector qd_res(N_t * robot_.getVelocity() + timestep_ * qdd_res);
+    Vector qd_res(robot_.getVelocity() + timestep_ * qdd_res);
     Vector q_res(robot_.getPosition() + timestep_ * qd_res);
     
     if (verbose) {
@@ -775,7 +765,7 @@ public:
     }
     
     qdd_res = qdd_t + N_t * qdd_o;
-    qd_res = N_t * robot_.getVelocity() + timestep_ * qdd_res;
+    qd_res = robot_.getVelocity() + timestep_ * qdd_res;
     q_res = robot_.getPosition() + timestep_ * qd_res;
     
     if (verbose) {
