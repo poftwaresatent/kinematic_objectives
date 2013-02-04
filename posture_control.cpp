@@ -34,59 +34,34 @@
 
 /* Author: Roland Philippsen */
 
-#include "algorithm.hpp"
-#include "pseudo_inverse.hpp"
-#include "print.hpp"
-#include "task.hpp"
+#include "posture_control.hpp"
+#include "model.hpp"
 
 
 namespace kinematic_elastic {
-
-  void perform_prioritization(Matrix const & N_init,
-			      vector<Task*> const & tasks,
-			      Vector & delta_res,
-			      Matrix & N_res,
-			      ostream * dbgos,
-			      char const * dbgpre)
+  
+  
+  PostureControl::
+  PostureControl()
+    : kp_(25.0),
+      kd_(10.0)
   {
-    delta_res = Vector::Zero(N_init.rows());
-    N_res = N_init;
-    
-    Matrix Jbinv;
-    Matrix Nup;
-    for (size_t ii(0); ii < tasks.size(); ++ii) {
-      
-      if (dbgos) {
-	*dbgos << dbgpre << "task " << ii << ":\n";
-	string pre (dbgpre);
-	pre += "  ";
-	print(tasks[ii]->delta_, *dbgos, "task delta", pre);
-	print(tasks[ii]->Jacobian_, *dbgos, "task Jacobian", pre);
-	Vector vtmp;
-	vtmp = tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res;
-	print(vtmp, *dbgos, "delta_comp", pre);
-	Matrix mtmp;
-	mtmp = tasks[ii]->Jacobian_ * N_res;
-	print(mtmp, *dbgos, "J_bar", pre);
-      }
-      
-      pseudo_inverse_moore_penrose(tasks[ii]->Jacobian_ * N_res, Jbinv, &Nup);
-      delta_res += Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
-      N_res -= Nup;
-      
-      if (dbgos) {
-        string pre (dbgpre);
-        pre += "  ";
-	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
-	print(Nup, *dbgos, "nullspace update", pre);
-	Vector vtmp;
-        vtmp = Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
-	print(vtmp, *dbgos, "delta update", pre);
-	print(delta_res, *dbgos, "accumulated delta", pre);
-	print(N_res, *dbgos, "accumulated nullspace", pre);
-      }
-      
-    }
+  }
+  
+  
+  void PostureControl::
+  init(Model const & model)
+  {
+    goal_ = model.getPosition();
+    delta_ = Vector::Zero(goal_.size());
+    Jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
+  }
+  
+  
+  void PostureControl::
+  update(Model const & model)
+  {
+    delta_ = kp_ * (goal_ - model.getPosition()) - kd_ * model.getVelocity();
   }
   
 }

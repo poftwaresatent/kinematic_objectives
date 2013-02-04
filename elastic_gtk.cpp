@@ -37,7 +37,11 @@
 #include "algorithm.hpp"
 #include "task.hpp"
 #include "model.hpp"
-#include "joint_limits.hpp"
+#include "joint_limit_constraint.hpp"
+#include "position_control.hpp"
+#include "point_attraction.hpp"
+#include "point_repulsion.hpp"
+#include "posture_damping.hpp"
 #include "print.hpp"
 #include "pseudo_inverse.hpp"
 #include <gtk/gtk.h>
@@ -91,229 +95,6 @@ static inline double normangle(double phi)
   }
   return phi;
 }
-
-
-class PostureTask
-  : public Task
-{
-public:
-  PostureTask()
-    : kp_(0.0),
-      kd_(10.0)
-  {
-  }
-  
-  
-  virtual void init(Model const & model)
-  {
-    goal_ = model.getPosition();
-    delta_ = Vector::Zero(goal_.size());
-    Jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
-  }
-  
-  virtual void update(Model const & model)
-  {
-    delta_ = kp_ * (goal_ - model.getPosition()) - kd_ * model.getVelocity();
-  }
-
-  double kp_;
-  double kd_;
-  Vector goal_;
-};
-
-
-class PositionTask
-  : public Task
-{
-public:
-  PositionTask(size_t node,
-	       Vector const & point)
-    : kp_(100.0),
-      kd_(20.0),
-      node_(node),
-      point_(point)
-  {
-  }
-  
-  
-  virtual void init(Model const & model)
-  {
-    Eigen::Vector3d tmp1, tmp2;
-    tmp1 << point_[0], point_[1], 0.0;
-    tmp2 = model.frame(node_) * tmp1;
-    gpoint_.resize(2);
-    gpoint_ << tmp2[0], tmp2[1];
-    goal_ = gpoint_;
-    delta_ = Vector::Zero(point_.size());
-    Matrix tmp3(model.computeJx(node_, gpoint_));
-    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
-  }
-  
-  
-  virtual void update(Model const & model)
-  {
-    Eigen::Vector3d tmp1, tmp2;
-    tmp1 << point_[0], point_[1], 0.0;
-    tmp2 = model.frame(node_) * tmp1;
-    gpoint_ << tmp2[0], tmp2[1];
-    Matrix tmp3(model.computeJx(node_, gpoint_));
-    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
-    delta_ = kp_ * (goal_ - gpoint_) - kd_ * Jacobian_ * model.getVelocity();
-  }
-  
-  double kp_;
-  double kd_;
-  size_t node_;
-  Vector point_;
-  Vector gpoint_;
-  Vector goal_;
-};
-
-
-class JointDamping
-  : public Task
-{
-public:
-  JointDamping()
-    : gain_(10.0)
-  {
-  }
-  
-  virtual void init(Model const & model)
-  {
-    Jacobian_ = Matrix::Identity(model.getPosition().size(), model.getPosition().size());
-  }
-  
-  virtual void update(Model const & model)
-  {
-    delta_ = - gain_ * model.getVelocity();
-  }
-  
-  double gain_;
-};
-
-
-class Repulsion
-  : public Task
-{
-public:
-  Repulsion(size_t node,
-	    Vector const & point)
-    : gain_(100.0),
-      distance_(2.0),
-      node_(node),
-      point_(point)
-  {
-    repulsor_.resize(0);
-  }
-  
-  
-  virtual void init(Model const & model)
-  {
-    gpoint_.resize(point_.size());
-    update(model);
-  }
-  
-  
-  virtual void update(Model const & model)
-  {
-    if (0 == repulsor_.size()) {
-      Jacobian_.resize(0, 0);
-      return;
-    }
-    Eigen::Vector3d tmp1, tmp2;
-    tmp1 << point_[0], point_[1], 0.0;
-    tmp2 = model.frame(node_) * tmp1;
-    gpoint_ << tmp2[0], tmp2[1];
-    delta_ = gpoint_ - repulsor_;
-    double const dist(delta_.norm());
-    if ((dist >= distance_) || (dist < 1e-9)) {
-      Jacobian_.resize(0, 0);
-      return;
-    }
-    delta_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
-    Matrix tmp3(model.computeJx(node_, gpoint_));
-    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
-  }
-  
-  
-  virtual bool isActive() const
-  {
-    return Jacobian_.rows() > 0;
-  }
-  
-  
-  double gain_;
-  double distance_;
-  size_t node_;
-  Vector point_;
-  Vector gpoint_;
-  Vector repulsor_;
-};
-
-
-class Attraction
-  : public Task
-{
-public:
-  Attraction(size_t node,
-	    Vector const & point)
-    : gain_(100.0),
-      distance_(2.0),
-      node_(node),
-      point_(point)
-  {
-    attractor_.resize(0);
-  }
-  
-  
-  virtual void init(Model const & model)
-  {
-    gpoint_.resize(point_.size());
-    update(model);
-  }
-  
-  
-  virtual void update(Model const & model)
-  {
-    if (0 == attractor_.size()) {
-      Jacobian_.resize(0, 0);
-      return;
-    }
-    Eigen::Vector3d tmp1, tmp2;
-    tmp1 << point_[0], point_[1], 0.0;
-    tmp2 = model.frame(node_) * tmp1;
-    gpoint_ << tmp2[0], tmp2[1];
-    delta_ = attractor_ - gpoint_;
-    double const dist(delta_.norm());
-    if (dist < 1e-9) {
-      Jacobian_.resize(0, 0);
-      return;
-    }
-    if (dist < distance_) {
-      delta_ *= gain_ / distance_;
-    }
-    else {
-      delta_ *= gain_ / dist;
-    }
-    Matrix tmp3(model.computeJx(node_, gpoint_));
-    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
-  }
-  
-  
-  virtual bool isActive() const
-  {
-    return Jacobian_.rows() > 0;
-  }
-  
-  
-  double gain_;
-  double distance_;
-  size_t node_;
-  Vector point_;
-  Vector gpoint_;
-  Vector attractor_;
-};
 
 
 class Robot
@@ -781,14 +562,14 @@ protected:
   double timestep_;
   Robot robot_;
   
-  JointLimits joint_limits_;
+  JointLimitConstraint joint_limits_;
   
-  PositionTask eetask_;
+  PositionControl eetask_;
   
-  Attraction attract_base_;
-  Repulsion repulse_ellbow_;
-  Repulsion repulse_wrist_;
-  JointDamping joint_damping_;
+  PointAttraction attract_base_;
+  PointRepulsion repulse_ellbow_;
+  PointRepulsion repulse_wrist_;
+  PostureDamping joint_damping_;
   
   vector<Task *> constraints_;
   vector<Task *> tasks_;

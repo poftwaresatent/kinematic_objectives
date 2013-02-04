@@ -34,7 +34,7 @@
 
 /* Author: Roland Philippsen */
 
-#include "joint_limits.hpp"
+#include "joint_limit_constraint.hpp"
 #include "model.hpp"
 #include <limits>
 
@@ -42,7 +42,7 @@
 namespace kinematic_elastic {
   
   
-  void JointLimits::
+  void JointLimitConstraint::
   init(size_t ndof)
   {
     limits_.resize(ndof, 4);
@@ -61,7 +61,7 @@ namespace kinematic_elastic {
   }
   
   
-  void JointLimits::
+  void JointLimitConstraint::
   update(Model const & model)
   {
     Vector const & position(model.getPosition());
@@ -92,7 +92,7 @@ namespace kinematic_elastic {
   }
   
   
-  bool JointLimits::
+  bool JointLimitConstraint::
   isActive()
     const
   {

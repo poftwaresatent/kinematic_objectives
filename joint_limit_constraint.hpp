@@ -34,59 +34,45 @@
 
 /* Author: Roland Philippsen */
 
-#include "algorithm.hpp"
-#include "pseudo_inverse.hpp"
-#include "print.hpp"
+#ifndef KINEMATIC_ELASTIC_JOINT_LIMIT_CONSTRAINT_HPP
+#define KINEMATIC_ELASTIC_JOINT_LIMIT_CONSTRAINT_HPP
+
 #include "task.hpp"
 
 
 namespace kinematic_elastic {
-
-  void perform_prioritization(Matrix const & N_init,
-			      vector<Task*> const & tasks,
-			      Vector & delta_res,
-			      Matrix & N_res,
-			      ostream * dbgos,
-			      char const * dbgpre)
+  
+  class JointLimitConstraint
+    : public Task
   {
-    delta_res = Vector::Zero(N_init.rows());
-    N_res = N_init;
+  public:
+    void init(size_t ndof);
     
-    Matrix Jbinv;
-    Matrix Nup;
-    for (size_t ii(0); ii < tasks.size(); ++ii) {
-      
-      if (dbgos) {
-	*dbgos << dbgpre << "task " << ii << ":\n";
-	string pre (dbgpre);
-	pre += "  ";
-	print(tasks[ii]->delta_, *dbgos, "task delta", pre);
-	print(tasks[ii]->Jacobian_, *dbgos, "task Jacobian", pre);
-	Vector vtmp;
-	vtmp = tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res;
-	print(vtmp, *dbgos, "delta_comp", pre);
-	Matrix mtmp;
-	mtmp = tasks[ii]->Jacobian_ * N_res;
-	print(mtmp, *dbgos, "J_bar", pre);
-      }
-      
-      pseudo_inverse_moore_penrose(tasks[ii]->Jacobian_ * N_res, Jbinv, &Nup);
-      delta_res += Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
-      N_res -= Nup;
-      
-      if (dbgos) {
-        string pre (dbgpre);
-        pre += "  ";
-	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
-	print(Nup, *dbgos, "nullspace update", pre);
-	Vector vtmp;
-        vtmp = Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
-	print(vtmp, *dbgos, "delta update", pre);
-	print(delta_res, *dbgos, "accumulated delta", pre);
-	print(N_res, *dbgos, "accumulated nullspace", pre);
-      }
-      
-    }
-  }
+    /**
+       For every joint that lies outside hard joint limits, create a
+       task dimension that brings it back to the corresponding soft
+       limit. All such dimensions are stacked into our TaskData
+       fields. Furthermore, the list of violating joint indices is
+       placed in locked_joints_. If there are no joints that violate
+       their hard joint limits, the task and locked list will be
+       empty.
+    */
+    virtual void update(Model const & model);
+    
+    virtual bool isActive() const;
+    
+    /**
+       Nx4 matrix, one row per joint, where
+       - col[0] is the lower hard limit
+       - col[1] is the lower soft limit
+       - col[2] is the upper soft limit
+       - col[3] is the upper hard limit
+    */
+    Matrix limits_;
+    
+    vector<size_t> locked_joints_;
+  };
   
 }
+
+#endif // KINEMATIC_ELASTIC_JOINT_LIMIT_CONSTRAINT_HPP

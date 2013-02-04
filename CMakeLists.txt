@@ -91,7 +91,12 @@ list (APPEND SRCS
   kinematic_elastic.cpp
   task.cpp
   model.cpp
-  joint_limits.cpp
+  joint_limit_constraint.cpp
+  point_attraction.cpp
+  point_repulsion.cpp
+  position_control.cpp
+  posture_control.cpp
+  posture_damping.cpp
   algorithm.cpp
   pseudo_inverse.cpp
   print.cpp

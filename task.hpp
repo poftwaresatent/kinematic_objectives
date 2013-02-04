@@ -51,6 +51,8 @@ namespace kinematic_elastic {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
+    virtual ~TaskData() {}
+    
     void stack(TaskData const & t1, TaskData const & t2);
     
     template<typename iterator_t>
@@ -78,8 +80,6 @@ namespace kinematic_elastic {
     : public TaskData
   {
   public:
-    virtual ~Task() {}
-    
     virtual void init(Model const & model) { }
     virtual bool isActive() const { return true; }
     

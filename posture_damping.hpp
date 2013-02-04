@@ -34,45 +34,26 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_JOINT_LIMITS_HPP
-#define KINEMATIC_ELASTIC_JOINT_LIMITS_HPP
+#ifndef KINEMATIC_ELASTIC_POSTURE_DAMPING_HPP
+#define KINEMATIC_ELASTIC_POSTURE_DAMPING_HPP
 
 #include "task.hpp"
 
 
 namespace kinematic_elastic {
   
-  class JointLimits
+  class PostureDamping
     : public Task
   {
   public:
-    void init(size_t ndof);
+    PostureDamping();
     
-    /**
-       For every joint that lies outside hard joint limits, create a
-       task dimension that brings it back to the corresponding soft
-       limit. All such dimensions are stacked into our TaskData
-       fields. Furthermore, the list of violating joint indices is
-       placed in locked_joints_. If there are no joints that violate
-       their hard joint limits, the task and locked list will be
-       empty.
-    */
+    virtual void init(Model const & model);
     virtual void update(Model const & model);
     
-    virtual bool isActive() const;
-    
-    /**
-       Nx4 matrix, one row per joint, where
-       - col[0] is the lower hard limit
-       - col[1] is the lower soft limit
-       - col[2] is the upper soft limit
-       - col[3] is the upper hard limit
-    */
-    Matrix limits_;
-    
-    vector<size_t> locked_joints_;
+    double gain_;
   };
-  
+
 }
 
-#endif // KINEMATIC_ELASTIC_JOINT_LIMITS_HPP
+#endif // KINEMATIC_ELASTIC_POSTURE_DAMPING_HPP
