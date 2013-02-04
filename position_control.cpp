@@ -54,27 +54,18 @@ namespace kinematic_elastic {
   void PositionControl::
   init(Model const & model)
   {
-    Eigen::Vector3d tmp1, tmp2;
-    tmp1 << point_[0], point_[1], 0.0;
-    tmp2 = model.frame(node_) * tmp1;
-    gpoint_.resize(2);
-    gpoint_ << tmp2[0], tmp2[1];
+    gpoint_ = model.frame(node_) * point_.homogeneous();
     goal_ = gpoint_;
+    Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
     delta_ = Vector::Zero(point_.size());
-    Matrix tmp3(model.computeJx(node_, gpoint_));
-    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
   }
   
   
   void PositionControl::
   update(Model const & model)
   {
-    Eigen::Vector3d tmp1, tmp2;
-    tmp1 << point_[0], point_[1], 0.0;
-    tmp2 = model.frame(node_) * tmp1;
-    gpoint_ << tmp2[0], tmp2[1];
-    Matrix tmp3(model.computeJx(node_, gpoint_));
-    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
+    gpoint_ = model.frame(node_) * point_.homogeneous();
+    Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
     delta_ = kp_ * (goal_ - gpoint_) - kd_ * Jacobian_ * model.getVelocity();
   }
 

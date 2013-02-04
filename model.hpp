@@ -51,7 +51,7 @@ namespace kinematic_elastic {
     virtual Vector const & getPosition() const = 0;
     virtual Vector const & getVelocity() const = 0;
     virtual Transform frame(size_t node) const = 0;
-    virtual Matrix computeJx(size_t node, Vector const & gpoint) const = 0;
+    virtual Matrix computeJxo(size_t node, Vector const & gpoint) const = 0;
   };
   
 }

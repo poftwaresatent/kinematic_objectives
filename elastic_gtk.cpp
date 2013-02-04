@@ -63,13 +63,13 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 
 static bool verbose(false);
 static int play(0);
-static Vector eegoal(2);
-static Vector repulsor(2);
-static Vector attractor(2);
+static Vector eegoal(3);
+static Vector repulsor(3);
+static Vector attractor(3);
 static Vector * handle[] = { &eegoal, &repulsor, &attractor, 0 };
 static Vector * grabbed(0);
 static double grab_radius(0.2);
-static Vector grab_offset(2);
+static Vector grab_offset(3);
 
 
 static inline double bound(double lower, double value, double upper)
@@ -108,9 +108,9 @@ public:
       len_a_(0.8),
       len_b_(0.6),
       len_c_(0.3),
-      pos_a_(2),
-      pos_b_(2),
-      pos_c_(2)
+      pos_a_(3),
+      pos_b_(3),
+      pos_c_(3)
   {
   }
   
@@ -153,31 +153,36 @@ public:
   }
   
   
-  virtual Matrix computeJx(size_t node, Vector const & gpoint) const
+  virtual Matrix computeJxo(size_t node, Vector const & gpoint) const
   {
-    Matrix Jx(Matrix::Zero(3, 5));
-    Vector delta;
+    Matrix Jxo(Matrix::Zero(6, 5));
     switch (node) {
     case 3:
-      delta = gpoint - pos_b_;
-      Jx.block(0, 4, 3, 1) << -delta[1], delta[0], 1.0;
+      Jxo(0, 4) = pos_b_[1] - gpoint[1];
+      Jxo(1, 4) = gpoint[0] - pos_b_[0];
+      Jxo(5, 4) = 1.0;
     case 2:
-      delta = gpoint - pos_a_;
-      Jx.block(0, 3, 3, 1) << -delta[1], delta[0], 1.0;
+      Jxo(0, 3) = pos_a_[1] - gpoint[1];
+      Jxo(1, 3) = gpoint[0] - pos_a_[0];
+      Jxo(5, 3) = 1.0;
     case 1:
-      delta = gpoint - position_.block(0, 0, 2, 1);
-      Jx.block(0, 2, 3, 1) << -delta[1], delta[0], 1.0;
+      Jxo(0, 2) = position_[1] - gpoint[1];
+      Jxo(1, 2) = gpoint[0]    - position_[0];
+      Jxo(5, 2) = 1.0;
     case 0:
-      Jx.block(0, 0, 2, 2) = Matrix::Identity(2, 2);
+      Jxo(0, 0) = 1.0;
+      Jxo(1, 1) = 1.0;
       break;
     default:
-      errx (EXIT_FAILURE, "Robot::computeJx() called on invalid node %zu", node);
+      errx (EXIT_FAILURE, "Robot::computeJxo() called on invalid node %zu", node);
     }
     if (verbose) {
-      cout << "Robot::computeJx(" << node << ", [" << gpoint[0] << "  " << gpoint[1] << "])\n";
-      print(Jx, cout, "", "  ");
+      cout << "Robot::computeJxo()\n"
+	   << "  node " << node << "\n";
+      print(gpoint, cout, "  gpoint", "    ");
+      print(Jxo, cout, "  Jxo", "    ");
     }
-    return Jx;
+    return Jxo;
   }
   
   
@@ -211,13 +216,16 @@ public:
     
     pos_a_ <<
       position_[0] + ac2_,
-      position_[1] + as2_;
+      position_[1] + as2_,
+      0.0;
     pos_b_ <<
       pos_a_[0] + bc23_,
-      pos_a_[1] + bs23_;
+      pos_a_[1] + bs23_,
+      0.0;
     pos_c_ <<
       pos_b_[0] + cc234_,
-      pos_b_[1] + cs234_;
+      pos_b_[1] + cs234_,
+      0.0;
   }
   
   
@@ -285,10 +293,10 @@ public:
   
   Waypoint()
     : timestep_(1e-2),
-      eetask_(3, Vector::Zero(2)),
-      attract_base_(0, Vector::Zero(2)),
-      repulse_ellbow_(1, Vector::Zero(2)),
-      repulse_wrist_(2, Vector::Zero(2))
+      eetask_(3, Vector::Zero(3)),
+      attract_base_(0, Vector::Zero(3)),
+      repulse_ellbow_(1, Vector::Zero(3)),
+      repulse_wrist_(2, Vector::Zero(3))
   {
     joint_limits_.init(5);
     joint_limits_.limits_(3, 0) = -120.0 * deg;
@@ -302,12 +310,12 @@ public:
     
     constraints_.push_back(&joint_limits_);
     
-    eetask_.point_ << robot_.len_c_, 0.0;
+    eetask_.point_ << robot_.len_c_, 0.0, 0.0;
     
     tasks_.push_back(&eetask_);
     
-    repulse_ellbow_.point_ << robot_.len_a_, 0.0;
-    repulse_wrist_.point_ << robot_.len_b_, 0.0;
+    repulse_ellbow_.point_ << robot_.len_a_, 0.0, 0.0;
+    repulse_wrist_.point_ << robot_.len_b_, 0.0, 0.0;
     
     objectives_.push_back(&attract_base_);
     objectives_.push_back(&repulse_ellbow_);
@@ -607,13 +615,16 @@ public:
     
     eegoal <<
       1.0,
-      dimy - 1.0;
+      dimy - 1.0,
+      0.0;
     repulsor <<
       dimx - 1.0,
-      dimy - 1.0;
+      dimy - 1.0,
+      0.0;
     attractor <<
       1.0,
-      1.0;
+      1.0,
+      0.0;
     
     wpt_->setEEGoal(eegoal);
     wpt_->setEllbowRepulsor(repulsor);
@@ -715,10 +726,6 @@ static gint cb_expose(GtkWidget * ww,
   cairo_arc(cr, attractor[0], attractor[1], grab_radius, 0., 2. * M_PI);
   cairo_fill(cr);
   
-  // cairo_set_source_rgba(cr, 0.0, 0.0, 0.6, 0.5);
-  // cairo_arc(cr, lasergoal[0], lasergoal[1], grab_radius, 0., 2. * M_PI);
-  // cairo_fill(cr);
-  
   cairo_destroy(cr);
   
   return TRUE;
@@ -758,8 +765,8 @@ static gint cb_click(GtkWidget * ww,
 		     gpointer data)
 {
   if (bb->type == GDK_BUTTON_PRESS) {
-    Vector point(2);
-    point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy;
+    Vector point(3);
+    point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy, 0.0;
     for (Vector ** hh(handle); *hh != 0; ++hh) {
       Vector offset = **hh - point;
       if (offset.norm() <= grab_radius) {
@@ -786,8 +793,8 @@ static gint cb_motion(GtkWidget * ww,
   gdk_window_get_pointer(ww->window, &mx, &my, &modifier);
   
   if (0 != grabbed) {
-    Vector point(2);
-    point << (mx - gw_x0) / (double) gw_sx, (my - gw_y0) / (double) gw_sy;
+    Vector point(3);
+    point << (mx - gw_x0) / (double) gw_sx, (my - gw_y0) / (double) gw_sy, 0.0;
     *grabbed = point + grab_offset;
     gtk_widget_queue_draw(gw);
   }

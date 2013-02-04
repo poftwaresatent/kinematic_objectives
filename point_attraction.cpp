@@ -68,10 +68,7 @@ namespace kinematic_elastic {
       Jacobian_.resize(0, 0);
       return;
     }
-    Eigen::Vector3d tmp1, tmp2;
-    tmp1 << point_[0], point_[1], 0.0;
-    tmp2 = model.frame(node_) * tmp1;
-    gpoint_ << tmp2[0], tmp2[1];
+    gpoint_ = model.frame(node_) * point_.homogeneous();
     delta_ = attractor_ - gpoint_;
     double const dist(delta_.norm());
     if (dist < 1e-9) {
@@ -84,8 +81,7 @@ namespace kinematic_elastic {
     else {
       delta_ *= gain_ / dist;
     }
-    Matrix tmp3(model.computeJx(node_, gpoint_));
-    Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
+    Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
   }
   
   
