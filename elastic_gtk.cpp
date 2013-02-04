@@ -38,6 +38,7 @@
 #include "task.hpp"
 #include "model.hpp"
 #include "joint_limit_constraint.hpp"
+#include "point_mindist_constraint.hpp"
 #include "position_control.hpp"
 #include "point_attraction.hpp"
 #include "point_repulsion.hpp"
@@ -63,12 +64,29 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 
 static bool verbose(false);
 static int play(0);
-static Vector eegoal(3);
-static Vector repulsor(3);
-static Vector attractor(3);
-static Vector * handle[] = { &eegoal, &repulsor, &attractor, 0 };
-static Vector * grabbed(0);
-static double grab_radius(0.2);
+
+struct handle_s {
+  handle_s(double radius, double red, double green, double blue, double alpha)
+    : point_(3),
+      radius_(radius),
+      red_(red),
+      green_(green),
+      blue_(blue),
+      alpha_(alpha)
+  {
+  }
+  
+  Vector point_;
+  double radius_, red_, green_, blue_, alpha_;
+};
+
+static handle_s eegoal(0.2, 1.0, 0.5, 0.0, 0.5);
+static handle_s repulsor(0.2, 0.0, 0.7, 0.7, 0.5);
+static handle_s obstacle(0.5, 1.0, 0.0, 0.5, 0.5);
+static handle_s attractor(0.2, 0.0, 1.0, 0.0, 0.5);
+
+static handle_s * handle[] = { &eegoal, &repulsor, &obstacle, &attractor, 0 };
+static handle_s * grabbed(0);
 static Vector grab_offset(3);
 
 
@@ -293,10 +311,16 @@ public:
   
   Waypoint()
     : timestep_(1e-2),
+      avoid_ee_(3, Vector::Zero(3), obstacle.radius_),
+      avoid_wrist_(2, Vector::Zero(3), obstacle.radius_),
+      avoid_ellbow_(1, Vector::Zero(3), obstacle.radius_),
+      avoid_base_(0, Vector::Zero(3), obstacle.radius_),
       eetask_(3, Vector::Zero(3)),
       attract_base_(0, Vector::Zero(3)),
+      repulse_base_(0, Vector::Zero(3)),
       repulse_ellbow_(1, Vector::Zero(3)),
-      repulse_wrist_(2, Vector::Zero(3))
+      repulse_wrist_(2, Vector::Zero(3)),
+      repulse_ee_(3, Vector::Zero(3))
   {
     joint_limits_.init(5);
     joint_limits_.limits_(3, 0) = -120.0 * deg;
@@ -308,7 +332,15 @@ public:
     joint_limits_.limits_(4, 2) =  119.999 * deg;
     joint_limits_.limits_(4, 3) =  120.0 * deg;
     
+    avoid_ellbow_.point_ << robot_.len_a_, 0.0, 0.0;
+    avoid_wrist_.point_ << robot_.len_b_, 0.0, 0.0;
+    avoid_ee_.point_ << robot_.len_c_, 0.0, 0.0;
+
     constraints_.push_back(&joint_limits_);
+    constraints_.push_back(&avoid_ee_);
+    constraints_.push_back(&avoid_wrist_);
+    constraints_.push_back(&avoid_ellbow_);
+    constraints_.push_back(&avoid_base_);
     
     eetask_.point_ << robot_.len_c_, 0.0, 0.0;
     
@@ -316,10 +348,13 @@ public:
     
     repulse_ellbow_.point_ << robot_.len_a_, 0.0, 0.0;
     repulse_wrist_.point_ << robot_.len_b_, 0.0, 0.0;
+    repulse_ee_.point_ << robot_.len_c_, 0.0, 0.0;
     
     objectives_.push_back(&attract_base_);
+    objectives_.push_back(&repulse_base_);
     objectives_.push_back(&repulse_ellbow_);
     objectives_.push_back(&repulse_wrist_);
+    objectives_.push_back(&repulse_ee_);
     objectives_.push_back(&joint_damping_);
   }
   
@@ -389,30 +424,6 @@ public:
   }
   
   
-  void setEEGoal(Vector const & goal)
-  {
-    eetask_.goal_ = goal;
-  }
-  
-  
-  void setBaseAttractor(Vector const & attractor)
-  {
-    attract_base_.attractor_ = attractor;
-  }
-  
-  
-  void setEllbowRepulsor(Vector const & repulsor)
-  {
-    repulse_ellbow_.repulsor_ = repulsor;
-  }
-  
-  
-  void setWristRepulsor(Vector const & repulsor)
-  {
-    repulse_wrist_.repulsor_ = repulsor;
-  }
-  
-  
   void init(Vector const & position, Vector const & velocity)
   {
     robot_.update(position, velocity);
@@ -431,6 +442,20 @@ public:
   
   void update()
   {
+    avoid_ee_.obstacle_ = obstacle.point_;
+    avoid_wrist_.obstacle_ = obstacle.point_;
+    avoid_ellbow_.obstacle_ = obstacle.point_;
+    avoid_base_.obstacle_ = obstacle.point_;
+    
+    eetask_.goal_ = eegoal.point_;
+    
+    attract_base_.attractor_ = attractor.point_;
+    
+    repulse_base_.repulsor_ = repulsor.point_;
+    repulse_ellbow_.repulsor_ = repulsor.point_;
+    repulse_wrist_.repulsor_ = repulsor.point_;
+    repulse_ee_.repulsor_ = repulsor.point_;
+    
     ostream * dbgos(0);
     if (verbose) {
       dbgos = &cout;
@@ -571,12 +596,20 @@ protected:
   Robot robot_;
   
   JointLimitConstraint joint_limits_;
+  PointMindistConstraint avoid_ee_;
+  PointMindistConstraint avoid_wrist_;
+  PointMindistConstraint avoid_ellbow_;
+  PointMindistConstraint avoid_base_;
   
   PositionControl eetask_;
   
   PointAttraction attract_base_;
+  
+  PointRepulsion repulse_base_;
   PointRepulsion repulse_ellbow_;
   PointRepulsion repulse_wrist_;
+  PointRepulsion repulse_ee_;
+  
   PostureDamping joint_damping_;
   
   vector<Task *> constraints_;
@@ -612,24 +645,6 @@ public:
     
     wpt_ = new Waypoint();
     wpt_->init(state, Vector::Zero(state.size()));
-    
-    eegoal <<
-      1.0,
-      dimy - 1.0,
-      0.0;
-    repulsor <<
-      dimx - 1.0,
-      dimy - 1.0,
-      0.0;
-    attractor <<
-      1.0,
-      1.0,
-      0.0;
-    
-    wpt_->setEEGoal(eegoal);
-    wpt_->setEllbowRepulsor(repulsor);
-    wpt_->setWristRepulsor(repulsor);
-    wpt_->setBaseAttractor(attractor);
     path_.push_back(wpt_);
   }
   
@@ -640,10 +655,6 @@ public:
       cout << "\n**************************************************\n";
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      (*ii)->setEEGoal(eegoal);
-      (*ii)->setEllbowRepulsor(repulsor);
-      (*ii)->setWristRepulsor(repulsor);
-      (*ii)->setBaseAttractor(attractor);
       (*ii)->update();
     }
   }
@@ -714,17 +725,11 @@ static gint cb_expose(GtkWidget * ww,
   
   elastic.draw(cr, gw_sx);
   
-  cairo_set_source_rgba(cr, 0.6, 0.0, 0.0, 0.5);
-  cairo_arc(cr, eegoal[0], eegoal[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill(cr);
-  
-  cairo_set_source_rgba(cr, 0.0, 0.0, 0.6, 0.5);
-  cairo_arc(cr, repulsor[0], repulsor[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill(cr);
-  
-  cairo_set_source_rgba(cr, 0.0, 0.6, 0.0, 0.5);
-  cairo_arc(cr, attractor[0], attractor[1], grab_radius, 0., 2. * M_PI);
-  cairo_fill(cr);
+  for (handle_s ** hh(handle); *hh != 0; ++hh) {
+    cairo_set_source_rgba(cr, (*hh)->red_, (*hh)->green_, (*hh)->blue_, (*hh)->alpha_);
+    cairo_arc(cr, (*hh)->point_[0], (*hh)->point_[1], (*hh)->radius_, 0.0, 2.0 * M_PI);
+    cairo_fill(cr);
+  }
   
   cairo_destroy(cr);
   
@@ -767,9 +772,9 @@ static gint cb_click(GtkWidget * ww,
   if (bb->type == GDK_BUTTON_PRESS) {
     Vector point(3);
     point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy, 0.0;
-    for (Vector ** hh(handle); *hh != 0; ++hh) {
-      Vector offset = **hh - point;
-      if (offset.norm() <= grab_radius) {
+    for (handle_s ** hh(handle); *hh != 0; ++hh) {
+      Vector offset = (*hh)->point_ - point;
+      if (offset.norm() <= (*hh)->radius_) {
     	grab_offset = offset;
     	grabbed = *hh;
     	break;
@@ -795,7 +800,7 @@ static gint cb_motion(GtkWidget * ww,
   if (0 != grabbed) {
     Vector point(3);
     point << (mx - gw_x0) / (double) gw_sx, (my - gw_y0) / (double) gw_sy, 0.0;
-    *grabbed = point + grab_offset;
+    grabbed->point_ = point + grab_offset;
     gtk_widget_queue_draw(gw);
   }
   
@@ -876,6 +881,23 @@ int main(int argc, char ** argv)
   if ((argc > 1) && (0 == strcmp("-v", argv[1]))) {
     verbose = true;
   }
+  
+  eegoal.point_ <<
+    1.0,
+    dimy - 1.0,
+    0.0;
+  repulsor.point_ <<
+    dimx - 1.0,
+    dimy - 1.0,
+    0.0;
+  obstacle.point_ <<
+    dimx - 1.0,
+    1.0,
+    0.0;
+  attractor.point_ <<
+    1.0,
+    1.0,
+    0.0;
   
   Vector posture(5);
   posture <<

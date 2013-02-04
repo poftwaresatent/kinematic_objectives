@@ -92,6 +92,7 @@ list (APPEND SRCS
   task.cpp
   model.cpp
   joint_limit_constraint.cpp
+  point_mindist_constraint.cpp
   point_attraction.cpp
   point_repulsion.cpp
   position_control.cpp
