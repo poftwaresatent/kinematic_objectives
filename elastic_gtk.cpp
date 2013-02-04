@@ -39,6 +39,7 @@
 #include "model.hpp"
 #include "joint_limits.hpp"
 #include "print.hpp"
+#include "pseudo_inverse.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -93,7 +94,7 @@ static inline double normangle(double phi)
 
 
 class PostureTask
-  : public Objective
+  : public Task
 {
 public:
   PostureTask()
@@ -103,18 +104,16 @@ public:
   }
   
   
-  virtual bool init(Model const & model)
+  virtual void init(Model const & model)
   {
     goal_ = model.getPosition();
     delta_ = Vector::Zero(goal_.size());
     Jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
-    return true;
   }
   
-  virtual bool update(Model const & model)
+  virtual void update(Model const & model)
   {
     delta_ = kp_ * (goal_ - model.getPosition()) - kd_ * model.getVelocity();
-    return true;
   }
 
   double kp_;
@@ -124,7 +123,7 @@ public:
 
 
 class PositionTask
-  : public Objective
+  : public Task
 {
 public:
   PositionTask(size_t node,
@@ -137,7 +136,7 @@ public:
   }
   
   
-  virtual bool init(Model const & model)
+  virtual void init(Model const & model)
   {
     Eigen::Vector3d tmp1, tmp2;
     tmp1 << point_[0], point_[1], 0.0;
@@ -148,11 +147,10 @@ public:
     delta_ = Vector::Zero(point_.size());
     Matrix tmp3(model.computeJx(node_, gpoint_));
     Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
-    return true;
   }
   
   
-  virtual bool update(Model const & model)
+  virtual void update(Model const & model)
   {
     Eigen::Vector3d tmp1, tmp2;
     tmp1 << point_[0], point_[1], 0.0;
@@ -161,7 +159,6 @@ public:
     Matrix tmp3(model.computeJx(node_, gpoint_));
     Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
     delta_ = kp_ * (goal_ - gpoint_) - kd_ * Jacobian_ * model.getVelocity();
-    return true;
   }
   
   double kp_;
@@ -174,7 +171,7 @@ public:
 
 
 class JointDamping
-  : public Objective
+  : public Task
 {
 public:
   JointDamping()
@@ -182,21 +179,14 @@ public:
   {
   }
   
-  virtual bool init(Model const & model)
+  virtual void init(Model const & model)
   {
     Jacobian_ = Matrix::Identity(model.getPosition().size(), model.getPosition().size());
-    return true;
   }
   
-  virtual bool update(Model const & model)
+  virtual void update(Model const & model)
   {
     delta_ = - gain_ * model.getVelocity();
-    return true;
-  }
-  
-  virtual bool isActive() const
-  {
-    return true;
   }
   
   double gain_;
@@ -218,17 +208,18 @@ public:
   }
   
   
-  virtual bool init(Model const & model)
+  virtual void init(Model const & model)
   {
-    return update(model);
+    gpoint_.resize(point_.size());
+    update(model);
   }
   
   
-  virtual bool update(Model const & model)
+  virtual void update(Model const & model)
   {
     if (0 == repulsor_.size()) {
       Jacobian_.resize(0, 0);
-      return true;
+      return;
     }
     Eigen::Vector3d tmp1, tmp2;
     tmp1 << point_[0], point_[1], 0.0;
@@ -238,12 +229,11 @@ public:
     double const dist(delta_.norm());
     if ((dist >= distance_) || (dist < 1e-9)) {
       Jacobian_.resize(0, 0);
-      return true;
+      return;
     }
     delta_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
     Matrix tmp3(model.computeJx(node_, gpoint_));
     Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
-    return true;
   }
   
   
@@ -277,17 +267,18 @@ public:
   }
   
   
-  virtual bool init(Model const & model)
+  virtual void init(Model const & model)
   {
-    return update(model);
+    gpoint_.resize(point_.size());
+    update(model);
   }
   
   
-  virtual bool update(Model const & model)
+  virtual void update(Model const & model)
   {
     if (0 == attractor_.size()) {
       Jacobian_.resize(0, 0);
-      return true;
+      return;
     }
     Eigen::Vector3d tmp1, tmp2;
     tmp1 << point_[0], point_[1], 0.0;
@@ -297,17 +288,16 @@ public:
     double const dist(delta_.norm());
     if (dist < 1e-9) {
       Jacobian_.resize(0, 0);
-      return true;
+      return;
     }
     if (dist < distance_) {
-      delta_ *= gain / distance_;
+      delta_ *= gain_ / distance_;
     }
     else {
       delta_ *= gain_ / dist;
     }
     Matrix tmp3(model.computeJx(node_, gpoint_));
     Jacobian_ = tmp3.block(0, 0, 2, tmp3.cols());
-    return true;
   }
   
   
@@ -517,7 +507,7 @@ public:
       eetask_(3, Vector::Zero(2)),
       attract_base_(0, Vector::Zero(2)),
       repulse_ellbow_(1, Vector::Zero(2)),
-      repulse_wrist_(2, Vector::Zero(2)),
+      repulse_wrist_(2, Vector::Zero(2))
   {
     joint_limits_.init(5);
     joint_limits_.limits_(3, 0) = -120.0 * deg;
@@ -579,26 +569,35 @@ public:
     cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
     cairo_stroke(cr);
     
-    // thin line for ellbow task
-    cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
-    cairo_move_to(cr, ellbowtask_.gpoint_[0], ellbowtask_.gpoint_[1]);
-    cairo_line_to(cr, ellbowtask_.goal_[0], ellbowtask_.goal_[1]);
-    cairo_stroke(cr);
+    // ellbow repulsion
+    if (repulse_ellbow_.isActive()) {
+      cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
+      cairo_set_line_width(cr, 1.0 / pixelsize);
+      cairo_move_to(cr, repulse_ellbow_.gpoint_[0], repulse_ellbow_.gpoint_[1]);
+      cairo_move_to(cr, repulse_ellbow_.gpoint_[0] + repulse_ellbow_.delta_[0] / repulse_ellbow_.gain_, repulse_ellbow_.gpoint_[1] + repulse_ellbow_.delta_[1] / repulse_ellbow_.gain_);
+      ////      cairo_line_to(cr, repulse_ellbow_.repulsor_[0], repulse_ellbow_.repulsor_[1]);
+      cairo_stroke(cr);
+    }
     
-    // thin line for base task
-    cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-    cairo_move_to(cr, basetask_.gpoint_[0], basetask_.gpoint_[1]);
-    cairo_line_to(cr, basetask_.goal_[0], basetask_.goal_[1]);
-    cairo_stroke(cr);
+    // wrist repulsion
+    if (repulse_wrist_.isActive()) {
+      cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
+      cairo_set_line_width(cr, 1.0 / pixelsize);
+      cairo_move_to(cr, repulse_wrist_.gpoint_[0], repulse_wrist_.gpoint_[1]);
+      cairo_move_to(cr, repulse_wrist_.gpoint_[0] + repulse_wrist_.delta_[0] / repulse_wrist_.gain_, repulse_wrist_.gpoint_[1] + repulse_wrist_.delta_[1] / repulse_wrist_.gain_);
+      ////      cairo_line_to(cr, repulse_wrist_.repulsor_[0], repulse_wrist_.repulsor_[1]);
+      cairo_stroke(cr);
+    }
     
-    // // thin line for laser task
-    // cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-    // cairo_move_to(cr, model_.pos_c_[0], model_.pos_c_[1]);
-    // double const dx(3.0 * cos(lasertask_.goal_[0]));
-    // double const dy(3.0 * sin(lasertask_.goal_[0]));
-    // cairo_line_to(cr, model_.pos_c_[0] + dx, model_.pos_c_[1] + dy);
-    // cairo_stroke(cr);
+    // base attraction
+    if (attract_base_.isActive()) {
+      cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
+      cairo_set_line_width(cr, 1.0 / pixelsize);
+      cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
+      cairo_move_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
+      ////      cairo_line_to(cr, attract_base_.attractor_[0], attract_base_.attractor_[1]);
+      cairo_stroke(cr);
+    }
     
     cairo_restore(cr);
   }
@@ -628,58 +627,38 @@ public:
   }
   
   
-  bool init(Vector const & position, Vector const & velocity)
+  void init(Vector const & position, Vector const & velocity)
   {
     robot_.update(position, velocity);
     
     for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      if ( ! (constraints_[ii])->init(robot_)) {
-	cerr << "Waypoint::init(): constraints_[" << ii << "]->init() failed\n";
-	return false;
-      }
+      constraints_[ii];
     }
-    
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      if ( ! (tasks_[ii])->init(robot_)) {
-	cerr << "Waypoint::init(): tasks_[" << ii << "]->init() failed\n";
-	return false;
-      }
+      tasks_[ii]->init(robot_);
     }
-    
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if ( ! (objectives_[ii])->init(robot_)) {
-	cerr << "Waypoint::init(): objectives_[" << ii << "]->init() failed\n";
-	return false;
-      }
+      objectives_[ii]->init(robot_);
     }
-    
-    return true;
   }
   
   
-  bool update()
+  void update()
   {
     ostream * dbgos(0);
     if (verbose) {
       dbgos = &cout;
       cout << "==================================================\n"
 	   << "Waypoint::update()\n";
-      print (robot_.getPosition(), cout, "current position", "  ");
-      print (robot_.getVelocity(), cout, "current velocity", "  ");
+      print(robot_.getPosition(), cout, "current position", "  ");
+      print(robot_.getVelocity(), cout, "current velocity", "  ");
     }
     
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      if ( ! (tasks_[ii])->update(robot_)) {
-	cerr << "Waypoint::update(): tasks_[" << ii << "]->update() failed\n";
-	return false;
-      }
+      tasks_[ii]->update(robot_);
     }
-    
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if ( ! (objectives_[ii])->update(robot_)) {
-	cerr << "Waypoint::update(): objectives_[" << ii << "]->update() failed\n";
-	return false;
-      }
+      objectives_[ii]->update(robot_);
     }
     
     if (verbose) {
@@ -687,63 +666,40 @@ public:
 	   << "trying without constraints first\n";
     }
     
-    Vector ddq_t;
+    ssize_t const ndof(robot_.getPosition().size());
+    Vector qdd_t;
     Matrix N_t;
-    perform_prioritization(tasks_, ddq_t, N_t, dbgos, "");
+    perform_prioritization(Matrix::Identity(ndof, ndof),
+			   tasks_,
+			   qdd_t,
+			   N_t,
+			   dbgos, "");
     
-    Vector ddq_o(Vector::Zero(robot_.getPosition().size()));
+    Vector qdd_o(Vector::Zero(robot_.getPosition().size()));
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
       if (objectives_[ii]->isActive()) {
-	ddq_o += objectives_[ii].Jacobian_ * objectives_[ii].delta_;
+	Matrix Jinv;
+	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
+	qdd_o += Jinv * objectives_[ii]->delta_;
       }
     }
     
-    Vector ddq_try(ddq_t + N_t * ddq_o);
-    Vector dq_try(robot_.getVelocity() + timestep_ * ddq_try);
-    Vector q_try(robot_.getPosition() + timestep_ * dq_try);
+    Vector qdd_res(qdd_t + N_t * qdd_o);
+    Vector qd_res(robot_.getVelocity() + timestep_ * qdd_res);
+    Vector q_res(robot_.getPosition() + timestep_ * qd_res);
     
     if (verbose) {
-      print (ddq_try, cout, "unconstrained acceleration", "  ");
-      print (dq_try, cout, "resulting unconstrained velocity", "  ");
-      print (q_try, cout, "resulting unconstrained position", "  ");
+      print(qdd_res, cout, "unconstrained acceleration", "  ");
+      print(qd_res, cout, "resulting unconstrained velocity", "  ");
+      print(q_res, cout, "resulting unconstrained position", "  ");
     }
     
     Vector const oldpos(robot_.getPosition()); // will need this in case of constraints
-    Vector const oldvel(robot_.getVelocity()); // will need this in case of constraints
-    robot_.update(q_try, dq_try);
-    
-
-#error here
-    // update constraints based on free trial, if none triggers we're home free
-    //
-    // if any constraint triggers, compute the required delta_q via
-    // constraint priorization and grab the nullspace of all
-    // constraints
-    //
-    // re-update the robot with the corrected position and a velocity
-    // that got projected into the nullspace of the constraints. not
-    // sure if this should be N_c*dq_try or maybe
-    // N_c*oldvel... probably dq_try makes more sense.
-    //
-    // re-update the tasks and objectives (they may care about the
-    // changed position and velocity after all).
-    //
-    // re-run task priorization, but seed it with N_c.
-    //
-    // re-add the objectives.
-    //
-    // now we should be able to re-integrate form accelerations to
-    // velocities to positions, and that should result in velocities
-    // and positions that respect the constraints. to be proven with
-    // pen and paper first!
-    
+    robot_.update(q_res, qd_res);
     
     bool need_constraints(false);
     for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      if ( ! (constraints_[ii])->update(robot_)) {
-    	cerr << "Waypoint::update(): constraints_[" << ii << "]->update() failed\n";
-    	return false;
-      }
+      constraints_[ii]->update(robot_);
       if (constraints_[ii]->isActive()) {
     	if (verbose) {
     	  cout << "constraint [" << ii << "] is active\n";
@@ -756,7 +712,7 @@ public:
       if (verbose) {
     	cout << "all constraints are inactive\n";
       }
-      return true;
+      return;
     }
     
     if (verbose) {
@@ -764,38 +720,64 @@ public:
     	   << "recomputing with constraints enabled\n";
     }
     
-    // XXXX quick non-generic hack, will break if constr+primary is
-    // infeasible, and if there is more than one constraint task.
-    TaskData constrained_primary;
-    Vector const bak(eetask_.delta_);
-    eetask_.delta_ *= timestep_ * timestep_;
-    constrained_primary.stack(joint_limits_, eetask_);
-    constr_wtf_[0] = &constrained_primary; // never restore, gets overwritten next time anyway
+    Vector dq_c;
+    Matrix N_c;
+    perform_prioritization(Matrix::Identity(ndof, ndof),
+			   constraints_,
+			   dq_c,
+			   N_c,
+			   dbgos, "");
     
-    Vector dq_cons;
-    Matrix Nc;
-    compute_constrained_velocity(timestep_, constr_wtf_, dq_cons, Nc, dbgos, "  ");
+    // The constraints cheat with the robot state: they directly work
+    // on the positions (and velocities) that would have been achieved
+    // without constraints. So, we then need to repair the position
+    // and velocity to something consistent with the constraints, then
+    // re-run the tasks and objectives.
     
-    eetask_.delta_ = bak;
-    
-    // TaskData all_constraints;
-    // all_constraints.stack(constraints_.begin(), constraints_.end());
-    // TaskData constrained_primary;
-    // constrained_primary.stack(all_constraints, *objectives_[0]);
-    // obj_wtf_[0] = &constrained_primary;
-    Vector const dq_obj_cons(timestep_ * Nc * compute_objective_acceleration(obj_wtf_, dbgos, "  "));
-    // obj_wtf_[0] = objectives_[0]; // restore
-    
-    robot_.update(oldpos + timestep_ * (dq_cons + dq_obj_cons), Nc * (oldvel + dq_cons));
+    robot_.update(oldpos + dq_c, N_c * dq_c / timestep_);
     
     if (verbose) {
-      print (dq_cons, cout, "velocity update to satisfy constraints", "  ");
-      print (Nc, cout, "nullspace of constrains", "  ");
-      print (robot_.getPosition(), cout, "resulting constrained position", "  ");
-      print (robot_.getVelocity(), cout, "resulting constrained velocity", "  ");
+      print(dq_c, cout, "position correction to satisfy constraints", "  ");
+      print(N_c, cout, "nullspace of constrains", "  ");
+      print(robot_.getVelocity(), cout, "resulting constrained velocity", "  ");
+      print(robot_.getPosition(), cout, "resulting constrained position", "  ");
     }
     
-    return true;
+    for (size_t ii(0); ii < tasks_.size(); ++ii) {
+      tasks_[ii]->update(robot_);
+    }
+    for (size_t ii(0); ii < objectives_.size(); ++ii) {
+      objectives_[ii]->update(robot_);
+    }
+    
+    // Re-run task priority scheme, but seed it with the constraint nullspace this time.
+    
+    perform_prioritization(N_c,
+			   tasks_,
+			   qdd_t,
+			   N_t,
+			   dbgos, "");
+    
+    qdd_o = Vector::Zero(robot_.getPosition().size());
+    for (size_t ii(0); ii < objectives_.size(); ++ii) {
+      if (objectives_[ii]->isActive()) {
+	Matrix Jinv;
+	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
+	qdd_o += Jinv * objectives_[ii]->delta_;
+      }
+    }
+    
+    qdd_res = qdd_t + N_t * qdd_o;
+    qd_res = robot_.getVelocity() + timestep_ * qdd_res;
+    q_res = robot_.getPosition() + timestep_ * qd_res;
+    
+    if (verbose) {
+      print(qdd_res, cout, "constrained acceleration", "  ");
+      print(qd_res, cout, "resulting constrained velocity", "  ");
+      print(q_res, cout, "resulting constrained position", "  ");
+    }
+    
+    robot_.update(q_res, qd_res);
   }
   
 protected:
@@ -809,6 +791,7 @@ protected:
   Attraction attract_base_;
   Repulsion repulse_ellbow_;
   Repulsion repulse_wrist_;
+  JointDamping joint_damping_;
   
   vector<Task *> constraints_;
   vector<Task *> tasks_;
@@ -837,50 +820,43 @@ public:
   }
   
   
-  bool init(Vector const & state)
+  void init(Vector const & state)
   {
     clear();
     
     wpt_ = new Waypoint();
-    if ( ! wpt_->init(state, Vector::Zero(state.size()))) {
-      delete wpt_;
-      wpt_ = 0;
-      return false;
-    }
+    wpt_->init(state, Vector::Zero(state.size()));
     
     eegoal <<
       1.0,
       dimy - 1.0;
-    ellbowgoal <<
+    repulsor <<
       dimx - 1.0,
       dimy - 1.0;
-    basegoal <<
+    attractor <<
       1.0,
       1.0;
     
     wpt_->setEEGoal(eegoal);
-    wpt_->setEllbowGoal(ellbowgoal);
-    wpt_->setBaseGoal(basegoal);
+    wpt_->setEllbowRepulsor(repulsor);
+    wpt_->setWristRepulsor(repulsor);
+    wpt_->setBaseAttractor(attractor);
     path_.push_back(wpt_);
-    
-    return true;
   }
   
   
-  bool update()
+  void update()
   {
     if (verbose) {
       cout << "\n**************************************************\n";
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
       (*ii)->setEEGoal(eegoal);
-      (*ii)->setEllbowGoal(ellbowgoal);
-      (*ii)->setBaseGoal(basegoal);
-      if ( ! (*ii)->update()) {
-	return false;
-      }
+      (*ii)->setEllbowRepulsor(repulsor);
+      (*ii)->setWristRepulsor(repulsor);
+      (*ii)->setBaseAttractor(attractor);
+      (*ii)->update();
     }
-    return true;
   }
   
   void draw(cairo_t * cr, double pixelsize)
@@ -954,11 +930,11 @@ static gint cb_expose(GtkWidget * ww,
   cairo_fill(cr);
   
   cairo_set_source_rgba(cr, 0.0, 0.0, 0.6, 0.5);
-  cairo_arc(cr, ellbowgoal[0], ellbowgoal[1], grab_radius, 0., 2. * M_PI);
+  cairo_arc(cr, repulsor[0], repulsor[1], grab_radius, 0., 2. * M_PI);
   cairo_fill(cr);
   
   cairo_set_source_rgba(cr, 0.0, 0.6, 0.0, 0.5);
-  cairo_arc(cr, basegoal[0], basegoal[1], grab_radius, 0., 2. * M_PI);
+  cairo_arc(cr, attractor[0], attractor[1], grab_radius, 0., 2. * M_PI);
   cairo_fill(cr);
   
   // cairo_set_source_rgba(cr, 0.0, 0.0, 0.6, 0.5);

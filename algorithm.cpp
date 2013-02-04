@@ -44,131 +44,51 @@
 
 
 namespace kinematic_elastic {
-  
-  
-  Vector compute_objective_acceleration(vector<TaskData *> const & objectives,
-					ostream * dbgos,
-					char const * dbgpre)
+
+  void perform_prioritization(Matrix const & N_init,
+			      vector<Task*> const & tasks,
+			      Vector & delta_res,
+			      Matrix & N_res,
+			      ostream * dbgos,
+			      char const * dbgpre)
   {
-    Vector const & xa(objectives[0]->delta_);
-    Matrix const & Ja(objectives[0]->Jacobian_);
-    Matrix Ja_inv;
-    pseudo_inverse_moore_penrose(Ja, Ja_inv);
-    Vector ddq(Ja_inv * xa);
+    delta_res = Vector::Zero(N_init.rows());
+    N_res = N_init;
     
-    if (dbgos) {
-      *dbgos << dbgpre << "primary task:\n";
-      string pre (dbgpre);
-      pre += "  ";
-      print(xa, *dbgos, "xa", pre);
-      print(Ja, *dbgos, "Ja", pre);
-      print(Ja_inv, *dbgos, "Ja_inv", pre);
-      print(ddq, *dbgos, "ddq", pre);
-    }
-    
-    if (1 == objectives.size()) {
+    Matrix Jbinv;
+    Matrix Nup;
+    for (size_t ii(0); ii < tasks.size(); ++ii) {
+      
       if (dbgos) {
-	*dbgos << dbgpre << "no secondary task\n";
-      }
-      return ddq;
-    }
-    
-    size_t const ndof(Ja.cols());
-    Matrix const Na(Matrix::Identity(ndof, ndof) - Ja_inv * Ja);
-    TaskData beta;
-    beta.stack(objectives.begin() + 1, objectives.end());
-    Vector const & xb(beta.delta_);
-    Matrix const & Jb(beta.Jacobian_);
-    Matrix Jb_inv;
-    pseudo_inverse_moore_penrose(Jb, Jb_inv);
-    
-    ddq += Na * Jb_inv * xb;
-    
-    if (dbgos) {
-      *dbgos << dbgpre << "secondary task:\n";
-      string pre (dbgpre);
-      pre += "  ";
-      print(xb, *dbgos, "xb", pre);
-      print(Jb, *dbgos, "Jb", pre);
-      print(Jb_inv, *dbgos, "Jb_inv", pre);
-      print(Na, *dbgos, "Na", pre);
-      Matrix tmp;
-      tmp = Jb_inv * xb;
-      print(tmp, *dbgos, "Jb_inv * xb", pre);
-      tmp = Na * Jb_inv;
-      print(tmp, *dbgos, "Na * Jb_inv", pre);
-      tmp = Na * Jb_inv * xb;
-      print(tmp, *dbgos, "Na * Jb_inv * xb", pre);
-      print(ddq, *dbgos, "updated ddq", pre);
-    }
-    
-    return ddq;
-  }
-  
-  
-  void compute_constrained_velocity(double timestep,
-				    vector<TaskData *> const & constraints,
-				    Vector & dq_cons,
-				    Matrix & Nc,
-				    ostream * dbgos,
-				    char const * dbgpre)
-  {
-    Vector const xa(constraints[0]->delta_ / timestep);
-    Matrix const & Ja(constraints[0]->Jacobian_);
-    Matrix Ja_inv;
-    pseudo_inverse_moore_penrose(Ja, Ja_inv);
-    dq_cons = Ja_inv * xa;
-    size_t const ndof(Ja.cols());
-    Matrix const Na(Matrix::Identity(ndof, ndof) - Ja_inv * Ja);
-    
-    if (dbgos) {
-      *dbgos << dbgpre << "primary constraint:\n";
-      string pre (dbgpre);
-      pre += "  ";
-      print(constraints[0]->delta_, *dbgos, "delta", pre);
-      print(xa, *dbgos, "xa", pre);
-      print(Ja, *dbgos, "Ja", pre);
-      print(Ja_inv, *dbgos, "Ja_inv", pre);
-      print(dq_cons, *dbgos, "dq_cons", pre);
-      print(Na, *dbgos, "Na", pre);
-    }
-    
-    if (1 == constraints.size()) {
-      Nc = Na;
-      if (dbgos) {
-	*dbgos << dbgpre << "no secondary constraint\n";
+	*dbgos << dbgpre << "task " << ii << ":\n";
 	string pre (dbgpre);
 	pre += "  ";
-	print(dq_cons, *dbgos, "dq_cons", pre);
+	print(tasks[ii]->delta_, *dbgos, "task delta", pre);
+	print(tasks[ii]->Jacobian_, *dbgos, "task Jacobian", pre);
+	Vector vtmp;
+	vtmp = tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res;
+	print(vtmp, *dbgos, "delta_comp", pre);
+	Matrix mtmp;
+	mtmp = tasks[ii]->Jacobian_ * N_res;
+	print(mtmp, *dbgos, "J_bar", pre);
       }
-      return;
-    }
-    
-    TaskData beta;
-    beta.stack(constraints.begin() + 1, constraints.end());
-    Vector const xb(beta.delta_ / timestep);
-    Matrix const & Jb(beta.Jacobian_);
-    Matrix Jb_inv;
-    pseudo_inverse_moore_penrose(Jb, Jb_inv);
-    Matrix const Nb(Matrix::Identity(ndof, ndof) - Jb_inv * Jb);
-    
-    Nc = Na * Nb;
-    
-    if (dbgos) {
-      *dbgos << dbgpre << "secondary constraint:\n";
-      string pre (dbgpre);
-      pre += "  ";
-      print(beta.delta_, *dbgos, "delta", pre);
-      print(xb, *dbgos, "xb", pre);
-      print(Jb, *dbgos, "Jb", pre);
-      print(Jb_inv, *dbgos, "Jb_inv", pre);
-      Vector tmp;
-      tmp = Jb_inv * xb;
-      print(tmp, *dbgos, "Jb_inv * xb", pre);
-      print(Nb, *dbgos, "Nb", pre);
-      tmp = Na * Jb_inv * xb;
-      print(tmp, *dbgos, "Na * Jb_inv * xb", pre);
-      print(dq_cons, *dbgos, "updated dq_cons", pre);
+      
+      pseudo_inverse_moore_penrose(tasks[ii]->Jacobian_ * N_res, Jbinv, &Nup);
+      delta_res += Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
+      N_res -= Nup;
+      
+      if (dbgos) {
+        string pre (dbgpre);
+        pre += "  ";
+	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
+	print(Nup, *dbgos, "nullspace update", pre);
+	Vector vtmp;
+        vtmp = Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
+	print(vtmp, *dbgos, "delta update", pre);
+	print(delta_res, *dbgos, "accumulated delta", pre);
+	print(N_res, *dbgos, "accumulated nullspace", pre);
+      }
+      
     }
   }
   

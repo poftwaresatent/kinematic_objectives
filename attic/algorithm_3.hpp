@@ -34,58 +34,28 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_TASK_HPP
-#define KINEMATIC_ELASTIC_TASK_HPP
+#ifndef KINEMATIC_ELASTIC_ALGORITHM_HPP
+#define KINEMATIC_ELASTIC_ALGORITHM_HPP
 
 #include "kinematic_elastic.hpp"
-#include <limits>
 
 
 namespace kinematic_elastic {
   
-  class Model;
+  class TaskData;
   
   
-  class TaskData
-  {
-  public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    void stack(TaskData const & t1, TaskData const & t2);
-    
-    template<typename iterator_t>
-    void stack(iterator_t begin, iterator_t end)
-    {
-      size_t ttnrows(0);
-      for (iterator_t ii(begin); ii != end; ++ii) {
-	ttnrows += (*ii)->Jacobian_.rows();
-      }
-      size_t const ndof((*begin)->Jacobian_.cols());
-      delta_.resize(ttnrows);
-      Jacobian_.resize(ttnrows, ndof);
-      for (size_t row(0); begin != end; row += (*begin++)->Jacobian_.rows()) {
-	delta_.block(   row, 0, (*begin)->Jacobian_.rows(),    1) = (*begin)->delta_;
-	Jacobian_.block(row, 0, (*begin)->Jacobian_.rows(), ndof) = (*begin)->Jacobian_;
-      }
-    }
-    
-    Vector delta_; // basically this is "desired - current" but may be different for objectives
-    Matrix Jacobian_;
-  };
+  Vector compute_objective_acceleration(vector<TaskData *> const & objectives,
+					ostream * dbgos = 0,
+					char const * dbgpre = "");
   
-  
-  class Task
-    : public TaskData
-  {
-  public:
-    virtual ~Task() {}
-    
-    virtual void init(Model const & model) { }
-    virtual bool isActive() const { return true; }
-    
-    virtual void update(Model const & model) = 0;
-  };
+  void compute_constrained_velocity(double timestep,
+				    vector<TaskData *> const & constraints,
+				    Vector & dq_cons,
+				    Matrix & Nc,
+				    ostream * dbgos = 0,
+				    char const * dbgpre = "");
   
 }
 
-#endif // KINEMATIC_ELASTIC_TASK_HPP
+#endif // KINEMATIC_ELASTIC_ALGORITHM_HPP

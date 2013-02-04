@@ -83,13 +83,13 @@ namespace kinematic_elastic {
     }
     
     if (dproj) {
-      // dropj is symmetric, so above we don't need to worry if we
+      // dproj is symmetric, so above we don't need to worry if we
       // used the mx.transpose() trick
-      *dropj
+      *dproj
 	= svd.matrixV().col(0)
 	* svd.matrixV().col(0).transpose();
-      for (index_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
-	*dropj
+      for (ssize_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
+	*dproj
 	  += svd.matrixV().col(ii)
 	  * svd.matrixV().col(ii).transpose();
       }

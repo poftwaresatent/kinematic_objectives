@@ -42,19 +42,14 @@
 
 namespace kinematic_elastic {
   
-  class TaskData;
+  class Task;
   
-  
-  Vector compute_objective_acceleration(vector<TaskData *> const & objectives,
-					ostream * dbgos = 0,
-					char const * dbgpre = "");
-  
-  void compute_constrained_velocity(double timestep,
-				    vector<TaskData *> const & constraints,
-				    Vector & dq_cons,
-				    Matrix & Nc,
-				    ostream * dbgos = 0,
-				    char const * dbgpre = "");
+  void perform_prioritization(Matrix const & N_init,
+			      vector<Task*> const & tasks,
+			      Vector & delta_res,
+			      Matrix & N_res,
+			      ostream * dbgos = 0,
+			      char const * dbgpre = "");
   
 }
 
