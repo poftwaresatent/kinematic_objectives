@@ -48,7 +48,9 @@ namespace kinematic_elastic {
   {
   public:
     PointMindistConstraint(size_t node,
-			   Vector const & point,
+			   double px,
+			   double py,
+			   double pz,
 			   double mindist);
     
     virtual void init(Model const & model);

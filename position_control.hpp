@@ -47,7 +47,11 @@ namespace kinematic_elastic {
   {
   public:
     PositionControl(size_t node,
-		    Vector const & point);
+		    double px,
+		    double py,
+		    double pz,
+		    double kp,
+		    double kd);
     
     virtual void init(Model const & model);
     virtual void update(Model const & model);

@@ -54,7 +54,6 @@ namespace kinematic_elastic {
     
   public:
     PointAttraction(size_t node,
-		    Vector const & point,
 		    double gain,
 		    double distance);
     

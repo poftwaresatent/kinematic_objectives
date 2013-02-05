@@ -43,11 +43,10 @@ namespace kinematic_elastic {
   
   PointAttraction::
   PointAttraction(size_t node,
-		  Vector const & point,
 		  double gain,
 		  double distance)
   {
-    construct(node, point, gain, distance);
+    construct(node, Vector::Zero(3), gain, distance);
   }
   
   

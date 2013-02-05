@@ -80,12 +80,12 @@ struct handle_s {
   double radius_, red_, green_, blue_, alpha_;
 };
 
-static handle_s eestart   (0.2, 1.0, 0.5, 0.0, 0.5);
-static handle_s basestart (0.2, 1.0, 0.0, 0.5, 0.5);
-static handle_s eegoal    (0.2, 0.5, 1.0, 0.0, 0.5);
-static handle_s basegoal  (0.2, 0.0, 1.0, 0.5, 0.5);
-static handle_s repulsor  (0.2, 0.0, 0.7, 0.7, 0.5);
-static handle_s obstacle  (0.5, 1.0, 0.0, 0.5, 0.5);
+static handle_s eestart   (0.2, 0.0, 1.0, 0.0, 0.5);
+static handle_s basestart (0.2, 0.0, 1.0, 0.5, 0.5);
+static handle_s eegoal    (0.2, 0.0, 0.0, 1.0, 0.5);
+static handle_s basegoal  (0.2, 0.0, 0.5, 1.0, 0.5);
+static handle_s repulsor  (1.5, 1.0, 0.5, 0.0, 0.2);
+static handle_s obstacle  (1.5, 0.7, 0.0, 0.2, 0.5);
 
 static handle_s * handle[] = { &eestart, &basestart, &eegoal, &basegoal, &repulsor, &obstacle, 0 };
 static handle_s * grabbed(0);
@@ -314,14 +314,14 @@ public:
   
   BaseWaypoint()
     : timestep_(1e-2),
-      avoid_base_(0, Vector::Zero(3), obstacle.radius_),
-      avoid_ellbow_(1, Vector::Zero(3), obstacle.radius_),
-      avoid_wrist_(2, Vector::Zero(3), obstacle.radius_),
-      avoid_ee_(3, Vector::Zero(3), obstacle.radius_),
-      repulse_base_(0, Vector::Zero(3)),
-      repulse_ellbow_(1, Vector::Zero(3)),
-      repulse_wrist_(2, Vector::Zero(3)),
-      repulse_ee_(3, Vector::Zero(3))
+      avoid_base_    (0,                 0.0, 0.0, 0.0, obstacle.radius_),
+      avoid_ellbow_  (1,       robot_.len_a_, 0.0, 0.0, obstacle.radius_),
+      avoid_wrist_   (2,       robot_.len_b_, 0.0, 0.0, obstacle.radius_),
+      avoid_ee_      (3, robot_.len_c_ / 2.0, 0.0, 0.0, obstacle.radius_),
+      repulse_base_  (0,                 0.0, 0.0, 0.0, 100.0, repulsor.radius_),
+      repulse_ellbow_(1,       robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
+      repulse_wrist_ (2,       robot_.len_b_, 0.0, 0.0, 100.0, repulsor.radius_),
+      repulse_ee_    (3,       robot_.len_c_, 0.0, 0.0, 100.0, repulsor.radius_)
   {
     joint_limits_.init(5);
     joint_limits_.limits_(3, 0) = -120.0 * deg;
@@ -333,19 +333,11 @@ public:
     joint_limits_.limits_(4, 2) =  119.999 * deg;
     joint_limits_.limits_(4, 3) =  120.0 * deg;
     
-    avoid_ellbow_.point_ << robot_.len_a_, 0.0, 0.0;
-    avoid_wrist_.point_ << robot_.len_b_, 0.0, 0.0;
-    avoid_ee_.point_ << robot_.len_c_ / 2.0, 0.0, 0.0;
-
     constraints_.push_back(&joint_limits_);
     constraints_.push_back(&avoid_ee_);
     constraints_.push_back(&avoid_wrist_);
     constraints_.push_back(&avoid_ellbow_);
     constraints_.push_back(&avoid_base_);
-    
-    repulse_ellbow_.point_ << robot_.len_a_, 0.0, 0.0;
-    repulse_wrist_.point_ << robot_.len_b_, 0.0, 0.0;
-    repulse_ee_.point_ << robot_.len_c_, 0.0, 0.0;
     
     objectives_.push_back(&repulse_base_);
     objectives_.push_back(&repulse_ellbow_);
@@ -703,29 +695,29 @@ public:
     
     PointAttraction * pa;
     
-    pa = new PointAttraction(0, Vector::Zero(3), 50, 1.0);
+    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, 10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 50, 1.0);
+    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, 10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 50, 1.0);
+    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, 10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 50, 1.0);
+    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, 10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
     
-    pa = new PointAttraction(0, Vector::Zero(3), 50, 1.0);
+    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, 10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 50, 1.0);
+    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, 10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 50, 1.0);
+    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, 10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 50, 1.0);
+    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, 10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
   }
@@ -746,12 +738,11 @@ class BoundaryWaypoint
 public:
   BoundaryWaypoint(Vector const * eegoal,
 		   Vector const * baseattractor)
-    : eetask_(3, Vector::Zero(3)),
-      attract_base_(0, Vector::Zero(3), 100.0, 2.0),
+    : eetask_      (3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
+      attract_base_(0,           0.0, 0.0, 0.0, 100.0, 2.0),
       eegoal_(eegoal),
       baseattractor_(baseattractor)
   {
-    eetask_.point_ << robot_.len_c_, 0.0, 0.0;
     tasks_.push_back(&eetask_);
     objectives_.push_back(&attract_base_);
   }
@@ -822,11 +813,20 @@ public:
     
     BoundaryWaypoint * start(new BoundaryWaypoint(&(eestart.point_), &(basestart.point_)));
     BoundaryWaypoint * goal(new BoundaryWaypoint(&(eegoal.point_), &(basegoal.point_)));
-    StandardWaypoint * wpt(new StandardWaypoint());
-    wpt->setNeighbors(start, goal);
+    vector<StandardWaypoint *> wpt;
+    for (size_t ii(0); ii < 10; ++ii) {
+      wpt.push_back(new StandardWaypoint());
+    }
+    wpt[0]->setNeighbors(start, wpt[1]);
+    for (size_t ii(1); ii < wpt.size() - 1; ++ii) {
+      wpt[ii]->setNeighbors(wpt[ii-1], wpt[ii+1]);
+    }
+    wpt[wpt.size() - 1]->setNeighbors(wpt[wpt.size() - 2], goal);
     
     path_.push_back(start);
-    path_.push_back(wpt);
+    for (size_t ii(0); ii < wpt.size(); ++ii) {
+      path_.push_back(wpt[ii]);
+    }
     path_.push_back(goal);
     
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
@@ -1071,8 +1071,8 @@ int main(int argc, char ** argv)
   basestart.point_ <<                 1.0,        1.0,     0.0;
   eegoal.point_    <<          dimx - 1.0, dimy / 2.0,     0.0;
   basegoal.point_  <<          dimx - 1.0,        1.0,     0.0;
-  repulsor.point_  << (dimx + dimy) / 2.0,        1.0,     0.0;
-  obstacle.point_  << (dimx + dimy) / 2.0, dimy - 1.0,     0.0;
+  repulsor.point_  <<          dimx / 2.0,        1.0,     0.0;
+  obstacle.point_  <<          dimx / 2.0, dimy - 1.0,     0.0;
   
   Vector posture(5);
   posture <<

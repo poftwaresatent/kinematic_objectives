@@ -46,9 +46,23 @@ namespace kinematic_elastic {
   class PointRepulsion
     : public Task
   {
+  protected:
+    void construct(size_t node,
+		   Vector const & point,
+		   double gain,
+		   double distance);
+    
   public:
     PointRepulsion(size_t node,
-		   Vector const & point);
+		   double gain,
+		   double distance);
+    
+    PointRepulsion(size_t node,
+		   double px,
+		   double py,
+		   double pz,
+		   double gain,
+		   double distance);
     
     virtual void init(Model const & model);
     

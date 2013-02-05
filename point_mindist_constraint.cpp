@@ -43,12 +43,15 @@ namespace kinematic_elastic {
   
   PointMindistConstraint::
   PointMindistConstraint(size_t node,
-			 Vector const & point,
+			 double px,
+			 double py,
+			 double pz,
 			 double mindist)
     : mindist_(mindist),
       node_(node),
-      point_(point)
+      point_(3)
   {
+    point_ << px, py, pz;
     delta_ = Vector::Zero(1);
     obstacle_.resize(0);
   }

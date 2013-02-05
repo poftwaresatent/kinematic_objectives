@@ -42,12 +42,17 @@ namespace kinematic_elastic {
   
   PositionControl::
   PositionControl(size_t node,
-		  Vector const & point)
-    : kp_(100.0),
-      kd_(20.0),
+		  double px,
+		  double py,
+		  double pz,
+		  double kp,
+		  double kd)
+    : kp_(kp),
+      kd_(kd),
       node_(node),
-      point_(point)
+      point_(3)
   {
+    point_ << px, py, pz;
   }
   
   
