@@ -74,7 +74,7 @@ namespace kinematic_elastic {
     inv = Matrix::Zero(mx.cols(), mx.rows());
     for (ssize_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
       if (svd.singularValues()[ii] <= thresh) {
-	return;
+	break;
       }
       inv
 	+= (1.0 / svd.singularValues()[ii])
