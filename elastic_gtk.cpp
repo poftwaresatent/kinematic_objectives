@@ -569,41 +569,41 @@ public:
       print(robot_.getPosition(), cout, "resulting constrained position", "  ");
     }
     
-    for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      tasks_[ii]->update(robot_);
-    }
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      objectives_[ii]->update(robot_);
-    }
+    // // for (size_t ii(0); ii < tasks_.size(); ++ii) {
+    // //   tasks_[ii]->update(robot_);
+    // // }
+    // // for (size_t ii(0); ii < objectives_.size(); ++ii) {
+    // //   objectives_[ii]->update(robot_);
+    // // }
     
-    // Re-run task priority scheme, but seed it with the constraint nullspace this time.
+    // // // Re-run task priority scheme, but seed it with the constraint nullspace this time.
     
-    perform_prioritization(N_c,
-    			   tasks_,
-    			   qdd_t,
-    			   N_t,
-    			   dbgos, "task   ");
+    // // perform_prioritization(N_c,
+    // // 			   tasks_,
+    // // 			   qdd_t,
+    // // 			   N_t,
+    // // 			   dbgos, "task   ");
     
-    qdd_o = Vector::Zero(robot_.getPosition().size());
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if (objectives_[ii]->isActive()) {
-    	Matrix Jinv;
-    	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
-    	qdd_o += Jinv * objectives_[ii]->delta_;
-      }
-    }
+    // // qdd_o = Vector::Zero(robot_.getPosition().size());
+    // // for (size_t ii(0); ii < objectives_.size(); ++ii) {
+    // //   if (objectives_[ii]->isActive()) {
+    // // 	Matrix Jinv;
+    // // 	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
+    // // 	qdd_o += Jinv * objectives_[ii]->delta_;
+    // //   }
+    // // }
     
-    qdd_res = qdd_t + N_t * qdd_o;
-    qd_res = robot_.getVelocity() + timestep_ * qdd_res;
-    q_res = robot_.getPosition() + timestep_ * qd_res;
+    // // qdd_res = qdd_t + N_t * qdd_o;
+    // // qd_res = robot_.getVelocity() + timestep_ * qdd_res;
+    // // q_res = robot_.getPosition() + timestep_ * qd_res;
     
-    if (verbose) {
-      print(qdd_res, cout, "constrained acceleration", "  ");
-      print(qd_res, cout, "resulting constrained velocity", "  ");
-      print(q_res, cout, "resulting constrained position", "  ");
-    }
+    // // if (verbose) {
+    // //   print(qdd_res, cout, "constrained acceleration", "  ");
+    // //   print(qd_res, cout, "resulting constrained velocity", "  ");
+    // //   print(q_res, cout, "resulting constrained position", "  ");
+    // // }
     
-    robot_.update(q_res, qd_res);
+    // // robot_.update(q_res, qd_res);
   }
   
 protected:
