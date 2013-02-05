@@ -106,7 +106,9 @@ namespace kinematic_elastic {
         vtmp = Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
 	print(vtmp, *dbgos, "delta update", pre);
         vtmp = tasks[ii]->Jacobian_ * vtmp;
-	print(vtmp, *dbgos, "corresponding task update", pre);
+	print(vtmp, *dbgos, "biased task update", pre);
+        vtmp = tasks[ii]->Jacobian_ * Jbinv * tasks[ii]->delta_;
+	print(vtmp, *dbgos, "unbiased task update", pre);
       }
       
       delta_res += Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);

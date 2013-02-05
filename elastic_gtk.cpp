@@ -194,12 +194,12 @@ public:
     default:
       errx (EXIT_FAILURE, "Robot::computeJxo() called on invalid node %zu", node);
     }
-    if (verbose) {
-      cout << "Robot::computeJxo()\n"
-	   << "  node " << node << "\n";
-      print(gpoint, cout, "  gpoint", "    ");
-      print(Jxo, cout, "  Jxo", "    ");
-    }
+    // if (verbose) {
+    //   cout << "Robot::computeJxo()\n"
+    // 	   << "  node " << node << "\n";
+    //   print(gpoint, cout, "  gpoint", "    ");
+    //   print(Jxo, cout, "  Jxo", "    ");
+    // }
     return Jxo;
   }
   
@@ -484,7 +484,7 @@ public:
 			   tasks_,
 			   qdd_t,
 			   N_t,
-			   dbgos, "");
+			   dbgos, "task   ");
     
     Vector qdd_o(Vector::Zero(robot_.getPosition().size()));
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
@@ -506,6 +506,7 @@ public:
     }
     
     Vector const oldpos(robot_.getPosition()); // will need this in case of constraints
+    Vector const oldvel(robot_.getVelocity()); // will need this in case of constraints
     robot_.update(q_res, qd_res);
     
     bool need_constraints(false);
@@ -537,63 +538,35 @@ public:
 			   constraints_,
 			   dq_c,
 			   N_c,
-			   dbgos, "");
+			   dbgos, "constr ");
     
     // The constraints cheat with the robot state: they directly work
-    // on the positions (and velocities) that would have been achieved
-    // without constraints. So, we then need to repair the position
-    // and velocity to something consistent with the constraints, then
-    // re-run the tasks and objectives.
-    
-    robot_.update(q_res + dq_c, N_c * (q_res + dq_c - oldpos) / timestep_);
-    ////robot_.update(oldpos + dq_c, N_c * dq_c / timestep_);
+    // on the positions that would have been achieved without
+    // constraints.
+    //
+    // Open question: after repairing the position and velocity to
+    // something consistent with the constraints, do we then then
+    // re-run the tasks and objectives? Or is that taken care of
+    // automatically in the next iteration? Also, if we re-run
+    // everything here, wouldn't the changed position and velocity
+    // also influence the constraints themselves? In the latter case,
+    // we'd need to re-run the constraints as well, possibly leading
+    // to another correction and so forth ad infinitum. But the
+    // nullspace of the constraints at least should not change (too
+    // much anyhow) so we can probably skip the chicken-and-egg
+    // constraint update problem.
+    //
+    // Note that the non-constrained velocity would be (q_res + dq_c -
+    // oldpos) / timestep_ but we're pre-multiplying with N_c and dq_c
+    // is perpendicular to that so we don't need to add it.
+    //
+    robot_.update(q_res + dq_c, N_c * (q_res - oldpos) / timestep_);
     
     if (verbose) {
       print(dq_c, cout, "position correction to satisfy constraints", "  ");
       print(N_c, cout, "nullspace of constrains", "  ");
       print(robot_.getVelocity(), cout, "resulting constrained velocity", "  ");
       print(robot_.getPosition(), cout, "resulting constrained position", "  ");
-    }
-
-    // And actually, we changed the state, so the constraints will
-    // result in different nullspaces. I can;t seem to get out of this
-    // chicken-egg problem, but let's do "just one more" update of the
-    // constraints without taking the resulting dq_c into account (it
-    // should ideally be zero anyhow).
-    
-    need_constraints = false;
-    for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      constraints_[ii]->update(robot_); // maybe some kind of force_active flag would help here?
-      if (constraints_[ii]->isActive()) {
-    	if (verbose) {
-    	  cout << "constraint [" << ii << "] is (still? / again?) active\n";
-    	}
-    	need_constraints = true;
-      }
-    }
-    
-    if ( ! need_constraints) {
-      if (verbose) {
-    	cout << "--------------------------------------------------\n"
-	     << "all constraints have suddenly become inactive, grr\n";
-      }
-      N_c = Matrix::Identity(ndof, ndof);
-    }
-    else {
-      if (verbose) {
-	cout << "--------------------------------------------------\n"
-	     << "re-running constraints after constraint-satisfaction step\n";
-      }
-      perform_prioritization(Matrix::Identity(ndof, ndof),
-			     constraints_,
-			     dq_c,
-			     N_c,
-			     dbgos, "");
-    }
-    
-    if (verbose) {
-      cout << "--------------------------------------------------\n"
-    	   << "recomputing tasks and objectives with constraints enabled\n";
     }
     
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
@@ -606,17 +579,17 @@ public:
     // Re-run task priority scheme, but seed it with the constraint nullspace this time.
     
     perform_prioritization(N_c,
-			   tasks_,
-			   qdd_t,
-			   N_t,
-			   dbgos, "");
+    			   tasks_,
+    			   qdd_t,
+    			   N_t,
+    			   dbgos, "task   ");
     
     qdd_o = Vector::Zero(robot_.getPosition().size());
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
       if (objectives_[ii]->isActive()) {
-	Matrix Jinv;
-	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
-	qdd_o += Jinv * objectives_[ii]->delta_;
+    	Matrix Jinv;
+    	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
+    	qdd_o += Jinv * objectives_[ii]->delta_;
       }
     }
     
