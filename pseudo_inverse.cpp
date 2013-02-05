@@ -70,7 +70,8 @@ namespace kinematic_elastic {
     }
     
     Eigen::JacobiSVD<Matrix> svd(mx, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    double const thresh(mx.cols() * numeric_limits<double>::epsilon() * svd.singularValues()[0]);
+    static double const prec(1e-3);  // numeric_limits<double>::epsilon() is way too small...
+    double const thresh(mx.cols() * prec * svd.singularValues()[0]);
     inv = Matrix::Zero(mx.cols(), mx.rows());
     for (ssize_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
       if (svd.singularValues()[ii] <= thresh) {
