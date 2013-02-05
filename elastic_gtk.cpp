@@ -334,7 +334,7 @@ public:
     
     avoid_ellbow_.point_ << robot_.len_a_, 0.0, 0.0;
     avoid_wrist_.point_ << robot_.len_b_, 0.0, 0.0;
-    avoid_ee_.point_ << robot_.len_c_, 0.0, 0.0;
+    avoid_ee_.point_ << robot_.len_c_ / 2.0, 0.0, 0.0;
 
     constraints_.push_back(&joint_limits_);
     constraints_.push_back(&avoid_ee_);
@@ -545,13 +545,55 @@ public:
     // and velocity to something consistent with the constraints, then
     // re-run the tasks and objectives.
     
-    robot_.update(oldpos + dq_c, N_c * dq_c / timestep_);
+    robot_.update(q_res + dq_c, N_c * (q_res + dq_c - oldpos) / timestep_);
+    ////robot_.update(oldpos + dq_c, N_c * dq_c / timestep_);
     
     if (verbose) {
       print(dq_c, cout, "position correction to satisfy constraints", "  ");
       print(N_c, cout, "nullspace of constrains", "  ");
       print(robot_.getVelocity(), cout, "resulting constrained velocity", "  ");
       print(robot_.getPosition(), cout, "resulting constrained position", "  ");
+    }
+
+    // And actually, we changed the state, so the constraints will
+    // result in different nullspaces. I can;t seem to get out of this
+    // chicken-egg problem, but let's do "just one more" update of the
+    // constraints without taking the resulting dq_c into account (it
+    // should ideally be zero anyhow).
+    
+    need_constraints = false;
+    for (size_t ii(0); ii < constraints_.size(); ++ii) {
+      constraints_[ii]->update(robot_); // maybe some kind of force_active flag would help here?
+      if (constraints_[ii]->isActive()) {
+    	if (verbose) {
+    	  cout << "constraint [" << ii << "] is (still? / again?) active\n";
+    	}
+    	need_constraints = true;
+      }
+    }
+    
+    if ( ! need_constraints) {
+      if (verbose) {
+    	cout << "--------------------------------------------------\n"
+	     << "all constraints have suddenly become inactive, grr\n";
+      }
+      N_c = Matrix::Identity(ndof, ndof);
+    }
+    else {
+      if (verbose) {
+	cout << "--------------------------------------------------\n"
+	     << "re-running constraints after constraint-satisfaction step\n";
+      }
+      perform_prioritization(Matrix::Identity(ndof, ndof),
+			     constraints_,
+			     dq_c,
+			     N_c,
+			     dbgos, "");
+    }
+    
+    if (verbose) {
+      cout << "--------------------------------------------------\n"
+    	   << "recomputing tasks and objectives with constraints enabled\n";
     }
     
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
@@ -883,8 +925,8 @@ int main(int argc, char ** argv)
   }
   
   eegoal.point_ <<
-    1.0,
-    dimy - 1.0,
+    dimx / 2.0,
+    dimy / 2.0,
     0.0;
   repulsor.point_ <<
     dimx - 1.0,

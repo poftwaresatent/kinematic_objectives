@@ -56,10 +56,12 @@ namespace kinematic_elastic {
     http://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_pseudoinverse
     and
     http://eigen.tuxfamily.org/index.php?title=FAQ
+    with some inspiration, too, from Baerlocher's thesis.
   */
   void pseudo_inverse_moore_penrose (Matrix const & mx,
 				     Matrix & inv,
-				     Matrix * dproj)
+				     Matrix * dproj,
+				     Vector * sigma)
   {
     if (mx.rows() > mx.cols()) {
       // apparently in this case it is cheaper to use the transpose...
@@ -94,6 +96,10 @@ namespace kinematic_elastic {
 	  += svd.matrixV().col(ii)
 	  * svd.matrixV().col(ii).transpose();
       }
+    }
+    
+    if (sigma) {
+      *sigma = svd.singularValues();
     }
   }
   

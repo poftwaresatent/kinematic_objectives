@@ -46,7 +46,8 @@ namespace kinematic_elastic {
   
   void pseudo_inverse_moore_penrose(Matrix const & mx,
 				    Matrix & inv,
-				    Matrix * dproj = 0);
+				    Matrix * dproj = 0,
+				    Vector * sigma = 0);
   
   void pseudo_inverse_damped(Matrix const & mx,
 			     double lambda,

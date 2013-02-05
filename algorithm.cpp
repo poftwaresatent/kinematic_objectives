@@ -54,6 +54,20 @@ namespace kinematic_elastic {
     
     Matrix Jbinv;
     Matrix Nup;
+    
+    Vector sigma;
+    Vector * dbgsigma(0);
+    if (dbgos) {
+      dbgsigma = &sigma;
+      
+      string pre (dbgpre);
+      pre += "  ";
+      print(N_res, *dbgos, "initial nullspace", pre);
+      Eigen::JacobiSVD<Matrix> svd;
+      svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
+      print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
+    }
+    
     for (size_t ii(0); ii < tasks.size(); ++ii) {
       
       if ( ! tasks[ii]->isActive()) {
@@ -69,6 +83,9 @@ namespace kinematic_elastic {
 	pre += "  ";
 	print(tasks[ii]->delta_, *dbgos, "task delta", pre);
 	print(tasks[ii]->Jacobian_, *dbgos, "task Jacobian", pre);
+	Eigen::JacobiSVD<Matrix> svd;
+	svd.compute(tasks[ii]->Jacobian_, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	print(svd.singularValues(), *dbgos, "eigenvalues of task Jacobian", pre);
 	Vector vtmp;
 	vtmp = tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res;
 	print(vtmp, *dbgos, "delta_comp", pre);
@@ -77,14 +94,28 @@ namespace kinematic_elastic {
 	print(mtmp, *dbgos, "J_bar", pre);
       }
       
-      pseudo_inverse_moore_penrose(tasks[ii]->Jacobian_ * N_res, Jbinv, &Nup);
+      pseudo_inverse_moore_penrose(tasks[ii]->Jacobian_ * N_res, Jbinv, &Nup, dbgsigma);
+      
+      if (dbgos) {
+        string pre (dbgpre);
+        pre += "  ";
+	print(sigma, *dbgos, "eigenvalues of J_bar", pre);
+	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
+	print(Nup, *dbgos, "nullspace update", pre);
+	Vector vtmp;
+        vtmp = Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
+	print(vtmp, *dbgos, "delta update", pre);
+        vtmp = tasks[ii]->Jacobian_ * vtmp;
+	print(vtmp, *dbgos, "corresponding task update", pre);
+      }
+      
       delta_res += Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
       
       if (Nup.cols() == 0) {
 	if (dbgos) {
 	  *dbgos << dbgpre << "NO DEGREES OF FREEDOM LEFT\n";
 	}
-	return;
+	break;
       }
       
       N_res -= Nup;
@@ -92,16 +123,24 @@ namespace kinematic_elastic {
       if (dbgos) {
         string pre (dbgpre);
         pre += "  ";
-	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
-	print(Nup, *dbgos, "nullspace update", pre);
-	Vector vtmp;
-        vtmp = Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
-	print(vtmp, *dbgos, "delta update", pre);
 	print(delta_res, *dbgos, "accumulated delta", pre);
 	print(N_res, *dbgos, "accumulated nullspace", pre);
+	Eigen::JacobiSVD<Matrix> svd;
+	svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
       }
       
     }
+    
+    if (dbgos) {
+      string pre (dbgpre);
+      pre += "  ";
+      print(N_res, *dbgos, "final nullspace", pre);
+      Eigen::JacobiSVD<Matrix> svd;
+      svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
+      print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
+    }
+
   }
   
 }
