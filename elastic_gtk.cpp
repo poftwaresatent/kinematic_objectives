@@ -80,12 +80,14 @@ struct handle_s {
   double radius_, red_, green_, blue_, alpha_;
 };
 
-static handle_s eegoal(0.2, 1.0, 0.5, 0.0, 0.5);
-static handle_s repulsor(0.2, 0.0, 0.7, 0.7, 0.5);
-static handle_s obstacle(0.5, 1.0, 0.0, 0.5, 0.5);
-static handle_s attractor(0.2, 0.0, 1.0, 0.0, 0.5);
+static handle_s eestart   (0.2, 1.0, 0.5, 0.0, 0.5);
+static handle_s basestart (0.2, 1.0, 0.0, 0.5, 0.5);
+static handle_s eegoal    (0.2, 0.5, 1.0, 0.0, 0.5);
+static handle_s basegoal  (0.2, 0.0, 1.0, 0.5, 0.5);
+static handle_s repulsor  (0.2, 0.0, 0.7, 0.7, 0.5);
+static handle_s obstacle  (0.5, 1.0, 0.0, 0.5, 0.5);
 
-static handle_s * handle[] = { &eegoal, &repulsor, &obstacle, &attractor, 0 };
+static handle_s * handle[] = { &eestart, &basestart, &eegoal, &basegoal, &repulsor, &obstacle, 0 };
 static handle_s * grabbed(0);
 static Vector grab_offset(3);
 
@@ -304,19 +306,18 @@ public:
 };
 
 
-class Waypoint
+class BaseWaypoint
 {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
-  Waypoint()
+  
+  BaseWaypoint()
     : timestep_(1e-2),
-      avoid_ee_(3, Vector::Zero(3), obstacle.radius_),
-      avoid_wrist_(2, Vector::Zero(3), obstacle.radius_),
-      avoid_ellbow_(1, Vector::Zero(3), obstacle.radius_),
       avoid_base_(0, Vector::Zero(3), obstacle.radius_),
-      eetask_(3, Vector::Zero(3)),
-      attract_base_(0, Vector::Zero(3)),
+      avoid_ellbow_(1, Vector::Zero(3), obstacle.radius_),
+      avoid_wrist_(2, Vector::Zero(3), obstacle.radius_),
+      avoid_ee_(3, Vector::Zero(3), obstacle.radius_),
       repulse_base_(0, Vector::Zero(3)),
       repulse_ellbow_(1, Vector::Zero(3)),
       repulse_wrist_(2, Vector::Zero(3)),
@@ -342,15 +343,10 @@ public:
     constraints_.push_back(&avoid_ellbow_);
     constraints_.push_back(&avoid_base_);
     
-    eetask_.point_ << robot_.len_c_, 0.0, 0.0;
-    
-    tasks_.push_back(&eetask_);
-    
     repulse_ellbow_.point_ << robot_.len_a_, 0.0, 0.0;
     repulse_wrist_.point_ << robot_.len_b_, 0.0, 0.0;
     repulse_ee_.point_ << robot_.len_c_, 0.0, 0.0;
     
-    objectives_.push_back(&attract_base_);
     objectives_.push_back(&repulse_base_);
     objectives_.push_back(&repulse_ellbow_);
     objectives_.push_back(&repulse_wrist_);
@@ -359,12 +355,12 @@ public:
   }
   
   
-  ~Waypoint()
+  virtual ~BaseWaypoint()
   {
   }
   
   
-  void draw(cairo_t * cr, double pixelsize)
+  virtual void draw(cairo_t * cr, double pixelsize)
   {
     robot_.draw(cr, pixelsize);
     
@@ -386,37 +382,36 @@ public:
     cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
     cairo_stroke(cr);
     
-    // thin line for end effector task
-    cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
-    cairo_move_to(cr, eetask_.gpoint_[0], eetask_.gpoint_[1]);
-    cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
-    cairo_stroke(cr);
+    // repulsion vectors
     
-    // ellbow repulsion
+    cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    
+    // base
+    if (repulse_base_.isActive()) {
+      cairo_move_to(cr, repulse_base_.gpoint_[0], repulse_base_.gpoint_[1]);
+      cairo_line_to(cr, repulse_base_.gpoint_[0] + repulse_base_.delta_[0] / repulse_base_.gain_, repulse_base_.gpoint_[1] + repulse_base_.delta_[1] / repulse_base_.gain_);
+      cairo_stroke(cr);
+    }
+    
+    // ellbow
     if (repulse_ellbow_.isActive()) {
-      cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-      cairo_set_line_width(cr, 1.0 / pixelsize);
       cairo_move_to(cr, repulse_ellbow_.gpoint_[0], repulse_ellbow_.gpoint_[1]);
       cairo_line_to(cr, repulse_ellbow_.gpoint_[0] + repulse_ellbow_.delta_[0] / repulse_ellbow_.gain_, repulse_ellbow_.gpoint_[1] + repulse_ellbow_.delta_[1] / repulse_ellbow_.gain_);
       cairo_stroke(cr);
     }
     
-    // wrist repulsion
+    // wrist
     if (repulse_wrist_.isActive()) {
-      cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-      cairo_set_line_width(cr, 1.0 / pixelsize);
       cairo_move_to(cr, repulse_wrist_.gpoint_[0], repulse_wrist_.gpoint_[1]);
       cairo_line_to(cr, repulse_wrist_.gpoint_[0] + repulse_wrist_.delta_[0] / repulse_wrist_.gain_, repulse_wrist_.gpoint_[1] + repulse_wrist_.delta_[1] / repulse_wrist_.gain_);
       cairo_stroke(cr);
     }
     
-    // base attraction
-    if (attract_base_.isActive()) {
-      cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-      cairo_set_line_width(cr, 1.0 / pixelsize);
-      cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
-      cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
+    // ee
+    if (repulse_ee_.isActive()) {
+      cairo_move_to(cr, repulse_ee_.gpoint_[0], repulse_ee_.gpoint_[1]);
+      cairo_line_to(cr, repulse_ee_.gpoint_[0] + repulse_ee_.delta_[0] / repulse_ee_.gain_, repulse_ee_.gpoint_[1] + repulse_ee_.delta_[1] / repulse_ee_.gain_);
       cairo_stroke(cr);
     }
     
@@ -424,12 +419,12 @@ public:
   }
   
   
-  void init(Vector const & position, Vector const & velocity)
+  virtual void init(Vector const & position, Vector const & velocity)
   {
     robot_.update(position, velocity);
     
     for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      constraints_[ii];
+      constraints_[ii]->init(robot_);
     }
     for (size_t ii(0); ii < tasks_.size(); ++ii) {
       tasks_[ii]->init(robot_);
@@ -440,16 +435,12 @@ public:
   }
   
   
-  void update()
+  virtual void update()
   {
     avoid_ee_.obstacle_ = obstacle.point_;
     avoid_wrist_.obstacle_ = obstacle.point_;
     avoid_ellbow_.obstacle_ = obstacle.point_;
     avoid_base_.obstacle_ = obstacle.point_;
-    
-    eetask_.goal_ = eegoal.point_;
-    
-    attract_base_.attractor_ = attractor.point_;
     
     repulse_base_.repulsor_ = repulsor.point_;
     repulse_ellbow_.repulsor_ = repulsor.point_;
@@ -460,7 +451,7 @@ public:
     if (verbose) {
       dbgos = &cout;
       cout << "==================================================\n"
-	   << "Waypoint::update()\n";
+	   << "BaseWaypoint::update()\n";
       print(robot_.getPosition(), cout, "current position", "  ");
       print(robot_.getVelocity(), cout, "current velocity", "  ");
     }
@@ -605,20 +596,17 @@ public:
     
     // // robot_.update(q_res, qd_res);
   }
-  
-protected:
+
+  ////protected:
   double timestep_;
   Robot robot_;
   
   JointLimitConstraint joint_limits_;
-  PointMindistConstraint avoid_ee_;
-  PointMindistConstraint avoid_wrist_;
-  PointMindistConstraint avoid_ellbow_;
+  
   PointMindistConstraint avoid_base_;
-  
-  PositionControl eetask_;
-  
-  PointAttraction attract_base_;
+  PointMindistConstraint avoid_ellbow_;
+  PointMindistConstraint avoid_wrist_;
+  PointMindistConstraint avoid_ee_;
   
   PointRepulsion repulse_base_;
   PointRepulsion repulse_ellbow_;
@@ -630,6 +618,180 @@ protected:
   vector<Task *> constraints_;
   vector<Task *> tasks_;
   vector<Task *> objectives_;
+};  
+
+	       
+class StandardWaypoint
+  : public BaseWaypoint
+{
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  
+  
+  virtual ~StandardWaypoint()
+  {
+    for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
+      delete attract_prev_[ii];
+    }
+    for (size_t ii(0); ii < attract_next_.size(); ++ii) {
+      delete attract_next_[ii];
+    }
+  }
+  
+  
+  virtual void init(Vector const & position, Vector const & velocity)
+  {
+    if (attract_prev_.empty()) {
+      errx(EXIT_FAILURE, "please call StandardWaypoint::setNeighbors exactly once on every waypoint");
+    }
+    BaseWaypoint::init(position, velocity);
+  }
+  
+  
+  virtual void draw(cairo_t * cr, double pixelsize)
+  {
+    BaseWaypoint::draw(cr, pixelsize);
+    
+    cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    
+    for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
+      if (attract_prev_[ii]->isActive()) {
+	cairo_move_to(cr, attract_prev_[ii]->gpoint_[0], attract_prev_[ii]->gpoint_[1]);
+	cairo_line_to(cr, attract_prev_[ii]->gpoint_[0] + attract_prev_[ii]->delta_[0] / attract_prev_[ii]->gain_, attract_prev_[ii]->gpoint_[1] + attract_prev_[ii]->delta_[1] / attract_prev_[ii]->gain_);
+	cairo_stroke(cr);
+      }
+    }
+    
+    for (size_t ii(0); ii < attract_next_.size(); ++ii) {
+      if (attract_next_[ii]->isActive()) {
+	cairo_move_to(cr, attract_next_[ii]->gpoint_[0], attract_next_[ii]->gpoint_[1]);
+	cairo_line_to(cr, attract_next_[ii]->gpoint_[0] + attract_next_[ii]->delta_[0] / attract_next_[ii]->gain_, attract_next_[ii]->gpoint_[1] + attract_next_[ii]->delta_[1] / attract_next_[ii]->gain_);
+	cairo_stroke(cr);
+      }
+    }
+  }
+  
+  
+  virtual void update()
+  {
+    for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
+      attract_prev_[ii]->attractor_
+	= prev_->robot_.frame(attract_prev_[ii]->node_)
+	* attract_prev_[ii]->point_.homogeneous();
+    }
+
+    for (size_t ii(0); ii < attract_next_.size(); ++ii) {
+      attract_next_[ii]->attractor_
+	= next_->robot_.frame(attract_next_[ii]->node_)
+	* attract_next_[ii]->point_.homogeneous();
+    }
+    
+    BaseWaypoint::update();
+  }
+  
+  
+  void setNeighbors(BaseWaypoint const * prev,
+		    BaseWaypoint const * next)
+  {
+    if ( ! attract_prev_.empty()) {
+      errx(EXIT_FAILURE, "please do not call StandardWaypoint::setNeighbors multiple times");
+    }
+    
+    prev_ = prev;
+    next_ = next;
+    
+    PointAttraction * pa;
+    
+    pa = new PointAttraction(0, Vector::Zero(3), 50, 1.0);
+    attract_prev_.push_back(pa);
+    objectives_.push_back(pa);
+    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 50, 1.0);
+    attract_prev_.push_back(pa);
+    objectives_.push_back(pa);
+    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 50, 1.0);
+    attract_prev_.push_back(pa);
+    objectives_.push_back(pa);
+    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 50, 1.0);
+    attract_prev_.push_back(pa);
+    objectives_.push_back(pa);
+    
+    pa = new PointAttraction(0, Vector::Zero(3), 50, 1.0);
+    attract_next_.push_back(pa);
+    objectives_.push_back(pa);
+    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 50, 1.0);
+    attract_next_.push_back(pa);
+    objectives_.push_back(pa);
+    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 50, 1.0);
+    attract_next_.push_back(pa);
+    objectives_.push_back(pa);
+    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 50, 1.0);
+    attract_next_.push_back(pa);
+    objectives_.push_back(pa);
+  }
+  
+  ////protected:
+
+  BaseWaypoint const * prev_;
+  BaseWaypoint const * next_;
+  
+  vector<PointAttraction*> attract_prev_;
+  vector<PointAttraction*> attract_next_;
+};
+
+
+class BoundaryWaypoint
+  : public BaseWaypoint
+{
+public:
+  BoundaryWaypoint(Vector const * eegoal,
+		   Vector const * baseattractor)
+    : eetask_(3, Vector::Zero(3)),
+      attract_base_(0, Vector::Zero(3), 100.0, 2.0),
+      eegoal_(eegoal),
+      baseattractor_(baseattractor)
+  {
+    eetask_.point_ << robot_.len_c_, 0.0, 0.0;
+    tasks_.push_back(&eetask_);
+    objectives_.push_back(&attract_base_);
+  }
+  
+  
+  virtual void draw(cairo_t * cr, double pixelsize)
+  {
+    BaseWaypoint::draw(cr, pixelsize);
+    
+    // thin line for end effector task
+    cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
+    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_move_to(cr, eetask_.gpoint_[0], eetask_.gpoint_[1]);
+    cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
+    cairo_stroke(cr);
+    
+    // base attraction
+    if (attract_base_.isActive()) {
+      cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
+      cairo_set_line_width(cr, 1.0 / pixelsize);
+      cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
+      cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
+      cairo_stroke(cr);
+    }
+  }
+  
+  
+  virtual void update()
+  {
+    eetask_.goal_ = *eegoal_;
+    attract_base_.attractor_ = *baseattractor_;
+    BaseWaypoint::update();
+  }
+  
+  
+  ////protected:
+  PositionControl eetask_;
+  PointAttraction attract_base_;
+  Vector const * eegoal_;
+  Vector const * baseattractor_;
 };
 
 
@@ -638,7 +800,7 @@ protected:
 class Elastic
 {
 public:
-  typedef list<Waypoint *> path_t;
+  typedef list<BaseWaypoint *> path_t;
 
   ~Elastic()
   {
@@ -658,9 +820,18 @@ public:
   {
     clear();
     
-    wpt_ = new Waypoint();
-    wpt_->init(state, Vector::Zero(state.size()));
-    path_.push_back(wpt_);
+    BoundaryWaypoint * start(new BoundaryWaypoint(&(eestart.point_), &(basestart.point_)));
+    BoundaryWaypoint * goal(new BoundaryWaypoint(&(eegoal.point_), &(basegoal.point_)));
+    StandardWaypoint * wpt(new StandardWaypoint());
+    wpt->setNeighbors(start, goal);
+    
+    path_.push_back(start);
+    path_.push_back(wpt);
+    path_.push_back(goal);
+    
+    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
+      (*ii)->init(state, Vector::Zero(state.size()));
+    }
   }
   
   
@@ -683,7 +854,6 @@ public:
   
 private:
   path_t path_;
-  Waypoint * wpt_;
 };
 
 
@@ -897,22 +1067,12 @@ int main(int argc, char ** argv)
     verbose = true;
   }
   
-  eegoal.point_ <<
-    dimx / 2.0,
-    dimy / 2.0,
-    0.0;
-  repulsor.point_ <<
-    dimx - 1.0,
-    dimy - 1.0,
-    0.0;
-  obstacle.point_ <<
-    dimx - 1.0,
-    1.0,
-    0.0;
-  attractor.point_ <<
-    1.0,
-    1.0,
-    0.0;
+  eestart.point_   <<                 1.0, dimy / 2.0,     0.0;
+  basestart.point_ <<                 1.0,        1.0,     0.0;
+  eegoal.point_    <<          dimx - 1.0, dimy / 2.0,     0.0;
+  basegoal.point_  <<          dimx - 1.0,        1.0,     0.0;
+  repulsor.point_  << (dimx + dimy) / 2.0,        1.0,     0.0;
+  obstacle.point_  << (dimx + dimy) / 2.0, dimy - 1.0,     0.0;
   
   Vector posture(5);
   posture <<

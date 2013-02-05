@@ -43,12 +43,38 @@ namespace kinematic_elastic {
   
   PointAttraction::
   PointAttraction(size_t node,
-		  Vector const & point)
-    : gain_(100.0),
-      distance_(2.0),
-      node_(node),
-      point_(point)
+		  Vector const & point,
+		  double gain,
+		  double distance)
   {
+    construct(node, point, gain, distance);
+  }
+  
+  
+  PointAttraction::
+  PointAttraction(size_t node,
+		  double px,
+		  double py,
+		  double pz,
+		  double gain,
+		  double distance)
+  {
+    Vector silly(3);
+    silly << px, py, pz;
+    construct(node, silly, gain, distance);
+  }
+  
+  
+  void PointAttraction::
+  construct(size_t node,
+		  Vector const & point,
+		  double gain,
+		  double distance)
+  {
+    gain_ = gain;
+    distance_ = distance;
+    node_ = node;
+    point_ = point;
     attractor_.resize(0);
   }
   
