@@ -314,14 +314,15 @@ public:
   
   BaseWaypoint()
     : timestep_(1e-2),
-      avoid_base_    (0,                 0.0, 0.0, 0.0, obstacle.radius_),
+      avoid_base_    (0,                 0.0, 0.0, 0.0, obstacle.radius_ + robot_.radius_),
       avoid_ellbow_  (1,       robot_.len_a_, 0.0, 0.0, obstacle.radius_),
       avoid_wrist_   (2,       robot_.len_b_, 0.0, 0.0, obstacle.radius_),
       avoid_ee_      (3, robot_.len_c_ / 2.0, 0.0, 0.0, obstacle.radius_),
       repulse_base_  (0,                 0.0, 0.0, 0.0, 100.0, repulsor.radius_),
       repulse_ellbow_(1,       robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
       repulse_wrist_ (2,       robot_.len_b_, 0.0, 0.0, 100.0, repulsor.radius_),
-      repulse_ee_    (3,       robot_.len_c_, 0.0, 0.0, 100.0, repulsor.radius_)
+      repulse_ee_    (3,       robot_.len_c_, 0.0, 0.0, 100.0, repulsor.radius_),
+      joint_damping_ (10.0)
   {
     joint_limits_.init(5);
     joint_limits_.limits_(3, 0) = -120.0 * deg;
@@ -373,6 +374,32 @@ public:
 	      bound(-2.0*M_PI, robot_.q23_ + joint_limits_.limits_(4, 3), 2.0*M_PI));
     cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
     cairo_stroke(cr);
+    
+    // avoidance points
+    
+    cairo_set_source_rgb(cr, 1.0, 0.4, 1.0);
+    cairo_set_line_width(cr, 5.0 / pixelsize);
+    
+    if (avoid_base_.isActive()) {
+      cairo_move_to(cr, avoid_base_.gpoint_[0], avoid_base_.gpoint_[1]);
+      cairo_line_to(cr, avoid_base_.gpoint_[0], avoid_base_.gpoint_[1]);
+      cairo_stroke(cr);
+    }
+    if (avoid_ellbow_.isActive()) {
+      cairo_move_to(cr, avoid_ellbow_.gpoint_[0], avoid_ellbow_.gpoint_[1]);
+      cairo_line_to(cr, avoid_ellbow_.gpoint_[0], avoid_ellbow_.gpoint_[1]);
+      cairo_stroke(cr);
+    }
+    if (avoid_wrist_.isActive()) {
+      cairo_move_to(cr, avoid_wrist_.gpoint_[0], avoid_wrist_.gpoint_[1]);
+      cairo_line_to(cr, avoid_wrist_.gpoint_[0], avoid_wrist_.gpoint_[1]);
+      cairo_stroke(cr);
+    }
+    if (avoid_ee_.isActive()) {
+      cairo_move_to(cr, avoid_ee_.gpoint_[0], avoid_ee_.gpoint_[1]);
+      cairo_line_to(cr, avoid_ee_.gpoint_[0], avoid_ee_.gpoint_[1]);
+      cairo_stroke(cr);
+    }
     
     // repulsion vectors
     
@@ -591,7 +618,7 @@ public:
 
   ////protected:
   double timestep_;
-  Robot robot_;
+  Robot robot_; // XXXX keep this beofre any constraints so we can use its values for initializing them
   
   JointLimitConstraint joint_limits_;
   
@@ -695,29 +722,29 @@ public:
     
     PointAttraction * pa;
     
-    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, -10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
     attract_prev_.push_back(pa);
     objectives_.push_back(pa);
     
-    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, -10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
-    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, 10.0);
+    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
     attract_next_.push_back(pa);
     objectives_.push_back(pa);
   }
@@ -901,6 +928,7 @@ static gint cb_expose(GtkWidget * ww,
 {
   cairo_t * cr = gdk_cairo_create(ee->window);
   
+  cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
   cairo_rectangle(cr, 0, 0, gw_width, gw_height);
   cairo_fill(cr);

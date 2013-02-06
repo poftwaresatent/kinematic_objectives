@@ -46,7 +46,7 @@ namespace kinematic_elastic {
     : public Task
   {
   public:
-    PostureDamping();
+    explicit PostureDamping(double gain);
     
     virtual void init(Model const & model);
     virtual void update(Model const & model);

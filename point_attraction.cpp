@@ -100,11 +100,18 @@ namespace kinematic_elastic {
       Jacobian_.resize(0, 0);
       return;
     }
-    if (dist < distance_) {
-      delta_ *= gain_ / distance_;
+    if (distance_ < 0.0) {
+      // no saturation
+      delta_ *= - gain_ / distance_;
     }
     else {
-      delta_ *= gain_ / dist;
+      // saturate at the given distance
+      if (dist < distance_) {
+	delta_ *= gain_ / distance_;
+      }
+      else {
+	delta_ *= gain_ / dist;
+      }
     }
     Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
   }

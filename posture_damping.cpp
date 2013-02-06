@@ -42,8 +42,8 @@ namespace kinematic_elastic {
   
   
   PostureDamping::
-  PostureDamping()
-    : gain_(10.0)
+  PostureDamping(double gain)
+    : gain_(gain)
   {
   }
   
