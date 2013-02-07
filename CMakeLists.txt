@@ -116,3 +116,6 @@ target_link_libraries (demo2 kinematic_elastic ${GTK2_LIBRARIES})
 
 add_executable (demo3 demo3.cpp)
 target_link_libraries (demo3 kinematic_elastic ${GTK2_LIBRARIES})
+
+add_executable (demo4 demo4.cpp)
+target_link_libraries (demo4 kinematic_elastic ${GTK2_LIBRARIES})

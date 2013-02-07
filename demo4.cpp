@@ -612,19 +612,17 @@ public:
     // on the positions that would have been achieved without
     // constraints.
     //
-    // Semi-open question: after repairing the position and velocity
-    // to something consistent with the constraints, do we then then
-    // re-run the tasks and objectives? I think yes, to give tasks a
-    // chance to get fulfilled within the constraints. But that does
-    // not seem to work quite yet...
-    //
-    // Also, wouldn't the position and velocity change for the
-    // constraints then influence the constraints themselves? We
-    // should thus re-run the constraints as well, possibly leading to
-    // another correction and so forth ad infinitum. But the nullspace
-    // of the constraints at least should not change too much, so we
-    // can probably skip the chicken-and-egg constraint update
-    // problem.
+    // Open question: after repairing the position and velocity to
+    // something consistent with the constraints, do we then then
+    // re-run the tasks and objectives? Or is that taken care of
+    // automatically in the next iteration? Also, if we re-run
+    // everything here, wouldn't the changed position and velocity
+    // also influence the constraints themselves? In the latter case,
+    // we'd need to re-run the constraints as well, possibly leading
+    // to another correction and so forth ad infinitum. But the
+    // nullspace of the constraints at least should not change (too
+    // much anyhow) so we can probably skip the chicken-and-egg
+    // constraint update problem.
     //
     // Note that the non-constrained velocity would be (q_res + dq_c -
     // oldpos) / timestep_ but we're pre-multiplying with N_c and dq_c
@@ -639,41 +637,41 @@ public:
       print(robot_.getPosition(), cout, "resulting constrained position", "  ");
     }
     
-    for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      tasks_[ii]->update(robot_);
-    }
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      objectives_[ii]->update(robot_);
-    }
+    // // for (size_t ii(0); ii < tasks_.size(); ++ii) {
+    // //   tasks_[ii]->update(robot_);
+    // // }
+    // // for (size_t ii(0); ii < objectives_.size(); ++ii) {
+    // //   objectives_[ii]->update(robot_);
+    // // }
     
-    // Re-run task priority scheme, but seed it with the constraint nullspace this time.
+    // // // Re-run task priority scheme, but seed it with the constraint nullspace this time.
     
-    perform_prioritization(N_c,
-    			   tasks_,
-    			   qdd_t,
-    			   N_t,
-    			   dbgos, "task   ");
+    // // perform_prioritization(N_c,
+    // // 			   tasks_,
+    // // 			   qdd_t,
+    // // 			   N_t,
+    // // 			   dbgos, "task   ");
     
-    qdd_o = Vector::Zero(robot_.getPosition().size());
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if (objectives_[ii]->isActive()) {
-    	Matrix Jinv;
-    	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
-    	qdd_o += Jinv * objectives_[ii]->delta_;
-      }
-    }
+    // // qdd_o = Vector::Zero(robot_.getPosition().size());
+    // // for (size_t ii(0); ii < objectives_.size(); ++ii) {
+    // //   if (objectives_[ii]->isActive()) {
+    // // 	Matrix Jinv;
+    // // 	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
+    // // 	qdd_o += Jinv * objectives_[ii]->delta_;
+    // //   }
+    // // }
     
-    qdd_res = qdd_t + N_t * qdd_o;
-    qd_res = robot_.getVelocity() + timestep_ * qdd_res;
-    q_res = robot_.getPosition() + timestep_ * qd_res;
+    // // qdd_res = qdd_t + N_t * qdd_o;
+    // // qd_res = robot_.getVelocity() + timestep_ * qdd_res;
+    // // q_res = robot_.getPosition() + timestep_ * qd_res;
     
-    if (verbose) {
-      print(qdd_res, cout, "constrained acceleration", "  ");
-      print(qd_res, cout, "resulting constrained velocity", "  ");
-      print(q_res, cout, "resulting constrained position", "  ");
-    }
+    // // if (verbose) {
+    // //   print(qdd_res, cout, "constrained acceleration", "  ");
+    // //   print(qd_res, cout, "resulting constrained velocity", "  ");
+    // //   print(q_res, cout, "resulting constrained position", "  ");
+    // // }
     
-    robot_.update(q_res, qd_res);
+    // // robot_.update(q_res, qd_res);
   }
 
   ////protected:
