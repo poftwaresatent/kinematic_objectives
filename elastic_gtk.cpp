@@ -81,13 +81,15 @@ struct handle_s {
 };
 
 static handle_s eestart   (0.2, 0.0, 1.0, 0.0, 0.5);
+static handle_s eestartori(0.1, 0.0, 1.0, 0.0, 0.3);
+static double zangle(0);
 static handle_s basestart (0.2, 0.0, 1.0, 0.5, 0.5);
 static handle_s eegoal    (0.2, 0.0, 0.0, 1.0, 0.5);
 static handle_s basegoal  (0.2, 0.0, 0.5, 1.0, 0.5);
 static handle_s repulsor  (1.5, 1.0, 0.5, 0.0, 0.2);
 static handle_s obstacle  (1.5, 0.7, 0.0, 0.2, 0.5);
 
-static handle_s * handle[] = { &eestart, &basestart, &eegoal, &basegoal, &repulsor, &obstacle, 0 };
+static handle_s * handle[] = { &eestart, &eestartori, &basestart, &eegoal, &basegoal, &repulsor, &obstacle, 0 };
 static handle_s * grabbed(0);
 static Vector grab_offset(3);
 
@@ -306,6 +308,45 @@ public:
 };
 
 
+class OriZControl
+  : public Task
+{
+public:
+  OriZControl(size_t node,
+	      double kp,
+	      double kd)
+    : kp_(kp),
+      kd_(kd),
+      node_(node)
+  {
+  }
+  
+  virtual void init(Model const & model)
+  {
+    Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+    angle_ = atan2(ex[1], ex[0]);
+    goal_ = angle_;
+    delta_ = Vector::Zero(1);
+    Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
+  }
+  
+  virtual void update(Model const & model)
+  {
+    Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+    angle_ = atan2(ex[1], ex[0]);
+    Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
+    delta_[0] = kp_ * (goal_ - angle_);
+    delta_ -= kd_ * Jacobian_ * model.getVelocity();
+  }
+  
+  double kp_;
+  double kd_;
+  size_t node_;
+  double angle_;
+  double goal_;
+};
+
+
 class BaseWaypoint
 {
 public:
@@ -318,6 +359,7 @@ public:
       avoid_ellbow_  (1,       robot_.len_a_, 0.0, 0.0, obstacle.radius_),
       avoid_wrist_   (2,       robot_.len_b_, 0.0, 0.0, obstacle.radius_),
       avoid_ee_      (3, robot_.len_c_ / 2.0, 0.0, 0.0, obstacle.radius_),
+      orient_ee_     (3, 100.0, 20.0),
       repulse_base_  (0,                 0.0, 0.0, 0.0, 100.0, repulsor.radius_),
       repulse_ellbow_(1,       robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
       repulse_wrist_ (2,       robot_.len_b_, 0.0, 0.0, 100.0, repulsor.radius_),
@@ -339,6 +381,8 @@ public:
     constraints_.push_back(&avoid_wrist_);
     constraints_.push_back(&avoid_ellbow_);
     constraints_.push_back(&avoid_base_);
+    
+    tasks_.push_back(&orient_ee_);
     
     objectives_.push_back(&repulse_base_);
     objectives_.push_back(&repulse_ellbow_);
@@ -461,6 +505,8 @@ public:
     avoid_wrist_.obstacle_ = obstacle.point_;
     avoid_ellbow_.obstacle_ = obstacle.point_;
     avoid_base_.obstacle_ = obstacle.point_;
+    
+    orient_ee_.goal_ = zangle;
     
     repulse_base_.repulsor_ = repulsor.point_;
     repulse_ellbow_.repulsor_ = repulsor.point_;
@@ -627,6 +673,8 @@ public:
   PointMindistConstraint avoid_ellbow_;
   PointMindistConstraint avoid_wrist_;
   PointMindistConstraint avoid_ee_;
+
+  OriZControl orient_ee_;
   
   PointRepulsion repulse_base_;
   PointRepulsion repulse_ellbow_;
@@ -865,6 +913,7 @@ public:
   
   void update()
   {
+    zangle = atan2(eestartori.point_[1] - eestart.point_[1], eestartori.point_[0] - eestart.point_[0]);
     if (verbose) {
       cout << "\n**************************************************\n";
     }
@@ -1111,12 +1160,14 @@ int main(int argc, char ** argv)
     verbose = true;
   }
   
-  eestart.point_   <<                 1.0, dimy / 2.0,     0.0;
-  basestart.point_ <<                 1.0,        1.0,     0.0;
-  eegoal.point_    <<          dimx - 1.0, dimy / 2.0,     0.0;
-  basegoal.point_  <<          dimx - 1.0,        1.0,     0.0;
-  repulsor.point_  <<          dimx / 2.0,        1.0,     0.0;
-  obstacle.point_  <<          dimx / 2.0, dimy - 1.0,     0.0;
+  eestart.point_   <<                 1.0, dimy / 2.0      ,     0.0;
+  eestartori.point_<<                 2.0, dimy / 2.0 + 1.0,     0.0;
+  zangle = atan2(eestartori.point_[1] - eestart.point_[1], eestartori.point_[0] - eestart.point_[0]);
+  basestart.point_ <<                 1.0,              1.0,     0.0;
+  eegoal.point_    <<          dimx - 1.0, dimy / 2.0      ,     0.0;
+  basegoal.point_  <<          dimx - 1.0,              1.0,     0.0;
+  repulsor.point_  <<          dimx / 2.0,              1.0,     0.0;
+  obstacle.point_  <<          dimx / 2.0,       dimy - 1.0,     0.0;
   
   Vector posture(5);
   posture <<
