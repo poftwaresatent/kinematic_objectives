@@ -107,3 +107,6 @@ add_library (kinematic_elastic SHARED ${SRCS})
 
 add_executable (elastic_gtk elastic_gtk.cpp)
 target_link_libraries (elastic_gtk kinematic_elastic ${GTK2_LIBRARIES})
+
+add_executable (demo1 demo1.cpp)
+target_link_libraries (demo1 kinematic_elastic ${GTK2_LIBRARIES})
