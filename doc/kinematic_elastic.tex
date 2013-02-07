@@ -1,0 +1,105 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{paralist}
+
+\begin{document}
+
+\title{Kinematic Elastic}
+\author{Roland Philipsen}
+\maketitle
+
+
+
+\section{Preliminaries}
+
+$dq$ is a displacement, velocity, or acceleration in joint space $\mathcal{C}$.
+$dx$ is a displacement, velocity, or acceleration in task space.
+Frequently, task space will be a (subspace of) workspace $\mathcal{W}$.
+
+Several variants are available for computing pseudo-inverses, but here all of them are just written $\cdot^\#$.
+A simple and surprisingly robust method is to use an SVD-based Moore-Penrose scheme with a fixed Eigenvalue threshold.
+Warnings against this approach are common in the literature, but it seems to work, and using more advanced schemes like damped or adaptively damped pseudo-inverses introduce parameters that need to be tuned.
+In addition, a particularly tricky issue with damping arises in the context of generalized task prioritization:
+a less-damped lower priority task can easily interfere with a higher-priority damped task.
+In practical cases, this happens a lot, because there tend to be singularilty-free tasks at lower priority levels, and singularity-prone tasks at higher priority levels.
+The idea of simply carrying the damping factor from higher priority tasks all the way down does not pan out, because \emph{(i)} the different tasks have different distance metrics associated with them and \emph{(ii)} the ``nullspace'' projectors produced from damped matrices leave residuals in the directions that they should kick out.
+
+
+
+\section{Strict Prioritization Scheme}
+
+\begin{align}
+  dq &= J_1^\#dx_1 + N_1 ( J_2^\#dx_2 + N_2 ( \cdots )) \\
+  &= \sum_{i=1}^T \left( \prod_{j=0}^{i-1}N_j \right) J_i^\#dx_i\\
+  N_0 &= I \\
+  N_i &= I - J_i^\#J_i
+\end{align}
+
+According to~\cite{mistry:2007} this is due to~\cite{chiaverini:1997}.
+Advantage: proper nullspace projection.
+Disadvantage: convergence can be slow\ldots extremely slow.
+
+
+
+\section{Sloppy Prioritization Scheme}
+
+\begin{align}
+  dq_1 &= 0 \\
+  P_1 &= I \\
+  \bar{J}_i &= J_iP_{i-1} \\
+  dq_i &= dq_{i-i} + \bar{J}_i^\#(dx_i-J_idq_{i-1}) \\
+  P_i &= P_{i-1} - \bar{J}_i^\#\bar{J}_i
+\end{align}
+
+Introduced by~\cite{siciliano:1991}.
+Advantage: good convergence (unless we hit singularities, of course).
+Disadvantage: lower-priority tasks can interfere with higher-priority tasks due to ``algorithmic singularities'' (when $\bar{J}_i$ becomes singular along directions that $P_{i-1}$ would like to kick out).
+
+BTW~\cite{mistry:2007} show that the above recursive formulation is equivalent to simply stacking all tasks like this:
+
+\begin{equation}
+  dq =
+  \begin{bmatrix}
+    J_1 \\
+    J_2 \\
+    \vdots
+  \end{bmatrix}
+  ^\#
+  \begin{bmatrix}
+    dx_1 \\
+    dx_2 \\
+    \vdots
+  \end{bmatrix}
+\end{equation}
+
+
+
+\section{Constraints, Tasks, and Objectives}
+
+All entities are represented as tuples $(dx_i, J_i)$ where $dx$ defines how much they want to move within their task space, and $J_i$ is (the linearization of) the mapping from joint space to task space.
+
+\begin{compactdesc}
+\item[Constraints]
+  $dx$ is interpreted as a displacement required to achieve constraint satisfaction.
+  After computing $dq$ from all constraints, the waypoint's model state is reset to the conforming positions.
+  Its velocities are also reset to something consistent with the constraints.
+\item[Tasks]
+  $dx$ is interpreted as a desired acceleration towards achieving the task.
+  Typically, we'll use a feedback control scheme (i.e.\ PD control) to compute $dx$ from the waypoint's current position and velocity.
+  Tasks are accumulated using a prioritization scheme with an initial projector $P_1$ that reflects the constraints.
+  This is inspired by the scheme in~\cite{baerlocher:2001}.
+\item[Objectives]
+  Similarly to tasks, $dx$ is interpreted as an acceleration.
+  However, objectives are not subjected to prioritization.
+  Instead, their desired accelerations are simply summed up in joint space.
+  By projecting the resulting \emph{bias acceleration} into the nullspace of the constraints and tasks, the overall effect is similar to virtual operational space forces.
+\end{compactdesc}
+
+
+
+\footnotesize
+\bibliographystyle{plain}
+\bibliography{kinematic_elastic}
+
+\end{document}
