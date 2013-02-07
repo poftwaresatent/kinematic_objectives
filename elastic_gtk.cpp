@@ -104,14 +104,14 @@ static inline double bound(double lower, double value, double upper)
 }
 
 
-static inline double normangle(double phi, double half_period)
+static inline double normangle(double phi)
 {
-  phi = fmod(phi, 2.0 * half_period);
-  if (phi > half_period) {
-    phi -= half_period;
+  phi = fmod(phi, 2.0 * M_PI);
+  if (phi > M_PI) {
+    phi -= 2 * M_PI;
   }
-  else if (phi < -half_period) {
-    phi += half_period;
+  else if (phi < -M_PI) {
+    phi += 2 * M_PI;
   }
   return phi;
 }
@@ -368,16 +368,16 @@ public:
 	if (0.0 < joint_limits_.Jacobian_(ii, 3)) {
 	  cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
 	  cairo_arc(cr, robot_.pos_a_[0], robot_.pos_a_[1], 0.1,
-		    normangle(normangle(robot_.position_[2], 2.0*M_PI) + joint_limits_.limits_(3, 0), 2.0*M_PI),
-		    normangle(normangle(robot_.position_[2], 2.0*M_PI) + joint_limits_.limits_(3, 3), 2.0*M_PI));
+		    normangle(normangle(robot_.position_[2]) + joint_limits_.limits_(3, 0)),
+		    normangle(normangle(robot_.position_[2]) + joint_limits_.limits_(3, 3)));
 	  cairo_line_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
 	  cairo_fill(cr);
 	}
 	if (0.0 < joint_limits_.Jacobian_(ii, 4)) {
 	  cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
 	  cairo_arc(cr, robot_.pos_b_[0], robot_.pos_b_[1], 0.1,
-		    normangle(normangle(robot_.q23_, 2.0*M_PI) + joint_limits_.limits_(4, 0), 2.0*M_PI),
-		    normangle(normangle(robot_.q23_, 2.0*M_PI) + joint_limits_.limits_(4, 3), 2.0*M_PI));
+		    normangle(normangle(robot_.q23_) + joint_limits_.limits_(4, 0)),
+		    normangle(normangle(robot_.q23_) + joint_limits_.limits_(4, 3)));
 	  cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
 	  cairo_fill(cr);
 	}
@@ -880,7 +880,7 @@ public:
     }
   }
   
-private:
+  ////private:
   path_t path_;
 };
 
@@ -902,6 +902,21 @@ static void cb_play(GtkWidget * ww, gpointer data)
   }
   else {
     play = 1;
+  }
+}
+
+
+static void cb_normalize(GtkWidget * ww, gpointer data)
+{
+  for (Elastic::path_t::iterator ii(elastic.path_.begin()); ii != elastic.path_.end(); ++ii) {
+    if (verbose) {
+      if (fabs((*ii)->robot_.position_[2]) > M_PI) {
+	cout << "normalize " << (*ii)->robot_.position_[2]
+	     << " to " << normangle((*ii)->robot_.position_[2]) << "\n";
+      }
+    }
+    (*ii)->robot_.position_[2] = normangle((*ii)->robot_.position_[2]);
+    (*ii)->robot_.update((*ii)->robot_.position_, (*ii)->robot_.velocity_);
   }
 }
 
@@ -1062,11 +1077,6 @@ static void init_gui(int * argc, char *** argv)
   gtk_box_pack_start(GTK_BOX (vbox), hbox, FALSE, TRUE, 0);
   gtk_widget_show(hbox);
   
-  // btn = gtk_button_new_with_label("reset");
-  // g_signal_connect(btn, "clicked", G_CALLBACK (cb_reset), NULL);
-  // gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
-  // gtk_widget_show(btn);
-  
   btn = gtk_button_new_with_label("play");
   g_signal_connect(btn, "clicked", G_CALLBACK (cb_play), NULL);
   gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
@@ -1074,6 +1084,11 @@ static void init_gui(int * argc, char *** argv)
   
   btn = gtk_button_new_with_label("next");
   g_signal_connect(btn, "clicked", G_CALLBACK (cb_next), NULL);
+  gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
+  gtk_widget_show(btn);
+  
+  btn = gtk_button_new_with_label("normalize");
+  g_signal_connect(btn, "clicked", G_CALLBACK (cb_normalize), NULL);
   gtk_box_pack_start(GTK_BOX (hbox), btn, TRUE, TRUE, 0);
   gtk_widget_show(btn);
   
