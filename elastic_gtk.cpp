@@ -104,14 +104,14 @@ static inline double bound(double lower, double value, double upper)
 }
 
 
-static inline double normangle(double phi)
+static inline double normangle(double phi, double half_period)
 {
-  phi = fmod(phi, 2.0 * M_PI);
-  if (phi > M_PI) {
-    phi -= M_PI;
+  phi = fmod(phi, 2.0 * half_period);
+  if (phi > half_period) {
+    phi -= half_period;
   }
-  else if (phi < -M_PI) {
-    phi += M_PI;
+  else if (phi < -half_period) {
+    phi += half_period;
   }
   return phi;
 }
@@ -359,21 +359,30 @@ public:
     
     cairo_save(cr);
     
-    // thin arcs for arm joint limits
-    cairo_set_source_rgb(cr, 0.5, 0.5, 1.0);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
-    cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
-    cairo_arc(cr, robot_.pos_a_[0], robot_.pos_a_[1], 0.1,
-	      bound(-2.0*M_PI, robot_.position_[2] + joint_limits_.limits_(3, 0), 2.0*M_PI),
-	      bound(-2.0*M_PI, robot_.position_[2] + joint_limits_.limits_(3, 3), 2.0*M_PI));
-    cairo_line_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
-    cairo_stroke(cr);
-    cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
-    cairo_arc(cr, robot_.pos_b_[0], robot_.pos_b_[1], 0.1,
-	      bound(-2.0*M_PI, robot_.q23_ + joint_limits_.limits_(4, 0), 2.0*M_PI),
-	      bound(-2.0*M_PI, robot_.q23_ + joint_limits_.limits_(4, 3), 2.0*M_PI));
-    cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
-    cairo_stroke(cr);
+    // joint limits
+    
+    if (joint_limits_.isActive()) {
+      cairo_set_source_rgba(cr, 1.0, 0.2, 0.8, 0.8);
+      cairo_set_line_width(cr, 1.0 / pixelsize);
+      for (ssize_t ii(0); ii < joint_limits_.Jacobian_.rows(); ++ii) {
+	if (0.0 < joint_limits_.Jacobian_(ii, 3)) {
+	  cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
+	  cairo_arc(cr, robot_.pos_a_[0], robot_.pos_a_[1], 0.1,
+		    normangle(normangle(robot_.position_[2], 2.0*M_PI) + joint_limits_.limits_(3, 0), 2.0*M_PI),
+		    normangle(normangle(robot_.position_[2], 2.0*M_PI) + joint_limits_.limits_(3, 3), 2.0*M_PI));
+	  cairo_line_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
+	  cairo_fill(cr);
+	}
+	if (0.0 < joint_limits_.Jacobian_(ii, 4)) {
+	  cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
+	  cairo_arc(cr, robot_.pos_b_[0], robot_.pos_b_[1], 0.1,
+		    normangle(normangle(robot_.q23_, 2.0*M_PI) + joint_limits_.limits_(4, 0), 2.0*M_PI),
+		    normangle(normangle(robot_.q23_, 2.0*M_PI) + joint_limits_.limits_(4, 3), 2.0*M_PI));
+	  cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
+	  cairo_fill(cr);
+	}
+      }
+    }
     
     // avoidance points
     
@@ -405,29 +414,21 @@ public:
     
     cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
     cairo_set_line_width(cr, 1.0 / pixelsize);
-    
-    // base
     if (repulse_base_.isActive()) {
       cairo_move_to(cr, repulse_base_.gpoint_[0], repulse_base_.gpoint_[1]);
       cairo_line_to(cr, repulse_base_.gpoint_[0] + repulse_base_.delta_[0] / repulse_base_.gain_, repulse_base_.gpoint_[1] + repulse_base_.delta_[1] / repulse_base_.gain_);
       cairo_stroke(cr);
     }
-    
-    // ellbow
     if (repulse_ellbow_.isActive()) {
       cairo_move_to(cr, repulse_ellbow_.gpoint_[0], repulse_ellbow_.gpoint_[1]);
       cairo_line_to(cr, repulse_ellbow_.gpoint_[0] + repulse_ellbow_.delta_[0] / repulse_ellbow_.gain_, repulse_ellbow_.gpoint_[1] + repulse_ellbow_.delta_[1] / repulse_ellbow_.gain_);
       cairo_stroke(cr);
     }
-    
-    // wrist
     if (repulse_wrist_.isActive()) {
       cairo_move_to(cr, repulse_wrist_.gpoint_[0], repulse_wrist_.gpoint_[1]);
       cairo_line_to(cr, repulse_wrist_.gpoint_[0] + repulse_wrist_.delta_[0] / repulse_wrist_.gain_, repulse_wrist_.gpoint_[1] + repulse_wrist_.delta_[1] / repulse_wrist_.gain_);
       cairo_stroke(cr);
     }
-    
-    // ee
     if (repulse_ee_.isActive()) {
       cairo_move_to(cr, repulse_ee_.gpoint_[0], repulse_ee_.gpoint_[1]);
       cairo_line_to(cr, repulse_ee_.gpoint_[0] + repulse_ee_.delta_[0] / repulse_ee_.gain_, repulse_ee_.gpoint_[1] + repulse_ee_.delta_[1] / repulse_ee_.gain_);
