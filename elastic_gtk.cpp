@@ -403,6 +403,17 @@ public:
     
     cairo_save(cr);
     
+    // orientation task
+    
+    cairo_set_source_rgba(cr, 0.0, 1.0, 0.5, 0.3);
+    cairo_set_line_width(cr, 6.0 / pixelsize);
+    static double const len(0.5);
+    double const dx(len * cos(zangle));
+    double const dy(len * sin(zangle));
+    cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
+    cairo_line_to(cr, robot_.pos_b_[0] + dx, robot_.pos_b_[1] + dy);
+    cairo_stroke(cr);
+    
     // joint limits
     
     if (joint_limits_.isActive()) {
@@ -665,7 +676,7 @@ public:
 
   ////protected:
   double timestep_;
-  Robot robot_; // XXXX keep this beofre any constraints so we can use its values for initializing them
+  Robot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
   
   JointLimitConstraint joint_limits_;
   
@@ -716,29 +727,29 @@ public:
   }
   
   
-  virtual void draw(cairo_t * cr, double pixelsize)
-  {
-    BaseWaypoint::draw(cr, pixelsize);
+  // virtual void draw(cairo_t * cr, double pixelsize)
+  // {
+  //   BaseWaypoint::draw(cr, pixelsize);
     
-    cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
+  //   cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
+  //   cairo_set_line_width(cr, 1.0 / pixelsize);
     
-    for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
-      if (attract_prev_[ii]->isActive()) {
-	cairo_move_to(cr, attract_prev_[ii]->gpoint_[0], attract_prev_[ii]->gpoint_[1]);
-	cairo_line_to(cr, attract_prev_[ii]->gpoint_[0] + attract_prev_[ii]->delta_[0] / attract_prev_[ii]->gain_, attract_prev_[ii]->gpoint_[1] + attract_prev_[ii]->delta_[1] / attract_prev_[ii]->gain_);
-	cairo_stroke(cr);
-      }
-    }
+  //   for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
+  //     if (attract_prev_[ii]->isActive()) {
+  // 	cairo_move_to(cr, attract_prev_[ii]->gpoint_[0], attract_prev_[ii]->gpoint_[1]);
+  // 	cairo_line_to(cr, attract_prev_[ii]->gpoint_[0] + attract_prev_[ii]->delta_[0] / attract_prev_[ii]->gain_, attract_prev_[ii]->gpoint_[1] + attract_prev_[ii]->delta_[1] / attract_prev_[ii]->gain_);
+  // 	cairo_stroke(cr);
+  //     }
+  //   }
     
-    for (size_t ii(0); ii < attract_next_.size(); ++ii) {
-      if (attract_next_[ii]->isActive()) {
-	cairo_move_to(cr, attract_next_[ii]->gpoint_[0], attract_next_[ii]->gpoint_[1]);
-	cairo_line_to(cr, attract_next_[ii]->gpoint_[0] + attract_next_[ii]->delta_[0] / attract_next_[ii]->gain_, attract_next_[ii]->gpoint_[1] + attract_next_[ii]->delta_[1] / attract_next_[ii]->gain_);
-	cairo_stroke(cr);
-      }
-    }
-  }
+  //   for (size_t ii(0); ii < attract_next_.size(); ++ii) {
+  //     if (attract_next_[ii]->isActive()) {
+  // 	cairo_move_to(cr, attract_next_[ii]->gpoint_[0], attract_next_[ii]->gpoint_[1]);
+  // 	cairo_line_to(cr, attract_next_[ii]->gpoint_[0] + attract_next_[ii]->delta_[0] / attract_next_[ii]->gain_, attract_next_[ii]->gpoint_[1] + attract_next_[ii]->delta_[1] / attract_next_[ii]->gain_);
+  // 	cairo_stroke(cr);
+  //     }
+  //   }
+  // }
   
   
   virtual void update()
@@ -1003,11 +1014,17 @@ static gint cb_expose(GtkWidget * ww,
   
   elastic.draw(cr, gw_sx);
   
+  cairo_set_line_width(cr, 1.0 / gw_sx);
   for (handle_s ** hh(handle); *hh != 0; ++hh) {
     cairo_set_source_rgba(cr, (*hh)->red_, (*hh)->green_, (*hh)->blue_, (*hh)->alpha_);
     cairo_arc(cr, (*hh)->point_[0], (*hh)->point_[1], (*hh)->radius_, 0.0, 2.0 * M_PI);
     cairo_fill(cr);
   }
+  
+  cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 0.5);
+  cairo_move_to(cr, eestart.point_[0], eestart.point_[1]);
+  cairo_line_to(cr, eestartori.point_[0], eestartori.point_[1]);
+  cairo_stroke(cr);
   
   cairo_destroy(cr);
   
