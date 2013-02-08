@@ -57,6 +57,7 @@ using namespace kinematic_elastic;
 static double const deg(M_PI / 180.);
 static double const dimx(10.);
 static double const dimy(8.);
+static double const lwscale(5.0);
 
 static GtkWidget * gw(0);
 static gint gw_width(800), gw_height(640);
@@ -261,13 +262,13 @@ public:
     
     // thick circle outline for base
     cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
-    cairo_set_line_width(cr, 3.0 / pixelsize);
+    cairo_set_line_width(cr, lwscale * 3.0 / pixelsize);
     cairo_arc(cr, position_[0], position_[1], radius_, 0., 2. * M_PI);
     cairo_stroke(cr);
     
     // thick line for arms
     cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
-    cairo_set_line_width(cr, 3.0 / pixelsize);
+    cairo_set_line_width(cr, lwscale * 3.0 / pixelsize);
     cairo_move_to(cr, position_[0], position_[1]);
     cairo_line_to(cr, pos_a_[0], pos_a_[1]);
     cairo_line_to(cr, pos_b_[0], pos_b_[1]);
@@ -403,7 +404,7 @@ public:
     
     if (joint_limits_.isActive()) {
       cairo_set_source_rgba(cr, 1.0, 0.2, 0.8, 0.8);
-      cairo_set_line_width(cr, 1.0 / pixelsize);
+      cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
       for (ssize_t ii(0); ii < joint_limits_.Jacobian_.rows(); ++ii) {
 	if (0.0 < joint_limits_.Jacobian_(ii, 3)) {
 	  cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
@@ -427,7 +428,7 @@ public:
     // repulsion vectors
     
     cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
     if (repulse1_base_.isActive()) {
       cairo_move_to(cr, repulse1_base_.gpoint_[0], repulse1_base_.gpoint_[1]);
       cairo_line_to(cr, repulse1_base_.gpoint_[0] + repulse1_base_.delta_[0] / repulse1_base_.gain_, repulse1_base_.gpoint_[1] + repulse1_base_.delta_[1] / repulse1_base_.gain_);
@@ -692,7 +693,7 @@ public:
 
     // thin line for end effector task
     cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
     cairo_move_to(cr, control_ee_.gpoint_[0], control_ee_.gpoint_[1]);
     cairo_line_to(cr, control_ee_.goal_[0], control_ee_.goal_[1]);
     cairo_stroke(cr);
@@ -700,7 +701,7 @@ public:
     // base attraction
     if (attract_base_.isActive()) {
       cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-      cairo_set_line_width(cr, 1.0 / pixelsize);
+      cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
       cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
       cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
       cairo_stroke(cr);
@@ -747,7 +748,7 @@ public:
 
     // thin line for end effector task
     cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
-    cairo_set_line_width(cr, 1.0 / pixelsize);
+    cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
     cairo_move_to(cr, control_ee_.gpoint_[0], control_ee_.gpoint_[1]);
     cairo_line_to(cr, control_ee_.goal_[0], control_ee_.goal_[1]);
     cairo_stroke(cr);
@@ -755,7 +756,7 @@ public:
     // base attraction
     if (attract_base_.isActive()) {
       cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-      cairo_set_line_width(cr, 1.0 / pixelsize);
+      cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
       cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
       cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
       cairo_stroke(cr);
@@ -764,7 +765,7 @@ public:
     // avoidance points
     
     cairo_set_source_rgb(cr, 1.0, 0.4, 1.0);
-    cairo_set_line_width(cr, 5.0 / pixelsize);
+    cairo_set_line_width(cr, lwscale * 5.0 / pixelsize);
     
     if (avoid_base_.isActive()) {
       cairo_move_to(cr, avoid_base_.gpoint_[0], avoid_base_.gpoint_[1]);
@@ -934,7 +935,7 @@ static gint cb_expose(GtkWidget * ww,
   
   elastic.draw(cr, gw_sx);
   
-  cairo_set_line_width(cr, 1.0 / gw_sx);
+  cairo_set_line_width(cr, lwscale * 1.0 / gw_sx);
   for (handle_s ** hh(handle); *hh != 0; ++hh) {
     cairo_set_source_rgba(cr, (*hh)->red_, (*hh)->green_, (*hh)->blue_, (*hh)->alpha_);
     cairo_arc(cr, (*hh)->point_[0], (*hh)->point_[1], (*hh)->radius_, 0.0, 2.0 * M_PI);
@@ -1098,6 +1099,7 @@ int main(int argc, char ** argv)
   baseright.point_ <<          dimx - 2.0,              1.0,     0.0;
   repulsor1.point_ <<                 3.0, dimy / 2.0 - 2.0,     0.0;
   repulsor2.point_ <<          dimx - 3.0, dimy / 2.0 - 2.0,     0.0;
+  obstacle.point_  <<    dimx / 2.0      ,              1.0,     0.0;
   
   Vector posture(5);
   posture <<
