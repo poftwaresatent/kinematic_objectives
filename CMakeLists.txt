@@ -91,6 +91,7 @@ list (APPEND SRCS
   kinematic_elastic.cpp
   task.cpp
   model.cpp
+  example_robot.cpp
   joint_limit_constraint.cpp
   point_mindist_constraint.cpp
   point_attraction.cpp
