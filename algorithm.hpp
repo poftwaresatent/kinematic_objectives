@@ -43,13 +43,32 @@
 namespace kinematic_elastic {
   
   class Task;
+  class Waypoint;
   
   void perform_prioritization(Matrix const & N_init,
 			      vector<Task*> const & tasks,
 			      Vector & delta_res,
 			      Matrix & N_res,
-			      ostream * dbgos = 0,
-			      char const * dbgpre = "");
+			      ostream * dbgos,
+			      string const & dbgpre);
+  
+  
+  class Algorithm
+  {
+  public:
+    Algorithm();
+    Algorithm(ostream * dbgos, string const & dbgpre);
+    
+    virtual ~Algorithm() {}
+    
+    virtual void update(Waypoint & waypoint) = 0;
+    
+  protected:
+    ostream * dbgos_;
+    string dbgpre_;
+    string dbgpre2_;
+  };
+  
   
 }
 

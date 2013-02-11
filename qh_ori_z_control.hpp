@@ -34,58 +34,32 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_HPP
-#define KINEMATIC_ELASTIC_HPP
+#ifndef KINEMATIC_ELASTIC_QH_ORI_Z_CONTROL_HPP
+#define KINEMATIC_ELASTIC_QH_ORI_Z_CONTROL_HPP
 
-#include <Eigen/Core>
-#include <Eigen/StdVector>
-#include <Eigen/Geometry>
-#include <cmath>
-
+#include "task.hpp"
 
 namespace kinematic_elastic {
   
-  typedef Eigen::VectorXd Vector;
-  typedef Eigen::MatrixXd Matrix;
-  typedef Eigen::Isometry3d Transform;
   
-  using namespace std;
-  
-  void stackVector (Vector const & v1,
-		    Vector const & v2,
-		    Vector & vv);
-  
-  void stackMatrix (Matrix const & m1,
-		    Matrix const & m2,
-		    Matrix & mm);
-  
-  template<typename value_t>
-  inline value_t bound(value_t lower, value_t value, value_t upper)
+  class OriZControl
+    : public Task
   {
-    if (value < lower) {
-      value = lower;
-    }
-    else if (value > upper) {
-      value = upper;
-    }
-    return value;
-  }
-  
-  
-  static inline double normangle(double phi)
-  {
-    phi = fmod(phi, 2.0 * M_PI);
-    if (phi > M_PI) {
-      phi -= 2 * M_PI;
-    }
-    else if (phi < -M_PI) {
-      phi += 2 * M_PI;
-    }
-    return phi;
-  }
-  
-  static double const deg(M_PI / 180.);
+  public:
+    OriZControl(size_t node,
+		double kp,
+		double kd);
+    
+    virtual void init(Model const & model);
+    virtual void update(Model const & model);
+    
+    double kp_;
+    double kd_;
+    size_t node_;
+    double angle_;
+    double goal_;
+  };
   
 }
 
-#endif // KINEMATIC_ELASTIC_HPP
+#endif // KINEMATIC_ELASTIC_QH_ORI_Z_CONTROL_HPP

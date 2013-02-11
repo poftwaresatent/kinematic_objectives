@@ -91,6 +91,8 @@ list (APPEND SRCS
   kinematic_elastic.cpp
   task.cpp
   model.cpp
+  waypoint.cpp
+  base_waypoint.cpp
   example_robot.cpp
   joint_limit_constraint.cpp
   point_mindist_constraint.cpp
@@ -98,10 +100,12 @@ list (APPEND SRCS
   point_repulsion.cpp
   position_control.cpp
   posture_control.cpp
+  qh_ori_z_control.cpp
   posture_damping.cpp
   algorithm.cpp
   pseudo_inverse.cpp
   print.cpp
+  cairo_drawable.cpp
   )
 
 add_library (kinematic_elastic SHARED ${SRCS})

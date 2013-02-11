@@ -34,75 +34,56 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
-
+#include "waypoint.hpp"
 #include "model.hpp"
-#include <cairo/cairo.h>
+#include "task.hpp"
 
 
 namespace kinematic_elastic {
   
   
-  class ExampleRobot
-    : public Model
+  Waypoint::
+  Waypoint(Model & model)
+    : model_(model),
+      dbgos_(0),
+      dbgpre_(""),
+      dbgpre2_("")
   {
-  public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  }
   
-    ExampleRobot();
-    
-    virtual Vector const & getPosition() const;
-    virtual Vector const & getVelocity() const;
-    
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid node!
-    */
-    virtual Transform frame(size_t node) const;
   
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid node!
-    */
-    virtual Matrix computeJxo(size_t node, Vector const & gpoint) const;
-    
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid position or velocity!
-    */
-    virtual void update(Vector const & position, Vector const & velocity);
-    
-    
-    //// XXXX make these protected or whatnot...
+  Waypoint::
+  Waypoint(Model & model,
+	   ostream * dbgos,
+	   string const & dbgpre)
+    : model_(model),
+      dbgos_(dbgos),
+      dbgpre_(dbgpre),
+      dbgpre2_(dbgpre + "  ")
+  {
+  }
   
-    double const radius_;
-    double const len_a_;
-    double const len_b_;
-    double const len_c_;
   
-    Vector position_;
-    Vector velocity_;
-    Vector pos_a_;
-    Vector pos_b_;
-    Vector pos_c_;
+  Waypoint::
+  ~Waypoint()
+  {
+  }
   
-    double c2_;
-    double s2_;
-    double c23_;
-    double s23_;
-    double c234_;
-    double s234_;
-    double q23_;
-    double q234_;
-    double ac2_;
-    double as2_;
-    double bc23_;
-    double bs23_;
-    double cc234_;
-    double cs234_;
-  };
+  
+  void Waypoint::
+  init(Vector const & position, Vector const & velocity)
+  {
+    model_.update(position, velocity);
+    
+    for (size_t ii(0); ii < constraints_.size(); ++ii) {
+      constraints_[ii]->init(model_);
+    }
+    for (size_t ii(0); ii < tasks_.size(); ++ii) {
+      tasks_[ii]->init(model_);
+    }
+    for (size_t ii(0); ii < objectives_.size(); ++ii) {
+      objectives_[ii]->init(model_);
+    }
+  }
   
 }
-
-#endif // KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP

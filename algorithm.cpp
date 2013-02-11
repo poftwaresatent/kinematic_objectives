@@ -47,7 +47,7 @@ namespace kinematic_elastic {
 			      Vector & delta_res,
 			      Matrix & N_res,
 			      ostream * dbgos,
-			      char const * dbgpre)
+			      string const & dbgpre)
   {
     delta_res = Vector::Zero(N_init.rows());
     N_res = N_init;

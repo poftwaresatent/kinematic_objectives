@@ -34,58 +34,43 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_HPP
-#define KINEMATIC_ELASTIC_HPP
-
-#include <Eigen/Core>
-#include <Eigen/StdVector>
-#include <Eigen/Geometry>
-#include <cmath>
+#include "qh_ori_z_control.hpp"
+#include "model.hpp"
 
 
 namespace kinematic_elastic {
   
-  typedef Eigen::VectorXd Vector;
-  typedef Eigen::MatrixXd Matrix;
-  typedef Eigen::Isometry3d Transform;
   
-  using namespace std;
-  
-  void stackVector (Vector const & v1,
-		    Vector const & v2,
-		    Vector & vv);
-  
-  void stackMatrix (Matrix const & m1,
-		    Matrix const & m2,
-		    Matrix & mm);
-  
-  template<typename value_t>
-  inline value_t bound(value_t lower, value_t value, value_t upper)
+  OriZControl::
+  OriZControl(size_t node,
+	      double kp,
+	      double kd)
+    : kp_(kp),
+      kd_(kd),
+      node_(node)
   {
-    if (value < lower) {
-      value = lower;
-    }
-    else if (value > upper) {
-      value = upper;
-    }
-    return value;
   }
   
   
-  static inline double normangle(double phi)
+  void OriZControl::
+  init(Model const & model)
   {
-    phi = fmod(phi, 2.0 * M_PI);
-    if (phi > M_PI) {
-      phi -= 2 * M_PI;
-    }
-    else if (phi < -M_PI) {
-      phi += 2 * M_PI;
-    }
-    return phi;
+    Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+    angle_ = atan2(ex[1], ex[0]);
+    goal_ = angle_;
+    delta_ = Vector::Zero(1);
+    Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
   }
   
-  static double const deg(M_PI / 180.);
   
-}
+  void OriZControl::
+  update(Model const & model)
+  {
+    Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+    angle_ = atan2(ex[1], ex[0]);
+    Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
+    delta_[0] = kp_ * (goal_ - angle_);
+    delta_ -= kd_ * Jacobian_ * model.getVelocity();
+  }
 
-#endif // KINEMATIC_ELASTIC_HPP
+}

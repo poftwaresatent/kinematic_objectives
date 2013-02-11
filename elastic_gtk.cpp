@@ -37,6 +37,7 @@
 #include "algorithm.hpp"
 #include "task.hpp"
 #include "example_robot.hpp"
+#include "base_waypoint.hpp"
 #include "joint_limit_constraint.hpp"
 #include "point_mindist_constraint.hpp"
 #include "position_control.hpp"
@@ -54,7 +55,6 @@
 using namespace kinematic_elastic;
 
 
-static double const deg(M_PI / 180.);
 static double const dimx(10.);
 static double const dimy(8.);
 static double const lwscale(5.0);
@@ -94,432 +94,16 @@ static handle_s * handle[] = { &eestart, &eestartori, &basestart, &eegoal, &base
 static handle_s * grabbed(0);
 static Vector grab_offset(3);
 
-
-static inline double bound(double lower, double value, double upper)
-{
-  if (value < lower) {
-    value = lower;
-  }
-  else if (value > upper) {
-    value = upper;
-  }
-  return value;
-}
-
-
-static inline double normangle(double phi)
-{
-  phi = fmod(phi, 2.0 * M_PI);
-  if (phi > M_PI) {
-    phi -= 2 * M_PI;
-  }
-  else if (phi < -M_PI) {
-    phi += 2 * M_PI;
-  }
-  return phi;
-}
-
-
-class OriZControl
-  : public Task
-{
-public:
-  OriZControl(size_t node,
-	      double kp,
-	      double kd)
-    : kp_(kp),
-      kd_(kd),
-      node_(node)
-  {
-  }
-  
-  virtual void init(Model const & model)
-  {
-    Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
-    angle_ = atan2(ex[1], ex[0]);
-    goal_ = angle_;
-    delta_ = Vector::Zero(1);
-    Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
-  }
-  
-  virtual void update(Model const & model)
-  {
-    Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
-    angle_ = atan2(ex[1], ex[0]);
-    Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
-    delta_[0] = kp_ * (goal_ - angle_);
-    delta_ -= kd_ * Jacobian_ * model.getVelocity();
-  }
-  
-  double kp_;
-  double kd_;
-  size_t node_;
-  double angle_;
-  double goal_;
-};
-
-
-class BaseWaypoint
-{
-public:
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  
-  
-  BaseWaypoint()
-    : timestep_(1e-2),
-      avoid_base_    (0,                 0.0, 0.0, 0.0, obstacle.radius_ + robot_.radius_),
-      avoid_ellbow_  (1,       robot_.len_a_, 0.0, 0.0, obstacle.radius_),
-      avoid_wrist_   (2,       robot_.len_b_, 0.0, 0.0, obstacle.radius_),
-      avoid_ee_      (3, robot_.len_c_ / 2.0, 0.0, 0.0, obstacle.radius_),
-      orient_ee_     (3, 100.0, 20.0),
-      repulse_base_  (0,                 0.0, 0.0, 0.0, 100.0, repulsor.radius_),
-      repulse_ellbow_(1,       robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
-      repulse_wrist_ (2,       robot_.len_b_, 0.0, 0.0, 100.0, repulsor.radius_),
-      repulse_ee_    (3,       robot_.len_c_, 0.0, 0.0, 100.0, repulsor.radius_),
-      joint_damping_ (10.0)
-  {
-    joint_limits_.init(5);
-    joint_limits_.limits_(3, 0) = -120.0 * deg;
-    joint_limits_.limits_(3, 1) = -119.999 * deg;
-    joint_limits_.limits_(3, 2) =  119.999 * deg;
-    joint_limits_.limits_(3, 3) =  120.0 * deg;
-    joint_limits_.limits_(4, 0) = -120.0 * deg;
-    joint_limits_.limits_(4, 1) = -119.999 * deg;
-    joint_limits_.limits_(4, 2) =  119.999 * deg;
-    joint_limits_.limits_(4, 3) =  120.0 * deg;
-    
-    constraints_.push_back(&joint_limits_);
-    constraints_.push_back(&avoid_ee_);
-    constraints_.push_back(&avoid_wrist_);
-    constraints_.push_back(&avoid_ellbow_);
-    constraints_.push_back(&avoid_base_);
-    
-    tasks_.push_back(&orient_ee_);
-    
-    objectives_.push_back(&repulse_base_);
-    objectives_.push_back(&repulse_ellbow_);
-    objectives_.push_back(&repulse_wrist_);
-    objectives_.push_back(&repulse_ee_);
-    objectives_.push_back(&joint_damping_);
-  }
-  
-  
-  virtual ~BaseWaypoint()
-  {
-  }
-  
-  
-  virtual void draw(cairo_t * cr, double pixelsize)
-  {
-    robot_.draw(cr, lwscale, pixelsize);
-    
-    cairo_save(cr);
-    
-    // orientation task
-    
-    cairo_set_source_rgba(cr, 0.0, 1.0, 0.5, 0.3);
-    cairo_set_line_width(cr, lwscale * 6.0 / pixelsize);
-    static double const len(0.5);
-    double const dx(len * cos(zangle));
-    double const dy(len * sin(zangle));
-    cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
-    cairo_line_to(cr, robot_.pos_b_[0] + dx, robot_.pos_b_[1] + dy);
-    cairo_stroke(cr);
-    
-    // joint limits
-    
-    if (joint_limits_.isActive()) {
-      cairo_set_source_rgba(cr, 1.0, 0.2, 0.8, 0.8);
-      cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
-      for (ssize_t ii(0); ii < joint_limits_.Jacobian_.rows(); ++ii) {
-	if (0.0 < joint_limits_.Jacobian_(ii, 3)) {
-	  cairo_move_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
-	  cairo_arc(cr, robot_.pos_a_[0], robot_.pos_a_[1], 0.1,
-		    normangle(normangle(robot_.position_[2]) + joint_limits_.limits_(3, 0)),
-		    normangle(normangle(robot_.position_[2]) + joint_limits_.limits_(3, 3)));
-	  cairo_line_to(cr, robot_.pos_a_[0], robot_.pos_a_[1]);
-	  cairo_fill(cr);
-	}
-	if (0.0 < joint_limits_.Jacobian_(ii, 4)) {
-	  cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
-	  cairo_arc(cr, robot_.pos_b_[0], robot_.pos_b_[1], 0.1,
-		    normangle(normangle(robot_.q23_) + joint_limits_.limits_(4, 0)),
-		    normangle(normangle(robot_.q23_) + joint_limits_.limits_(4, 3)));
-	  cairo_line_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
-	  cairo_fill(cr);
-	}
-      }
-    }
-    
-    // avoidance points
-    
-    cairo_set_source_rgb(cr, 1.0, 0.4, 1.0);
-    cairo_set_line_width(cr, lwscale * 5.0 / pixelsize);
-    
-    if (avoid_base_.isActive()) {
-      cairo_move_to(cr, avoid_base_.gpoint_[0], avoid_base_.gpoint_[1]);
-      cairo_line_to(cr, avoid_base_.gpoint_[0], avoid_base_.gpoint_[1]);
-      cairo_stroke(cr);
-    }
-    if (avoid_ellbow_.isActive()) {
-      cairo_move_to(cr, avoid_ellbow_.gpoint_[0], avoid_ellbow_.gpoint_[1]);
-      cairo_line_to(cr, avoid_ellbow_.gpoint_[0], avoid_ellbow_.gpoint_[1]);
-      cairo_stroke(cr);
-    }
-    if (avoid_wrist_.isActive()) {
-      cairo_move_to(cr, avoid_wrist_.gpoint_[0], avoid_wrist_.gpoint_[1]);
-      cairo_line_to(cr, avoid_wrist_.gpoint_[0], avoid_wrist_.gpoint_[1]);
-      cairo_stroke(cr);
-    }
-    if (avoid_ee_.isActive()) {
-      cairo_move_to(cr, avoid_ee_.gpoint_[0], avoid_ee_.gpoint_[1]);
-      cairo_line_to(cr, avoid_ee_.gpoint_[0], avoid_ee_.gpoint_[1]);
-      cairo_stroke(cr);
-    }
-    
-    // repulsion vectors
-    
-    cairo_set_source_rgb(cr, 0.4, 0.4, 1.0);
-    cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
-    if (repulse_base_.isActive()) {
-      cairo_move_to(cr, repulse_base_.gpoint_[0], repulse_base_.gpoint_[1]);
-      cairo_line_to(cr, repulse_base_.gpoint_[0] + repulse_base_.delta_[0] / repulse_base_.gain_, repulse_base_.gpoint_[1] + repulse_base_.delta_[1] / repulse_base_.gain_);
-      cairo_stroke(cr);
-    }
-    if (repulse_ellbow_.isActive()) {
-      cairo_move_to(cr, repulse_ellbow_.gpoint_[0], repulse_ellbow_.gpoint_[1]);
-      cairo_line_to(cr, repulse_ellbow_.gpoint_[0] + repulse_ellbow_.delta_[0] / repulse_ellbow_.gain_, repulse_ellbow_.gpoint_[1] + repulse_ellbow_.delta_[1] / repulse_ellbow_.gain_);
-      cairo_stroke(cr);
-    }
-    if (repulse_wrist_.isActive()) {
-      cairo_move_to(cr, repulse_wrist_.gpoint_[0], repulse_wrist_.gpoint_[1]);
-      cairo_line_to(cr, repulse_wrist_.gpoint_[0] + repulse_wrist_.delta_[0] / repulse_wrist_.gain_, repulse_wrist_.gpoint_[1] + repulse_wrist_.delta_[1] / repulse_wrist_.gain_);
-      cairo_stroke(cr);
-    }
-    if (repulse_ee_.isActive()) {
-      cairo_move_to(cr, repulse_ee_.gpoint_[0], repulse_ee_.gpoint_[1]);
-      cairo_line_to(cr, repulse_ee_.gpoint_[0] + repulse_ee_.delta_[0] / repulse_ee_.gain_, repulse_ee_.gpoint_[1] + repulse_ee_.delta_[1] / repulse_ee_.gain_);
-      cairo_stroke(cr);
-    }
-    
-    cairo_restore(cr);
-  }
-  
-  
-  virtual void init(Vector const & position, Vector const & velocity)
-  {
-    robot_.update(position, velocity);
-    
-    for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      constraints_[ii]->init(robot_);
-    }
-    for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      tasks_[ii]->init(robot_);
-    }
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      objectives_[ii]->init(robot_);
-    }
-  }
-  
-  
-  virtual void update()
-  {
-    avoid_ee_.obstacle_ = obstacle.point_;
-    avoid_wrist_.obstacle_ = obstacle.point_;
-    avoid_ellbow_.obstacle_ = obstacle.point_;
-    avoid_base_.obstacle_ = obstacle.point_;
-    
-    orient_ee_.goal_ = zangle;
-    
-    repulse_base_.repulsor_ = repulsor.point_;
-    repulse_ellbow_.repulsor_ = repulsor.point_;
-    repulse_wrist_.repulsor_ = repulsor.point_;
-    repulse_ee_.repulsor_ = repulsor.point_;
-    
-    ostream * dbgos(0);
-    if (verbose) {
-      dbgos = &cout;
-      cout << "==================================================\n"
-	   << "BaseWaypoint::update()\n";
-      print(robot_.getPosition(), cout, "current position", "  ");
-      print(robot_.getVelocity(), cout, "current velocity", "  ");
-    }
-    
-    for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      tasks_[ii]->update(robot_);
-    }
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      objectives_[ii]->update(robot_);
-    }
-    
-    if (verbose) {
-      cout << "--------------------------------------------------\n"
-	   << "trying without constraints first\n";
-    }
-    
-    ssize_t const ndof(robot_.getPosition().size());
-    Vector qdd_t;
-    Matrix N_t;
-    perform_prioritization(Matrix::Identity(ndof, ndof),
-			   tasks_,
-			   qdd_t,
-			   N_t,
-			   dbgos, "task   ");
-    
-    Vector qdd_o(Vector::Zero(robot_.getPosition().size()));
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if (objectives_[ii]->isActive()) {
-	Matrix Jinv;
-	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
-	qdd_o += Jinv * objectives_[ii]->delta_;
-      }
-    }
-    
-    Vector qdd_res(qdd_t + N_t * qdd_o);
-    Vector qd_res(robot_.getVelocity() + timestep_ * qdd_res);
-    Vector q_res(robot_.getPosition() + timestep_ * qd_res);
-    
-    if (verbose) {
-      print(qdd_res, cout, "unconstrained acceleration", "  ");
-      print(qd_res, cout, "resulting unconstrained velocity", "  ");
-      print(q_res, cout, "resulting unconstrained position", "  ");
-    }
-    
-    Vector const oldpos(robot_.getPosition()); // will need this in case of constraints
-    Vector const oldvel(robot_.getVelocity()); // will need this in case of constraints
-    robot_.update(q_res, qd_res);
-    
-    bool need_constraints(false);
-    for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      constraints_[ii]->update(robot_);
-      if (constraints_[ii]->isActive()) {
-    	if (verbose) {
-    	  cout << "constraint [" << ii << "] is active\n";
-    	}
-    	need_constraints = true;
-      }
-    }
-    
-    if ( ! need_constraints) {
-      if (verbose) {
-    	cout << "all constraints are inactive\n";
-      }
-      return;
-    }
-    
-    if (verbose) {
-      cout << "--------------------------------------------------\n"
-    	   << "recomputing with constraints enabled\n";
-    }
-    
-    Vector dq_c;
-    Matrix N_c;
-    perform_prioritization(Matrix::Identity(ndof, ndof),
-			   constraints_,
-			   dq_c,
-			   N_c,
-			   dbgos, "constr ");
-    
-    // The constraints cheat with the robot state: they directly work
-    // on the positions that would have been achieved without
-    // constraints.
-    //
-    // Semi-open question: after repairing the position and velocity
-    // to something consistent with the constraints, do we then then
-    // re-run the tasks and objectives? I think yes, to give tasks a
-    // chance to get fulfilled within the constraints. But that does
-    // not seem to work quite yet...
-    //
-    // Also, wouldn't the position and velocity change for the
-    // constraints then influence the constraints themselves? We
-    // should thus re-run the constraints as well, possibly leading to
-    // another correction and so forth ad infinitum. But the nullspace
-    // of the constraints at least should not change too much, so we
-    // can probably skip the chicken-and-egg constraint update
-    // problem.
-    //
-    // Note that the non-constrained velocity would be (q_res + dq_c -
-    // oldpos) / timestep_ but we're pre-multiplying with N_c and dq_c
-    // is perpendicular to that so we don't need to add it.
-    //
-    robot_.update(q_res + dq_c, N_c * (q_res - oldpos) / timestep_);
-    
-    if (verbose) {
-      print(dq_c, cout, "position correction to satisfy constraints", "  ");
-      print(N_c, cout, "nullspace of constrains", "  ");
-      print(robot_.getVelocity(), cout, "resulting constrained velocity", "  ");
-      print(robot_.getPosition(), cout, "resulting constrained position", "  ");
-    }
-    
-    for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      tasks_[ii]->update(robot_);
-    }
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      objectives_[ii]->update(robot_);
-    }
-    
-    // Re-run task priority scheme, but seed it with the constraint nullspace this time.
-    
-    perform_prioritization(N_c,
-    			   tasks_,
-    			   qdd_t,
-    			   N_t,
-    			   dbgos, "task   ");
-    
-    qdd_o = Vector::Zero(robot_.getPosition().size());
-    for (size_t ii(0); ii < objectives_.size(); ++ii) {
-      if (objectives_[ii]->isActive()) {
-    	Matrix Jinv;
-    	pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
-    	qdd_o += Jinv * objectives_[ii]->delta_;
-      }
-    }
-    
-    qdd_res = qdd_t + N_t * qdd_o;
-    qd_res = robot_.getVelocity() + timestep_ * qdd_res;
-    q_res = robot_.getPosition() + timestep_ * qd_res;
-    
-    if (verbose) {
-      print(qdd_res, cout, "constrained acceleration", "  ");
-      print(qd_res, cout, "resulting constrained velocity", "  ");
-      print(q_res, cout, "resulting constrained position", "  ");
-    }
-    
-    robot_.update(q_res, qd_res);
-  }
-
-  ////protected:
-  double timestep_;
-  ExampleRobot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
-  
-  JointLimitConstraint joint_limits_;
-  
-  PointMindistConstraint avoid_base_;
-  PointMindistConstraint avoid_ellbow_;
-  PointMindistConstraint avoid_wrist_;
-  PointMindistConstraint avoid_ee_;
-
-  OriZControl orient_ee_;
-  
-  PointRepulsion repulse_base_;
-  PointRepulsion repulse_ellbow_;
-  PointRepulsion repulse_wrist_;
-  PointRepulsion repulse_ee_;
-  
-  PostureDamping joint_damping_;
-  
-  vector<Task *> constraints_;
-  vector<Task *> tasks_;
-  vector<Task *> objectives_;
-};  
-
 	       
 class StandardWaypoint
   : public BaseWaypoint
 {
 public:
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  
+  StandardWaypoint(double qh_obstacle_radius,
+		   double qh_repulsor_radius)
+    : BaseWaypoint(qh_obstacle_radius, qh_repulsor_radius)
+  {
+  }
   
   virtual ~StandardWaypoint()
   {
@@ -541,12 +125,12 @@ public:
   }
   
   
-  // virtual void draw(cairo_t * cr, double pixelsize)
+  // virtual void draw(cairo_t * cr, double weight, double pixelsize)
   // {
   //   BaseWaypoint::draw(cr, pixelsize);
     
   //   cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-  //   cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
+  //   cairo_set_line_width(cr, weight * 1.0 / pixelsize);
     
   //   for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
   //     if (attract_prev_[ii]->isActive()) {
@@ -566,7 +150,9 @@ public:
   // }
   
   
-  virtual void update()
+  virtual void update(Vector const & qh_obstacle_point,
+		      Vector const & qh_repulsor_point,
+		      double qh_zangle)
   {
     for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
       attract_prev_[ii]->attractor_
@@ -580,7 +166,9 @@ public:
 	* attract_next_[ii]->point_.homogeneous();
     }
     
-    BaseWaypoint::update();
+    BaseWaypoint::update(qh_obstacle_point,
+			 qh_repulsor_point,
+			 qh_zangle);
   }
   
   
@@ -637,9 +225,12 @@ class BoundaryWaypoint
   : public BaseWaypoint
 {
 public:
-  BoundaryWaypoint(Vector const * eegoal,
+  BoundaryWaypoint(double qh_obstacle_radius,
+		   double qh_repulsor_radius,
+		   Vector const * eegoal,
 		   Vector const * baseattractor)
-    : eetask_      (3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
+    : BaseWaypoint(qh_obstacle_radius, qh_repulsor_radius),
+      eetask_      (3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
       attract_base_(0,           0.0, 0.0, 0.0, 100.0, 2.0),
       eegoal_(eegoal),
       baseattractor_(baseattractor)
@@ -649,13 +240,13 @@ public:
   }
   
   
-  virtual void draw(cairo_t * cr, double pixelsize)
+  virtual void draw(cairo_t * cr, double weight, double pixelsize)
   {
-    BaseWaypoint::draw(cr, pixelsize);
+    BaseWaypoint::draw(cr, weight, pixelsize);
     
     // thin line for end effector task
     cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
-    cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
+    cairo_set_line_width(cr, weight * 1.0 / pixelsize);
     cairo_move_to(cr, eetask_.gpoint_[0], eetask_.gpoint_[1]);
     cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
     cairo_stroke(cr);
@@ -663,7 +254,7 @@ public:
     // base attraction
     if (attract_base_.isActive()) {
       cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-      cairo_set_line_width(cr, lwscale * 1.0 / pixelsize);
+      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
       cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
       cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
       cairo_stroke(cr);
@@ -671,11 +262,15 @@ public:
   }
   
   
-  virtual void update()
+  virtual void update(Vector const & qh_obstacle_point,
+		      Vector const & qh_repulsor_point,
+		      double qh_zangle)
   {
     eetask_.goal_ = *eegoal_;
     attract_base_.attractor_ = *baseattractor_;
-    BaseWaypoint::update();
+    BaseWaypoint::update(qh_obstacle_point,
+			 qh_repulsor_point,
+			 qh_zangle);
   }
   
   
@@ -712,11 +307,17 @@ public:
   {
     clear();
     
-    BoundaryWaypoint * start(new BoundaryWaypoint(&(eestart.point_), &(basestart.point_)));
-    BoundaryWaypoint * goal(new BoundaryWaypoint(&(eegoal.point_), &(basegoal.point_)));
+    BoundaryWaypoint * start(new BoundaryWaypoint(obstacle.radius_,
+						  repulsor.radius_,
+						  &(eestart.point_),
+						  &(basestart.point_)));
+    BoundaryWaypoint * goal(new BoundaryWaypoint(obstacle.radius_,
+						 repulsor.radius_,
+						 &(eegoal.point_),
+						 &(basegoal.point_)));
     vector<StandardWaypoint *> wpt;
     for (size_t ii(0); ii < 10; ++ii) {
-      wpt.push_back(new StandardWaypoint());
+      wpt.push_back(new StandardWaypoint(obstacle.radius_, repulsor.radius_));
     }
     wpt[0]->setNeighbors(start, wpt[1]);
     for (size_t ii(1); ii < wpt.size() - 1; ++ii) {
@@ -743,14 +344,14 @@ public:
       cout << "\n**************************************************\n";
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      (*ii)->update();
+      (*ii)->update(obstacle.point_, repulsor.point_, zangle);
     }
   }
   
-  void draw(cairo_t * cr, double pixelsize)
+  void draw(cairo_t * cr, double weight, double pixelsize)
   {
     for (path_t::reverse_iterator ii(path_.rbegin()); ii != path_.rend(); ++ii) {
-      (*ii)->draw(cr, pixelsize);
+      (*ii)->draw(cr, weight, pixelsize);
     }
   }
   
@@ -826,7 +427,7 @@ static gint cb_expose(GtkWidget * ww,
   cairo_translate(cr, gw_x0, gw_y0);
   cairo_scale(cr, gw_sx, gw_sy);
   
-  elastic.draw(cr, gw_sx);
+  elastic.draw(cr, lwscale, gw_sx);
   
   cairo_set_line_width(cr, lwscale * 1.0 / gw_sx);
   for (handle_s ** hh(handle); *hh != 0; ++hh) {

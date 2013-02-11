@@ -34,75 +34,40 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
+#ifndef KINEMATIC_ELASTIC_WAYPOINT_HPP
+#define KINEMATIC_ELASTIC_WAYPOINT_HPP
 
-#include "model.hpp"
-#include <cairo/cairo.h>
+#include "kinematic_elastic.hpp"
 
 
 namespace kinematic_elastic {
   
+  class Model;
+  class Task;
   
-  class ExampleRobot
-    : public Model
+  
+  class Waypoint
   {
   public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  
-    ExampleRobot();
+    explicit Waypoint(Model & model);
+    Waypoint(Model & model, ostream * dbgos, string const & dbgpre);
     
-    virtual Vector const & getPosition() const;
-    virtual Vector const & getVelocity() const;
+    virtual ~Waypoint();
     
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid node!
-    */
-    virtual Transform frame(size_t node) const;
-  
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid node!
-    */
-    virtual Matrix computeJxo(size_t node, Vector const & gpoint) const;
+    virtual void init(Vector const & position, Vector const & velocity);    
     
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid position or velocity!
-    */
-    virtual void update(Vector const & position, Vector const & velocity);
+    //// XXXX make this protected or something...
+    Model & model_;
     
+    vector<Task *> constraints_;
+    vector<Task *> tasks_;
+    vector<Task *> objectives_;
     
-    //// XXXX make these protected or whatnot...
-  
-    double const radius_;
-    double const len_a_;
-    double const len_b_;
-    double const len_c_;
-  
-    Vector position_;
-    Vector velocity_;
-    Vector pos_a_;
-    Vector pos_b_;
-    Vector pos_c_;
-  
-    double c2_;
-    double s2_;
-    double c23_;
-    double s23_;
-    double c234_;
-    double s234_;
-    double q23_;
-    double q234_;
-    double ac2_;
-    double as2_;
-    double bc23_;
-    double bs23_;
-    double cc234_;
-    double cs234_;
-  };
+    ostream * dbgos_;
+    string dbgpre_;
+    string dbgpre2_;
+  };  
   
 }
 
-#endif // KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
+#endif // KINEMATIC_ELASTIC_WAYPOINT_HPP

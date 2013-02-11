@@ -167,33 +167,4 @@ namespace kinematic_elastic {
       0.0;
   }
   
-  
-  void ExampleRobot::
-  draw(cairo_t * cr, double weight, double pixelsize) const
-  {
-    cairo_save(cr);
-    
-    // translucent disk for base
-    cairo_set_source_rgba(cr, 0.7, 0.7, 0.7, 0.5);
-    cairo_arc(cr, position_[0], position_[1], radius_, 0., 2. * M_PI);
-    cairo_fill(cr);
-    
-    // thick circle outline for base
-    cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
-    cairo_set_line_width(cr, weight * 3.0 / pixelsize);
-    cairo_arc(cr, position_[0], position_[1], radius_, 0., 2. * M_PI);
-    cairo_stroke(cr);
-    
-    // thick line for arms
-    cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
-    cairo_set_line_width(cr, weight * 3.0 / pixelsize);
-    cairo_move_to(cr, position_[0], position_[1]);
-    cairo_line_to(cr, pos_a_[0], pos_a_[1]);
-    cairo_line_to(cr, pos_b_[0], pos_b_[1]);
-    cairo_line_to(cr, pos_c_[0], pos_c_[1]);
-    cairo_stroke(cr);
-    
-    cairo_restore(cr);
-  }
-  
 }

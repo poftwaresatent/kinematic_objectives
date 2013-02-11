@@ -54,7 +54,6 @@
 using namespace kinematic_elastic;
 
 
-static double const deg(M_PI / 180.);
 static double const dimx(10.);
 static double const dimy(8.);
 static double const lwscale(5.0);
@@ -93,31 +92,6 @@ static handle_s obstacle  (1.5, 0.7, 0.0, 0.2, 0.5);
 static handle_s * handle[] = { &eestart, &eestartori, &basestart, &eegoal, &basegoal, &repulsor, &obstacle, 0 };
 static handle_s * grabbed(0);
 static Vector grab_offset(3);
-
-
-static inline double bound(double lower, double value, double upper)
-{
-  if (value < lower) {
-    value = lower;
-  }
-  else if (value > upper) {
-    value = upper;
-  }
-  return value;
-}
-
-
-static inline double normangle(double phi)
-{
-  phi = fmod(phi, 2.0 * M_PI);
-  if (phi > M_PI) {
-    phi -= 2 * M_PI;
-  }
-  else if (phi < -M_PI) {
-    phi += 2 * M_PI;
-  }
-  return phi;
-}
 
 
 class Robot

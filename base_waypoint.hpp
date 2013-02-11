@@ -34,75 +34,61 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
+#ifndef KINEMATIC_ELASTIC_BASE_WAYPOINT_HPP
+#define KINEMATIC_ELASTIC_BASE_WAYPOINT_HPP
 
-#include "model.hpp"
-#include <cairo/cairo.h>
+#include "waypoint.hpp"
+
+#include "joint_limit_constraint.hpp"
+#include "point_mindist_constraint.hpp"
+#include "position_control.hpp"
+#include "point_attraction.hpp"
+#include "point_repulsion.hpp"
+#include "posture_damping.hpp"
+#include "qh_ori_z_control.hpp"
+
+#include "example_robot.hpp"	// rfct
+#include <cairo/cairo.h>	// rfct
 
 
 namespace kinematic_elastic {
   
-  
-  class ExampleRobot
-    : public Model
+  class BaseWaypoint
+    : public Waypoint
   {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  
-    ExampleRobot();
     
-    virtual Vector const & getPosition() const;
-    virtual Vector const & getVelocity() const;
+    BaseWaypoint(double qh_obstacle_radius,
+		 double qh_repulsor_radius);
     
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid node!
-    */
-    virtual Transform frame(size_t node) const;
-  
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid node!
-    */
-    virtual Matrix computeJxo(size_t node, Vector const & gpoint) const;
+    virtual void draw(cairo_t * cr, double weight, double pixelsize);
+    virtual void update(Vector const & qh_obstacle_point,
+			Vector const & qh_repulsor_point,
+			double qh_zangle);
     
-    /**
-       \note Do not use in production code: this method calls exit()
-       when you specify an invalid position or velocity!
-    */
-    virtual void update(Vector const & position, Vector const & velocity);
+    //// XXXX protected or so...
     
+    double timestep_;
+    ExampleRobot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
     
-    //// XXXX make these protected or whatnot...
-  
-    double const radius_;
-    double const len_a_;
-    double const len_b_;
-    double const len_c_;
-  
-    Vector position_;
-    Vector velocity_;
-    Vector pos_a_;
-    Vector pos_b_;
-    Vector pos_c_;
-  
-    double c2_;
-    double s2_;
-    double c23_;
-    double s23_;
-    double c234_;
-    double s234_;
-    double q23_;
-    double q234_;
-    double ac2_;
-    double as2_;
-    double bc23_;
-    double bs23_;
-    double cc234_;
-    double cs234_;
+    JointLimitConstraint joint_limits_;
+    
+    PointMindistConstraint avoid_base_;
+    PointMindistConstraint avoid_ellbow_;
+    PointMindistConstraint avoid_wrist_;
+    PointMindistConstraint avoid_ee_;
+    
+    OriZControl orient_ee_;
+    
+    PointRepulsion repulse_base_;
+    PointRepulsion repulse_ellbow_;
+    PointRepulsion repulse_wrist_;
+    PointRepulsion repulse_ee_;
+    
+    PostureDamping joint_damping_;
   };
   
 }
 
-#endif // KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
+#endif // KINEMATIC_ELASTIC_BASE_WAYPOINT_HPP
