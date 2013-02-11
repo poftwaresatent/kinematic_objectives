@@ -34,61 +34,47 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_BASE_WAYPOINT_HPP
-#define KINEMATIC_ELASTIC_BASE_WAYPOINT_HPP
-
-#include "waypoint.hpp"
-
-#include "joint_limit_constraint.hpp"
-#include "point_mindist_constraint.hpp"
-#include "position_control.hpp"
-#include "point_attraction.hpp"
-#include "point_repulsion.hpp"
-#include "posture_damping.hpp"
-#include "qh_ori_z_control.hpp"
-
-#include "example_robot.hpp"	// rfct
-#include <cairo/cairo.h>	// rfct
+#include "example_orientation_control.hpp"
+#include "model.hpp"
 
 
 namespace kinematic_elastic {
   
-  class BaseWaypoint
-    : public Waypoint
-  {
-  public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  namespace example {
     
-    BaseWaypoint(double qh_obstacle_radius,
-		 double qh_repulsor_radius);
     
-    virtual void draw(cairo_t * cr, double weight, double pixelsize);
-    virtual void update(Vector const & qh_obstacle_point,
-			Vector const & qh_repulsor_point,
-			double qh_zangle);
-    
-    //// XXXX protected or so...
-    
-    double timestep_;
-    ExampleRobot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
-    
-    JointLimitConstraint joint_limits_;
-    
-    PointMindistConstraint avoid_base_;
-    PointMindistConstraint avoid_ellbow_;
-    PointMindistConstraint avoid_wrist_;
-    PointMindistConstraint avoid_ee_;
-    
-    OriZControl orient_ee_;
-    
-    PointRepulsion repulse_base_;
-    PointRepulsion repulse_ellbow_;
-    PointRepulsion repulse_wrist_;
-    PointRepulsion repulse_ee_;
-    
-    PostureDamping joint_damping_;
-  };
+    OrientationControl::
+    OrientationControl(size_t node,
+		       double kp,
+		       double kd)
+      : kp_(kp),
+	kd_(kd),
+	node_(node)
+    {
+    }
   
-}
+  
+    void OrientationControl::
+    init(Model const & model)
+    {
+      Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+      angle_ = atan2(ex[1], ex[0]);
+      goal_ = angle_;
+      delta_ = Vector::Zero(1);
+      Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
+    }
+  
+  
+    void OrientationControl::
+    update(Model const & model)
+    {
+      Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+      angle_ = atan2(ex[1], ex[0]);
+      Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
+      delta_[0] = kp_ * (goal_ - angle_);
+      delta_ -= kd_ * Jacobian_ * model.getVelocity();
+    }
 
-#endif // KINEMATIC_ELASTIC_BASE_WAYPOINT_HPP
+  }
+
+}

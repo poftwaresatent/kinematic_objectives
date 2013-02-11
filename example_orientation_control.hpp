@@ -34,32 +34,35 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_QH_ORI_Z_CONTROL_HPP
-#define KINEMATIC_ELASTIC_QH_ORI_Z_CONTROL_HPP
+#ifndef KINEMATIC_ELASTIC_EXAMPLE_ORIENTATION_CONTROL_HPP
+#define KINEMATIC_ELASTIC_EXAMPLE_ORIENTATION_CONTROL_HPP
 
 #include "task.hpp"
 
 namespace kinematic_elastic {
   
-  
-  class OriZControl
-    : public Task
-  {
-  public:
-    OriZControl(size_t node,
-		double kp,
-		double kd);
+  namespace example {
     
-    virtual void init(Model const & model);
-    virtual void update(Model const & model);
+    class OrientationControl
+      : public Task
+    {
+    public:
+      OrientationControl(size_t node,
+			 double kp,
+			 double kd);
+      
+      virtual void init(Model const & model);
+      virtual void update(Model const & model);
+      
+      double kp_;
+      double kd_;
+      size_t node_;
+      double angle_;
+      double goal_;
+    };
     
-    double kp_;
-    double kd_;
-    size_t node_;
-    double angle_;
-    double goal_;
-  };
+  }
   
 }
 
-#endif // KINEMATIC_ELASTIC_QH_ORI_Z_CONTROL_HPP
+#endif // KINEMATIC_ELASTIC_EXAMPLE_ORIENTATION_CONTROL_HPP

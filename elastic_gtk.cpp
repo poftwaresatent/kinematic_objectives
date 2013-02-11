@@ -37,7 +37,7 @@
 #include "algorithm.hpp"
 #include "task.hpp"
 #include "example_robot.hpp"
-#include "base_waypoint.hpp"
+#include "example_waypoints.hpp"
 #include "joint_limit_constraint.hpp"
 #include "point_mindist_constraint.hpp"
 #include "position_control.hpp"
@@ -52,12 +52,13 @@
 #include <list>
 #include <err.h>
 
+using namespace kinematic_elastic::example;
 using namespace kinematic_elastic;
 
 
 static double const dimx(10.);
 static double const dimy(8.);
-static double const lwscale(5.0);
+static double const lwscale(1.0);
 
 static GtkWidget * gw(0);
 static gint gw_width(800), gw_height(640);
@@ -66,220 +67,25 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 
-struct handle_s {
-  handle_s(double radius, double red, double green, double blue, double alpha)
-    : point_(3),
-      radius_(radius),
-      red_(red),
-      green_(green),
-      blue_(blue),
-      alpha_(alpha)
-  {
-  }
-  
-  Vector point_;
-  double radius_, red_, green_, blue_, alpha_;
-};
-
-static handle_s eestart   (0.2, 0.0, 1.0, 0.0, 0.5);
-static handle_s eestartori(0.1, 0.0, 1.0, 0.0, 0.3);
+static InteractionHandle eestart   (0.2, 0.0, 1.0, 0.0, 0.5);
+static InteractionHandle eestartori(0.1, 0.0, 1.0, 0.0, 0.3);
 static double zangle(0);
-static handle_s basestart (0.2, 0.0, 1.0, 0.5, 0.5);
-static handle_s eegoal    (0.2, 0.0, 0.0, 1.0, 0.5);
-static handle_s basegoal  (0.2, 0.0, 0.5, 1.0, 0.5);
-static handle_s repulsor  (1.5, 1.0, 0.5, 0.0, 0.2);
-static handle_s obstacle  (1.5, 0.7, 0.0, 0.2, 0.5);
+static InteractionHandle basestart (0.2, 0.0, 1.0, 0.5, 0.5);
+static InteractionHandle eegoal    (0.2, 0.0, 0.0, 1.0, 0.5);
+static InteractionHandle basegoal  (0.2, 0.0, 0.5, 1.0, 0.5);
+static InteractionHandle repulsor  (1.5, 1.0, 0.5, 0.0, 0.2);
+static InteractionHandle obstacle  (1.5, 0.7, 0.0, 0.2, 0.5);
 
-static handle_s * handle[] = { &eestart, &eestartori, &basestart, &eegoal, &basegoal, &repulsor, &obstacle, 0 };
-static handle_s * grabbed(0);
+static InteractionHandle * handle[] = { &eestart,
+					   &eestartori,
+					   &basestart,
+					   &eegoal,
+					   &basegoal,
+					   &repulsor,
+					   &obstacle,
+					   0 };
+static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
-
-	       
-class StandardWaypoint
-  : public BaseWaypoint
-{
-public:
-  StandardWaypoint(double qh_obstacle_radius,
-		   double qh_repulsor_radius)
-    : BaseWaypoint(qh_obstacle_radius, qh_repulsor_radius)
-  {
-  }
-  
-  virtual ~StandardWaypoint()
-  {
-    for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
-      delete attract_prev_[ii];
-    }
-    for (size_t ii(0); ii < attract_next_.size(); ++ii) {
-      delete attract_next_[ii];
-    }
-  }
-  
-  
-  virtual void init(Vector const & position, Vector const & velocity)
-  {
-    if (attract_prev_.empty()) {
-      errx(EXIT_FAILURE, "please call StandardWaypoint::setNeighbors exactly once on every waypoint");
-    }
-    BaseWaypoint::init(position, velocity);
-  }
-  
-  
-  // virtual void draw(cairo_t * cr, double weight, double pixelsize)
-  // {
-  //   BaseWaypoint::draw(cr, pixelsize);
-    
-  //   cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-  //   cairo_set_line_width(cr, weight * 1.0 / pixelsize);
-    
-  //   for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
-  //     if (attract_prev_[ii]->isActive()) {
-  // 	cairo_move_to(cr, attract_prev_[ii]->gpoint_[0], attract_prev_[ii]->gpoint_[1]);
-  // 	cairo_line_to(cr, attract_prev_[ii]->gpoint_[0] + attract_prev_[ii]->delta_[0] / attract_prev_[ii]->gain_, attract_prev_[ii]->gpoint_[1] + attract_prev_[ii]->delta_[1] / attract_prev_[ii]->gain_);
-  // 	cairo_stroke(cr);
-  //     }
-  //   }
-    
-  //   for (size_t ii(0); ii < attract_next_.size(); ++ii) {
-  //     if (attract_next_[ii]->isActive()) {
-  // 	cairo_move_to(cr, attract_next_[ii]->gpoint_[0], attract_next_[ii]->gpoint_[1]);
-  // 	cairo_line_to(cr, attract_next_[ii]->gpoint_[0] + attract_next_[ii]->delta_[0] / attract_next_[ii]->gain_, attract_next_[ii]->gpoint_[1] + attract_next_[ii]->delta_[1] / attract_next_[ii]->gain_);
-  // 	cairo_stroke(cr);
-  //     }
-  //   }
-  // }
-  
-  
-  virtual void update(Vector const & qh_obstacle_point,
-		      Vector const & qh_repulsor_point,
-		      double qh_zangle)
-  {
-    for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
-      attract_prev_[ii]->attractor_
-	= prev_->robot_.frame(attract_prev_[ii]->node_)
-	* attract_prev_[ii]->point_.homogeneous();
-    }
-
-    for (size_t ii(0); ii < attract_next_.size(); ++ii) {
-      attract_next_[ii]->attractor_
-	= next_->robot_.frame(attract_next_[ii]->node_)
-	* attract_next_[ii]->point_.homogeneous();
-    }
-    
-    BaseWaypoint::update(qh_obstacle_point,
-			 qh_repulsor_point,
-			 qh_zangle);
-  }
-  
-  
-  void setNeighbors(BaseWaypoint const * prev,
-		    BaseWaypoint const * next)
-  {
-    if ( ! attract_prev_.empty()) {
-      errx(EXIT_FAILURE, "please do not call StandardWaypoint::setNeighbors multiple times");
-    }
-    
-    prev_ = prev;
-    next_ = next;
-    
-    PointAttraction * pa;
-    
-    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, -10.0);
-    attract_prev_.push_back(pa);
-    objectives_.push_back(pa);
-    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
-    attract_prev_.push_back(pa);
-    objectives_.push_back(pa);
-    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
-    attract_prev_.push_back(pa);
-    objectives_.push_back(pa);
-    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
-    attract_prev_.push_back(pa);
-    objectives_.push_back(pa);
-    
-    pa = new PointAttraction(0,           0.0, 0.0, 0.0, 500.0, -10.0);
-    attract_next_.push_back(pa);
-    objectives_.push_back(pa);
-    pa = new PointAttraction(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
-    attract_next_.push_back(pa);
-    objectives_.push_back(pa);
-    pa = new PointAttraction(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
-    attract_next_.push_back(pa);
-    objectives_.push_back(pa);
-    pa = new PointAttraction(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
-    attract_next_.push_back(pa);
-    objectives_.push_back(pa);
-  }
-  
-  ////protected:
-
-  BaseWaypoint const * prev_;
-  BaseWaypoint const * next_;
-  
-  vector<PointAttraction*> attract_prev_;
-  vector<PointAttraction*> attract_next_;
-};
-
-
-class BoundaryWaypoint
-  : public BaseWaypoint
-{
-public:
-  BoundaryWaypoint(double qh_obstacle_radius,
-		   double qh_repulsor_radius,
-		   Vector const * eegoal,
-		   Vector const * baseattractor)
-    : BaseWaypoint(qh_obstacle_radius, qh_repulsor_radius),
-      eetask_      (3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
-      attract_base_(0,           0.0, 0.0, 0.0, 100.0, 2.0),
-      eegoal_(eegoal),
-      baseattractor_(baseattractor)
-  {
-    tasks_.push_back(&eetask_);
-    objectives_.push_back(&attract_base_);
-  }
-  
-  
-  virtual void draw(cairo_t * cr, double weight, double pixelsize)
-  {
-    BaseWaypoint::draw(cr, weight, pixelsize);
-    
-    // thin line for end effector task
-    cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
-    cairo_set_line_width(cr, weight * 1.0 / pixelsize);
-    cairo_move_to(cr, eetask_.gpoint_[0], eetask_.gpoint_[1]);
-    cairo_line_to(cr, eetask_.goal_[0], eetask_.goal_[1]);
-    cairo_stroke(cr);
-    
-    // base attraction
-    if (attract_base_.isActive()) {
-      cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
-      cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
-      cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.delta_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.delta_[1] / attract_base_.gain_);
-      cairo_stroke(cr);
-    }
-  }
-  
-  
-  virtual void update(Vector const & qh_obstacle_point,
-		      Vector const & qh_repulsor_point,
-		      double qh_zangle)
-  {
-    eetask_.goal_ = *eegoal_;
-    attract_base_.attractor_ = *baseattractor_;
-    BaseWaypoint::update(qh_obstacle_point,
-			 qh_repulsor_point,
-			 qh_zangle);
-  }
-  
-  
-  ////protected:
-  PositionControl eetask_;
-  PointAttraction attract_base_;
-  Vector const * eegoal_;
-  Vector const * baseattractor_;
-};
 
 
 // could templatize on Waypoint or pass in a factory or something along
@@ -307,17 +113,19 @@ public:
   {
     clear();
     
-    BoundaryWaypoint * start(new BoundaryWaypoint(obstacle.radius_,
-						  repulsor.radius_,
+    BoundaryWaypoint * start(new BoundaryWaypoint(obstacle,
+						  repulsor,
+						  zangle,
 						  &(eestart.point_),
 						  &(basestart.point_)));
-    BoundaryWaypoint * goal(new BoundaryWaypoint(obstacle.radius_,
-						 repulsor.radius_,
+    BoundaryWaypoint * goal(new BoundaryWaypoint(obstacle,
+						 repulsor,
+						 zangle,
 						 &(eegoal.point_),
 						 &(basegoal.point_)));
-    vector<StandardWaypoint *> wpt;
+    vector<NormalWaypoint *> wpt;
     for (size_t ii(0); ii < 10; ++ii) {
-      wpt.push_back(new StandardWaypoint(obstacle.radius_, repulsor.radius_));
+      wpt.push_back(new NormalWaypoint(obstacle, repulsor, zangle));
     }
     wpt[0]->setNeighbors(start, wpt[1]);
     for (size_t ii(1); ii < wpt.size() - 1; ++ii) {
@@ -344,7 +152,7 @@ public:
       cout << "\n**************************************************\n";
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      (*ii)->update(obstacle.point_, repulsor.point_, zangle);
+      (*ii)->update();
     }
   }
   
@@ -429,11 +237,8 @@ static gint cb_expose(GtkWidget * ww,
   
   elastic.draw(cr, lwscale, gw_sx);
   
-  cairo_set_line_width(cr, lwscale * 1.0 / gw_sx);
-  for (handle_s ** hh(handle); *hh != 0; ++hh) {
-    cairo_set_source_rgba(cr, (*hh)->red_, (*hh)->green_, (*hh)->blue_, (*hh)->alpha_);
-    cairo_arc(cr, (*hh)->point_[0], (*hh)->point_[1], (*hh)->radius_, 0.0, 2.0 * M_PI);
-    cairo_fill(cr);
+  for (InteractionHandle ** hh(handle); *hh != 0; ++hh) {
+    (*hh)->draw(cr, lwscale, gw_sx);
   }
   
   cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 0.5);
@@ -482,7 +287,7 @@ static gint cb_click(GtkWidget * ww,
   if (bb->type == GDK_BUTTON_PRESS) {
     Vector point(3);
     point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy, 0.0;
-    for (handle_s ** hh(handle); *hh != 0; ++hh) {
+    for (InteractionHandle ** hh(handle); *hh != 0; ++hh) {
       Vector offset = (*hh)->point_ - point;
       if (offset.norm() <= (*hh)->radius_) {
     	grab_offset = offset;

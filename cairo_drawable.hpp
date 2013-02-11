@@ -42,12 +42,13 @@
 
 namespace kinematic_elastic {
   
-  class ExampleRobot;
-  class BaseWaypoint;
-  
-  void drawExampleRobot(ExampleRobot const & robot, cairo_t * cr, double weight, double pixelsize);
-  
-  void drawBaseWaypoint(BaseWaypoint const & wpt, cairo_t * cr, double weight, double pixelsize);
+  class CairoDrawable
+  {
+  public:
+    virtual ~CairoDrawable() {}
+    
+    virtual void draw(cairo_t * cr, double weight, double pixelsize) const = 0;
+  };
   
 }
 
