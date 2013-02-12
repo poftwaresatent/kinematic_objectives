@@ -106,6 +106,7 @@ list (APPEND SRCS
   example_robot.cpp
   example_orientation_control.cpp
   example_interactive_elastic.cpp
+  example_distance_api.cpp
   )
 
 add_library (kinematic_elastic SHARED ${SRCS})
