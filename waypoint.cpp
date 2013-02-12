@@ -44,22 +44,7 @@ namespace kinematic_elastic {
   
   Waypoint::
   Waypoint(Model & model)
-    : model_(model),
-      dbgos_(0),
-      dbgpre_(""),
-      dbgpre2_("")
-  {
-  }
-  
-  
-  Waypoint::
-  Waypoint(Model & model,
-	   ostream * dbgos,
-	   string const & dbgpre)
-    : model_(model),
-      dbgos_(dbgos),
-      dbgpre_(dbgpre),
-      dbgpre2_(dbgpre + "  ")
+    : model_(model)
   {
   }
   

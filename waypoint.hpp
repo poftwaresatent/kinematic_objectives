@@ -50,11 +50,12 @@ namespace kinematic_elastic {
   {
   public:
     explicit Waypoint(Model & model);
-    Waypoint(Model & model, ostream * dbgos, string const & dbgpre);
     
     virtual ~Waypoint();
     
-    virtual void init(Vector const & position, Vector const & velocity);    
+    virtual void init(Vector const & position, Vector const & velocity);
+    
+    virtual void preUpdateHook() = 0; // rfct
     
     //// XXXX make this protected or something...
     Model & model_;
@@ -62,10 +63,6 @@ namespace kinematic_elastic {
     vector<Task *> constraints_;
     vector<Task *> tasks_;
     vector<Task *> objectives_;
-    
-    ostream * dbgos_;
-    string dbgpre_;
-    string dbgpre2_;
   };  
   
 }

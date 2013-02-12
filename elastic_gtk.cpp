@@ -34,18 +34,18 @@
 
 /* Author: Roland Philippsen */
 
-#include "algorithm.hpp"
-#include "task.hpp"
-#include "example_robot.hpp"
-#include "example_waypoints.hpp"
-#include "joint_limit_constraint.hpp"
-#include "point_mindist_constraint.hpp"
-#include "position_control.hpp"
-#include "point_attraction.hpp"
-#include "point_repulsion.hpp"
-#include "posture_damping.hpp"
-#include "print.hpp"
-#include "pseudo_inverse.hpp"
+// #include "task.hpp"
+// #include "example_robot.hpp"
+// #include "example_waypoints.hpp"
+// #include "joint_limit_constraint.hpp"
+// #include "point_mindist_constraint.hpp"
+// #include "position_control.hpp"
+// #include "point_attraction.hpp"
+// #include "point_repulsion.hpp"
+// #include "posture_damping.hpp"
+// #include "print.hpp"
+// #include "pseudo_inverse.hpp"
+#include "example_interactive_elastic.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -67,113 +67,15 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 
-static InteractionHandle eestart   (0.2, 0.0, 1.0, 0.0, 0.5);
-static InteractionHandle eestartori(0.1, 0.0, 1.0, 0.0, 0.3);
-static double zangle(0);
-static InteractionHandle basestart (0.2, 0.0, 1.0, 0.5, 0.5);
-static InteractionHandle eegoal    (0.2, 0.0, 0.0, 1.0, 0.5);
-static InteractionHandle basegoal  (0.2, 0.0, 0.5, 1.0, 0.5);
-static InteractionHandle repulsor  (1.5, 1.0, 0.5, 0.0, 0.2);
-static InteractionHandle obstacle  (1.5, 0.7, 0.0, 0.2, 0.5);
-
-static InteractionHandle * handle[] = { &eestart,
-					   &eestartori,
-					   &basestart,
-					   &eegoal,
-					   &basegoal,
-					   &repulsor,
-					   &obstacle,
-					   0 };
+static InteractiveElastic * elastic;
 static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
 
 
-// could templatize on Waypoint or pass in a factory or something along
-// those lines to make it robot agnostic...
-class Elastic
-{
-public:
-  typedef list<BaseWaypoint *> path_t;
-
-  ~Elastic()
-  {
-    clear();
-  }
-  
-  void clear()
-  {
-    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      delete *ii;
-    }
-    path_.clear();
-  }
-  
-  
-  void init(Vector const & state)
-  {
-    clear();
-    
-    BoundaryWaypoint * start(new BoundaryWaypoint(obstacle,
-						  repulsor,
-						  zangle,
-						  &(eestart.point_),
-						  &(basestart.point_)));
-    BoundaryWaypoint * goal(new BoundaryWaypoint(obstacle,
-						 repulsor,
-						 zangle,
-						 &(eegoal.point_),
-						 &(basegoal.point_)));
-    vector<NormalWaypoint *> wpt;
-    for (size_t ii(0); ii < 10; ++ii) {
-      wpt.push_back(new NormalWaypoint(obstacle, repulsor, zangle));
-    }
-    wpt[0]->setNeighbors(start, wpt[1]);
-    for (size_t ii(1); ii < wpt.size() - 1; ++ii) {
-      wpt[ii]->setNeighbors(wpt[ii-1], wpt[ii+1]);
-    }
-    wpt[wpt.size() - 1]->setNeighbors(wpt[wpt.size() - 2], goal);
-    
-    path_.push_back(start);
-    for (size_t ii(0); ii < wpt.size(); ++ii) {
-      path_.push_back(wpt[ii]);
-    }
-    path_.push_back(goal);
-    
-    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      (*ii)->init(state, Vector::Zero(state.size()));
-    }
-  }
-  
-  
-  void update()
-  {
-    zangle = atan2(eestartori.point_[1] - eestart.point_[1], eestartori.point_[0] - eestart.point_[0]);
-    if (verbose) {
-      cout << "\n**************************************************\n";
-    }
-    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      (*ii)->update();
-    }
-  }
-  
-  void draw(cairo_t * cr, double weight, double pixelsize)
-  {
-    for (path_t::reverse_iterator ii(path_.rbegin()); ii != path_.rend(); ++ii) {
-      (*ii)->draw(cr, weight, pixelsize);
-    }
-  }
-  
-  ////private:
-  path_t path_;
-};
-
-
-static Elastic elastic;
-
 
 static void update()
 {
-  elastic.update();
+  elastic->update();
   gtk_widget_queue_draw(gw);
 }
 
@@ -191,15 +93,19 @@ static void cb_play(GtkWidget * ww, gpointer data)
 
 static void cb_normalize(GtkWidget * ww, gpointer data)
 {
-  for (Elastic::path_t::iterator ii(elastic.path_.begin()); ii != elastic.path_.end(); ++ii) {
+  for (Elastic::path_t::iterator ii(elastic->path_.begin()); ii != elastic->path_.end(); ++ii) {
+    BaseWaypoint * wpt(dynamic_cast<BaseWaypoint*>(*ii));
+    if ( ! wpt) {
+      continue;
+    }
     if (verbose) {
-      if (fabs((*ii)->robot_.position_[2]) > M_PI) {
-	cout << "normalize " << (*ii)->robot_.position_[2]
-	     << " to " << normangle((*ii)->robot_.position_[2]) << "\n";
+      if (fabs(wpt->robot_.position_[2]) > M_PI) {
+	cout << "normalize " << wpt->robot_.position_[2]
+	     << " to " << normangle(wpt->robot_.position_[2]) << "\n";
       }
     }
-    (*ii)->robot_.position_[2] = normangle((*ii)->robot_.position_[2]);
-    (*ii)->robot_.update((*ii)->robot_.position_, (*ii)->robot_.velocity_);
+    wpt->robot_.position_[2] = normangle(wpt->robot_.position_[2]);
+    wpt->robot_.update(wpt->robot_.position_, wpt->robot_.velocity_);
   }
 }
 
@@ -235,16 +141,7 @@ static gint cb_expose(GtkWidget * ww,
   cairo_translate(cr, gw_x0, gw_y0);
   cairo_scale(cr, gw_sx, gw_sy);
   
-  elastic.draw(cr, lwscale, gw_sx);
-  
-  for (InteractionHandle ** hh(handle); *hh != 0; ++hh) {
-    (*hh)->draw(cr, lwscale, gw_sx);
-  }
-  
-  cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 0.5);
-  cairo_move_to(cr, eestart.point_[0], eestart.point_[1]);
-  cairo_line_to(cr, eestartori.point_[0], eestartori.point_[1]);
-  cairo_stroke(cr);
+  elastic->draw(cr, lwscale, gw_sx);
   
   cairo_destroy(cr);
   
@@ -287,11 +184,11 @@ static gint cb_click(GtkWidget * ww,
   if (bb->type == GDK_BUTTON_PRESS) {
     Vector point(3);
     point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy, 0.0;
-    for (InteractionHandle ** hh(handle); *hh != 0; ++hh) {
-      Vector offset = (*hh)->point_ - point;
-      if (offset.norm() <= (*hh)->radius_) {
+    for (size_t ii(0); ii < elastic->handles_.size(); ++ii) {
+      Vector offset = elastic->handles_[ii]->point_ - point;
+      if (offset.norm() <= elastic->handles_[ii]->radius_) {
     	grab_offset = offset;
-    	grabbed = *hh;
+    	grabbed = elastic->handles_[ii];
     	break;
       }
     }
@@ -395,16 +292,19 @@ int main(int argc, char ** argv)
   
   if ((argc > 1) && (0 == strcmp("-v", argv[1]))) {
     verbose = true;
+    elastic = new InteractiveElastic(1.0e-2, &cout, "");
+  }
+  else {
+    elastic = new InteractiveElastic(1.0e-2, 0, "");
   }
   
-  eestart.point_   <<                 1.0, dimy / 2.0      ,     0.0;
-  eestartori.point_<<                 2.0, dimy / 2.0 + 1.0,     0.0;
-  zangle = atan2(eestartori.point_[1] - eestart.point_[1], eestartori.point_[0] - eestart.point_[0]);
-  basestart.point_ <<                 1.0,              1.0,     0.0;
-  eegoal.point_    <<          dimx - 1.0, dimy / 2.0      ,     0.0;
-  basegoal.point_  <<          dimx - 1.0,              1.0,     0.0;
-  repulsor.point_  <<          dimx / 2.0,              1.0,     0.0;
-  obstacle.point_  <<          dimx / 2.0,       dimy - 1.0,     0.0;
+  elastic->eestart_.point_    <<         1.0, dimy / 2.0      ,     0.0;
+  elastic->eestartori_.point_ <<         2.0, dimy / 2.0 + 1.0,     0.0;
+  elastic->basestart_.point_  <<         1.0,              1.0,     0.0;
+  elastic->eegoal_.point_     <<  dimx - 1.0, dimy / 2.0      ,     0.0;
+  elastic->basegoal_.point_   <<  dimx - 1.0,              1.0,     0.0;
+  elastic->repulsor_.point_   <<  dimx / 2.0,              1.0,     0.0;
+  elastic->obstacle_.point_   <<  dimx / 2.0,       dimy - 1.0,     0.0;
   
   Vector posture(5);
   posture <<
@@ -413,9 +313,11 @@ int main(int argc, char ** argv)
     80.0 * deg,
     - 40.0 * deg,
     25.0 * deg;
-  elastic.init(posture);
+  elastic->init(posture);
   
   gtk_main();
+  
+  delete elastic;
   
   return 0;
 }

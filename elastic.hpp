@@ -34,42 +34,43 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_ALGORITHM_HPP
-#define KINEMATIC_ELASTIC_ALGORITHM_HPP
+#ifndef KINEMATIC_ELASTIC_ELASTIC_HPP
+#define KINEMATIC_ELASTIC_ELASTIC_HPP
 
 #include "kinematic_elastic.hpp"
+#include <list>
 
 
 namespace kinematic_elastic {
   
-  class Task;
   class Waypoint;
   
-  void perform_prioritization(Matrix const & N_init,
-			      vector<Task*> const & tasks,
-			      Vector & delta_res,
-			      Matrix & N_res,
-			      ostream * dbgos,
-			      string const & dbgpre);
   
-  
-  class Algorithm
+  class Elastic
   {
   public:
-    Algorithm();
-    Algorithm(ostream * dbgos, string const & dbgpre);
+    typedef list<Waypoint *> path_t;
     
-    virtual ~Algorithm() {}
+    Elastic(double timestep, ostream * dbgos, string const & dbgpre);
     
-    virtual void update(Waypoint & waypoint) = 0;
+    virtual ~Elastic();
     
-  protected:
+    virtual void clear();
+    
+    virtual void update();
+    
+    virtual void updateWaypoint(Waypoint * wpt);
+    
+    //// XXXX protected or so
+    
     ostream * dbgos_;
     string dbgpre_;
     string dbgpre2_;
+    
+    double timestep_;
+    path_t path_;
   };
-  
   
 }
 
-#endif // KINEMATIC_ELASTIC_ALGORITHM_HPP
+#endif // KINEMATIC_ELASTIC_ELASTIC_HPP

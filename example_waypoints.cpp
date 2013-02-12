@@ -37,9 +37,6 @@
 #include "example_waypoints.hpp"
 #include "print.hpp"
 
-#include "algorithm.hpp"	// rfct
-#include "pseudo_inverse.hpp"	// rfct
-
 #include <err.h>
 
 
@@ -76,7 +73,6 @@ namespace kinematic_elastic {
 		 InteractionHandle const & repulsor,
 		 double const & z_angle)
       : Waypoint(robot_),
-	timestep_(1e-2),
 	obstacle_(obstacle),
 	repulsor_(repulsor),
 	z_angle_(z_angle),
@@ -225,7 +221,7 @@ namespace kinematic_elastic {
   
   
     void BaseWaypoint::
-    update()
+    preUpdateHook()
     {
       avoid_ee_.obstacle_ = obstacle_.point_;
       avoid_wrist_.obstacle_ = obstacle_.point_;
@@ -238,158 +234,6 @@ namespace kinematic_elastic {
       repulse_ellbow_.repulsor_ = repulsor_.point_;
       repulse_wrist_.repulsor_ = repulsor_.point_;
       repulse_ee_.repulsor_ = repulsor_.point_;
-    
-      if (dbgos_) {
-	*dbgos_ << dbgpre_ << "==================================================\n"
-		<< dbgpre_ << "BaseWaypoint::update()\n";
-	print(robot_.getPosition(), *dbgos_, "current position", dbgpre2_);
-	print(robot_.getVelocity(), *dbgos_, "current velocity", dbgpre2_);
-      }
-    
-      for (size_t ii(0); ii < tasks_.size(); ++ii) {
-	tasks_[ii]->update(robot_);
-      }
-      for (size_t ii(0); ii < objectives_.size(); ++ii) {
-	objectives_[ii]->update(robot_);
-      }
-    
-      if (dbgos_) {
-	*dbgos_ << dbgpre_ << "--------------------------------------------------\n"
-		<< dbgpre_ << "trying without constraints first\n";
-      }
-    
-      ssize_t const ndof(robot_.getPosition().size());
-      Vector qdd_t;
-      Matrix N_t;
-      perform_prioritization(Matrix::Identity(ndof, ndof),
-			     tasks_,
-			     qdd_t,
-			     N_t,
-			     dbgos_,
-			     dbgpre_ + "task   ");
-    
-      Vector qdd_o(Vector::Zero(robot_.getPosition().size()));
-      for (size_t ii(0); ii < objectives_.size(); ++ii) {
-	if (objectives_[ii]->isActive()) {
-	  Matrix Jinv;
-	  pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
-	  qdd_o += Jinv * objectives_[ii]->delta_;
-	}
-      }
-    
-      Vector qdd_res(qdd_t + N_t * qdd_o);
-      Vector qd_res(robot_.getVelocity() + timestep_ * qdd_res);
-      Vector q_res(robot_.getPosition() + timestep_ * qd_res);
-    
-      if (dbgos_) {
-	print(qdd_res, *dbgos_, "unconstrained acceleration", dbgpre2_);
-	print(qd_res, *dbgos_, "resulting unconstrained velocity", dbgpre2_);
-	print(q_res, *dbgos_, "resulting unconstrained position", dbgpre2_);
-      }
-    
-      Vector const oldpos(robot_.getPosition()); // will need this in case of constraints
-      Vector const oldvel(robot_.getVelocity()); // will need this in case of constraints
-      robot_.update(q_res, qd_res);
-    
-      bool need_constraints(false);
-      for (size_t ii(0); ii < constraints_.size(); ++ii) {
-	constraints_[ii]->update(robot_);
-	if (constraints_[ii]->isActive()) {
-	  if (dbgos_) {
-	    *dbgos_ << dbgpre_ << "constraint [" << ii << "] is active\n";
-	  }
-	  need_constraints = true;
-	}
-      }
-    
-      if ( ! need_constraints) {
-	if (dbgos_) {
-	  *dbgos_ << dbgpre_ << "all constraints are inactive\n";
-	}
-	return;
-      }
-    
-      if (dbgos_) {
-	*dbgos_ << dbgpre_ << "--------------------------------------------------\n"
-		<< dbgpre_ << "recomputing with constraints enabled\n";
-      }
-    
-      Vector dq_c;
-      Matrix N_c;
-      perform_prioritization(Matrix::Identity(ndof, ndof),
-			     constraints_,
-			     dq_c,
-			     N_c,
-			     dbgos_,
-			     dbgpre_ + "constr ");
-    
-      // The constraints cheat with the robot state: they directly work
-      // on the positions that would have been achieved without
-      // constraints.
-      //
-      // Semi-open question: after repairing the position and velocity
-      // to something consistent with the constraints, do we then then
-      // re-run the tasks and objectives? I think yes, to give tasks a
-      // chance to get fulfilled within the constraints. But that does
-      // not seem to work quite yet...
-      //
-      // Also, wouldn't the position and velocity change for the
-      // constraints then influence the constraints themselves? We
-      // should thus re-run the constraints as well, possibly leading to
-      // another correction and so forth ad infinitum. But the nullspace
-      // of the constraints at least should not change too much, so we
-      // can probably skip the chicken-and-egg constraint update
-      // problem.
-      //
-      // Note that the non-constrained velocity would be (q_res + dq_c -
-      // oldpos) / timestep_ but we're pre-multiplying with N_c and dq_c
-      // is perpendicular to that so we don't need to add it.
-      //
-      robot_.update(q_res + dq_c, N_c * (q_res - oldpos) / timestep_);
-    
-      if (dbgos_) {
-	print(dq_c, *dbgos_, "position correction to satisfy constraints", dbgpre2_);
-	print(N_c, *dbgos_, "nullspace of constrains", dbgpre2_);
-	print(robot_.getVelocity(), *dbgos_, "resulting constrained velocity", dbgpre2_);
-	print(robot_.getPosition(), *dbgos_, "resulting constrained position", dbgpre2_);
-      }
-    
-      for (size_t ii(0); ii < tasks_.size(); ++ii) {
-	tasks_[ii]->update(robot_);
-      }
-      for (size_t ii(0); ii < objectives_.size(); ++ii) {
-	objectives_[ii]->update(robot_);
-      }
-    
-      // Re-run task priority scheme, but seed it with the constraint nullspace this time.
-    
-      perform_prioritization(N_c,
-			     tasks_,
-			     qdd_t,
-			     N_t,
-			     dbgos_,
-			     dbgpre_ + "task   ");
-    
-      qdd_o = Vector::Zero(robot_.getPosition().size());
-      for (size_t ii(0); ii < objectives_.size(); ++ii) {
-	if (objectives_[ii]->isActive()) {
-	  Matrix Jinv;
-	  pseudo_inverse_moore_penrose(objectives_[ii]->Jacobian_, Jinv);
-	  qdd_o += Jinv * objectives_[ii]->delta_;
-	}
-      }
-    
-      qdd_res = qdd_t + N_t * qdd_o;
-      qd_res = robot_.getVelocity() + timestep_ * qdd_res;
-      q_res = robot_.getPosition() + timestep_ * qd_res;
-    
-      if (dbgos_) {
-	print(qdd_res, *dbgos_, "constrained acceleration", dbgpre2_);
-	print(qd_res, *dbgos_, "resulting constrained velocity", dbgpre2_);
-	print(q_res, *dbgos_, "resulting constrained position", dbgpre2_);
-      }
-    
-      robot_.update(q_res, qd_res);
     }
     
     
@@ -450,7 +294,7 @@ namespace kinematic_elastic {
     
     
     void NormalWaypoint::
-    update()
+    preUpdateHook()
     {
       for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
 	attract_prev_[ii]->attractor_
@@ -464,7 +308,7 @@ namespace kinematic_elastic {
 	  * attract_next_[ii]->point_.homogeneous();
       }
       
-      BaseWaypoint::update();
+      BaseWaypoint::preUpdateHook();
     }
     
     
@@ -551,11 +395,11 @@ namespace kinematic_elastic {
     
     
     void BoundaryWaypoint::
-    update()
+    preUpdateHook()
     {
       eetask_.goal_ = *eegoal_;
       attract_base_.attractor_ = *baseattractor_;
-      BaseWaypoint::update();
+      BaseWaypoint::preUpdateHook();
     }
     
   }

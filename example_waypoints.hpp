@@ -76,12 +76,11 @@ namespace kinematic_elastic {
 		   double const & z_angle);
     
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
-    
-      virtual void update();
-    
+      
+      virtual void preUpdateHook(); // rfct
+      
       //// XXXX protected or so...
       
-      double timestep_;
       PlanarRobot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
       
       InteractionHandle const & obstacle_;
@@ -123,7 +122,7 @@ namespace kinematic_elastic {
       
       // virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      virtual void update();
+      virtual void preUpdateHook(); // rfct
       
       /**
 	 \note Do not use in production code: calls exit() on error.
@@ -153,7 +152,7 @@ namespace kinematic_elastic {
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      virtual void update();
+      virtual void preUpdateHook(); // rfct
 
       //// XXXX protected or so...
       
