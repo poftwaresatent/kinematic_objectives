@@ -34,43 +34,38 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_DISTANCE_API_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_DISTANCE_API_HPP
+#ifndef KINEMATIC_ELASTIC_OBSTACLE_CONSTRAINT_HPP
+#define KINEMATIC_ELASTIC_OBSTACLE_CONSTRAINT_HPP
 
-#include "distance_api.hpp"
+#include "task.hpp"
+
 
 namespace kinematic_elastic {
   
-  namespace example {
+  class DistanceAPI;
+  
+  
+  class ObstacleConstraint
+    : public Task
+  {
+  public:
+    ObstacleConstraint(DistanceAPI const & distance_api,
+		       size_t node,
+		       double mindist);
     
-    class PlanarRobot;
-    class InteractiveElastic;
+    virtual void init(Model const & model);
     
+    virtual void update(Model const & model);
     
-    class PlanarDistanceAPI
-      : public DistanceAPI
-    {
-    public:
-      PlanarDistanceAPI(PlanarRobot const & robot,
-			InteractiveElastic const & elastic);
-      
-      /**
-	 Implements DistanceAPI::computeMinimumSeparation().
-	 
-	 \note Do not use for production code, it calls exit() when
-	 you pass an invalid link.
-      */
-      virtual double computeMinimumSeparation(size_t link,
-					      Vector & link_point,
-					      Vector & obstacle_point) const;
-      
-    protected:
-      PlanarRobot const & robot_;
-      InteractiveElastic const & elastic_;
-    };
-
-  }
-
+    virtual bool isActive() const;
+    
+    DistanceAPI const & distance_api_;
+    size_t node_;
+    double mindist_;
+    Vector gpoint_;
+    Vector obstacle_;
+  };
+  
 }
 
-#endif // KINEMATIC_ELASTIC_EXAMPLE_DISTANCE_API_HPP
+#endif // KINEMATIC_ELASTIC_OBSTACLE_CONSTRAINT_HPP

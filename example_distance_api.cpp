@@ -54,36 +54,36 @@ namespace kinematic_elastic {
      
     
     double PlanarDistanceAPI::
-    getMaxDistance() const
+    computeMinimumSeparation(size_t link,
+			     Vector & link_point,
+			     Vector & obstacle_point)
+      const
     {
-      return numeric_limits<double>::max();
-    }
-    
-    
-    DistanceAPI::reply_s PlanarDistanceAPI::
-    handleRequest(size_t link, double max_distance_hint)
-    {
-      DistanceAPI::reply_s reply;
-      reply.obstacle_point = elastic_.obstacle_.point_;
+      link_point.resize(3);
+      obstacle_point = elastic_.obstacle_.point_;
       Vector unit(3);
       double len;
       switch (link) {
       case 0:
-	reply.link_point << robot_.position_[0], robot_.position_[1], 0.0;
-	reply.distance = (reply.obstacle_point - reply.link_point).norm();
-	return reply;
+	link_point << robot_.position_[0], robot_.position_[1], 0.0;
+	unit = obstacle_point - link_point;
+	len = unit.norm();
+	unit /= len;
+	link_point += robot_.radius_ * unit;
+	obstacle_point -= elastic_.obstacle_.radius_ * unit;
+	return len - robot_.radius_ - elastic_.obstacle_.radius_;
       case 1:
-	reply.link_point << robot_.position_[0], robot_.position_[1], 0.0;
+	link_point << robot_.position_[0], robot_.position_[1], 0.0;
 	unit << robot_.c2_, robot_.s2_, 0.0;
 	len = robot_.len_a_;
 	break;
       case 2:
-	reply.link_point << robot_.pos_a_[0], robot_.pos_a_[1], 0.0;
+	link_point << robot_.pos_a_[0], robot_.pos_a_[1], 0.0;
 	unit << robot_.c23_, robot_.s23_, 0.0;
 	len = robot_.len_b_;
 	break;
       case 3:
-	reply.link_point << robot_.pos_b_[0], robot_.pos_b_[1], 0.0;
+	link_point << robot_.pos_b_[0], robot_.pos_b_[1], 0.0;
 	unit << robot_.c234_, robot_.s234_, 0.0;
 	len = robot_.len_c_;
 	break;
@@ -91,20 +91,22 @@ namespace kinematic_elastic {
 	errx (EXIT_FAILURE, "PlanarDistanceAPI::handleRequest() called on invalid link %zu", link);
       }
 
-      Vector const delta(reply.obstacle_point - reply.link_point);
+      Vector delta(obstacle_point - link_point);
       double const perp(delta.transpose() * unit);
-      if (perp <= 0.0) {
-	reply.distance = delta.norm();
-	return reply;
+      if (perp > 0.0) {
+	if (perp >= len) {
+	  link_point += unit * len;
+	}
+	else {
+	  link_point += unit * perp;
+	}
+	delta = obstacle_point - link_point;
       }
-      if (perp >= len) {
-	reply.link_point += unit * len;
-      }
-      else {
-	reply.link_point += unit * perp;
-      }
-      reply.distance = (reply.obstacle_point - reply.link_point).norm();
-      return reply;
+      
+      len = delta.norm();
+      unit = delta / len;
+      obstacle_point -= elastic_.obstacle_.radius_ * unit;
+      return len - elastic_.obstacle_.radius_;
     }
     
   }

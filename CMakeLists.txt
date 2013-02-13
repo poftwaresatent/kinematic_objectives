@@ -95,6 +95,7 @@ list (APPEND SRCS
   elastic.cpp
   joint_limit_constraint.cpp
   point_mindist_constraint.cpp
+  obstacle_constraint.cpp
   point_attraction.cpp
   point_repulsion.cpp
   position_control.cpp

@@ -71,19 +71,19 @@ namespace kinematic_elastic {
     {
       clear();
       
-      BoundaryWaypoint * start(new BoundaryWaypoint(obstacle_,
+      BoundaryWaypoint * start(new BoundaryWaypoint(*this,
 						    repulsor_,
 						    z_angle_,
 						    &(eestart_.point_),
 						    &(basestart_.point_)));
-      BoundaryWaypoint * goal(new BoundaryWaypoint(obstacle_,
+      BoundaryWaypoint * goal(new BoundaryWaypoint(*this,
 						   repulsor_,
 						   z_angle_,
 						   &(eegoal_.point_),
 						   &(basegoal_.point_)));
       vector<NormalWaypoint *> wpt;
       for (size_t ii(0); ii < 10; ++ii) {
-	wpt.push_back(new NormalWaypoint(obstacle_, repulsor_, z_angle_));
+	wpt.push_back(new NormalWaypoint(*this, repulsor_, z_angle_));
       }
       wpt[0]->setNeighbors(start, wpt[1]);
       for (size_t ii(1); ii < wpt.size() - 1; ++ii) {

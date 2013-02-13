@@ -46,41 +46,32 @@ namespace kinematic_elastic {
   class DistanceAPI
   {
   public:
-    struct reply_s {
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-      
-      reply_s()
-	: distance(-1.0), link_point(3), obstacle_point(3)
-      {}
-      
-      /**
-	 Distance between link and obstacle point, if available. Set
-	 to -1.0 if there is no obstacle closer than
-	 DistanceAPI::getMaxDistance().
-      */
-      double distance;
-      
-      /**
-	 If a closest obstacle was found, then this is the point on
-	 the link which lies (approximately) closest to the
-	 obstacle. Note that DistanceAPI::handleRequest() yields
-	 points with respect to the global frame.
-      */
-      Vector link_point;
-      
-      /**
-	 If a closest obstacle was found, then this is the point on
-	 the obstacle which lies (approximately) closest to the
-	 link. Note that DistanceAPI::handleRequest() yields points
-	 with respect to the global frame.
-      */
-      Vector obstacle_point;
-    };
-    
     virtual ~DistanceAPI() {}
     
-    virtual double getMaxDistance() const = 0;
-    virtual reply_s handleRequest(size_t link, double max_distance_hint) = 0;
+    /**
+       \return The minimum separation distance of the given link. This
+       is a positive number (corresponding to the minimum distance) in
+       case the link is collision-free, and a negative number in case
+       of collision (with magnitude equal to the smallest displacement
+       necessary to separate the link from the collision).
+       
+       \todo Does the moveit collision/distance API provide minimum
+       separation distances?
+       
+       \param[out] link_point point on the link, in global
+       coordinates, that is closest to the obstacle (in case of
+       positive return value) or which would have to move the minimum
+       amount (in case of negative return value). In case of multiple
+       such points, a (hopefully) reasonable one will be selected.
+       
+       \param[out] obstacle_point point on the obstacle, in global
+       coordinates, that is the returned distance away from \p
+       link_point. As for the latter, a reasonable choice is made when
+       there is more than one such point.
+    */
+    virtual double computeMinimumSeparation(size_t link,
+					    Vector & link_point,
+					    Vector & obstacle_point) const = 0;
   };
   
 }

@@ -69,17 +69,17 @@ namespace kinematic_elastic {
     
     
     BaseWaypoint::
-    BaseWaypoint(InteractionHandle const & obstacle,
+    BaseWaypoint(InteractiveElastic const & elastic,
 		 InteractionHandle const & repulsor,
 		 double const & z_angle)
       : Waypoint(robot_),
-	obstacle_(obstacle),
+	distance_api_(robot_, elastic),
 	repulsor_(repulsor),
 	z_angle_(z_angle),
-	avoid_base_    (0,                 0.0, 0.0, 0.0, obstacle.radius_ + robot_.radius_),
-	avoid_ellbow_  (1,       robot_.len_a_, 0.0, 0.0, obstacle.radius_),
-	avoid_wrist_   (2,       robot_.len_b_, 0.0, 0.0, obstacle.radius_),
-	avoid_ee_      (3, robot_.len_c_ / 2.0, 0.0, 0.0, obstacle.radius_),
+	avoid_base_    (distance_api_, 0, 0.0),
+	avoid_ellbow_  (distance_api_, 1, 0.0),
+	avoid_wrist_   (distance_api_, 2, 0.0),
+	avoid_ee_      (distance_api_, 3, 0.0),
 	orient_ee_     (3, 100.0, 20.0),
 	repulse_base_  (0,                 0.0, 0.0, 0.0, 100.0, repulsor.radius_),
 	repulse_ellbow_(1,       robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
@@ -223,11 +223,6 @@ namespace kinematic_elastic {
     void BaseWaypoint::
     preUpdateHook()
     {
-      avoid_ee_.obstacle_ = obstacle_.point_;
-      avoid_wrist_.obstacle_ = obstacle_.point_;
-      avoid_ellbow_.obstacle_ = obstacle_.point_;
-      avoid_base_.obstacle_ = obstacle_.point_;
-    
       orient_ee_.goal_ = z_angle_;
     
       repulse_base_.repulsor_ = repulsor_.point_;
@@ -238,10 +233,10 @@ namespace kinematic_elastic {
     
     
     NormalWaypoint::
-    NormalWaypoint(InteractionHandle const & obstacle,
+    NormalWaypoint(InteractiveElastic const & elastic,
 		   InteractionHandle const & repulsor,
 		   double const & z_angle)
-      : BaseWaypoint(obstacle, repulsor, z_angle)
+      : BaseWaypoint(elastic, repulsor, z_angle)
     {
     }
     
@@ -354,12 +349,12 @@ namespace kinematic_elastic {
     
     
     BoundaryWaypoint::
-    BoundaryWaypoint(InteractionHandle const & obstacle,
+    BoundaryWaypoint(InteractiveElastic const & elastic,
 		     InteractionHandle const & repulsor,
 		     double const & z_angle,
 		     Vector const * eegoal,
 		     Vector const * baseattractor)
-      : BaseWaypoint(obstacle, repulsor, z_angle),
+      : BaseWaypoint(elastic, repulsor, z_angle),
 	eetask_      (3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
 	attract_base_(0,           0.0, 0.0, 0.0, 100.0, 2.0),
 	eegoal_(eegoal),

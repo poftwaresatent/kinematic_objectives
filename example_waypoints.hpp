@@ -39,19 +39,23 @@
 
 #include "waypoint.hpp"
 #include "joint_limit_constraint.hpp"
-#include "point_mindist_constraint.hpp"
+#include "obstacle_constraint.hpp"
 #include "position_control.hpp"
 #include "point_attraction.hpp"
 #include "point_repulsion.hpp"
 #include "posture_damping.hpp"
 #include "example_orientation_control.hpp"
 #include "example_robot.hpp"
+#include "example_distance_api.hpp"
 #include "cairo_drawable.hpp"
 
 
 namespace kinematic_elastic {
   
   namespace example {
+    
+    class InteractiveElastic;
+    
     
     class InteractionHandle
       : public CairoDrawable
@@ -71,7 +75,7 @@ namespace kinematic_elastic {
 	public CairoDrawable
     {
     public:
-      BaseWaypoint(InteractionHandle const & obstacle,
+      BaseWaypoint(InteractiveElastic const & elastic,
 		   InteractionHandle const & repulsor,
 		   double const & z_angle);
     
@@ -82,17 +86,17 @@ namespace kinematic_elastic {
       //// XXXX protected or so...
       
       PlanarRobot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
+      PlanarDistanceAPI distance_api_;
       
-      InteractionHandle const & obstacle_;
       InteractionHandle const & repulsor_;
       double const & z_angle_;
       
       JointLimitConstraint joint_limits_;
     
-      PointMindistConstraint avoid_base_;
-      PointMindistConstraint avoid_ellbow_;
-      PointMindistConstraint avoid_wrist_;
-      PointMindistConstraint avoid_ee_;
+      ObstacleConstraint avoid_base_;
+      ObstacleConstraint avoid_ellbow_;
+      ObstacleConstraint avoid_wrist_;
+      ObstacleConstraint avoid_ee_;
     
       OrientationControl orient_ee_;
     
@@ -109,7 +113,7 @@ namespace kinematic_elastic {
       : public BaseWaypoint
     {
     public:
-      NormalWaypoint(InteractionHandle const & obstacle,
+      NormalWaypoint(InteractiveElastic const & elastic,
 		     InteractionHandle const & repulsor,
 		     double const & z_angle);
       
@@ -144,7 +148,7 @@ namespace kinematic_elastic {
       : public BaseWaypoint
     {
     public:
-      BoundaryWaypoint(InteractionHandle const & obstacle,
+      BoundaryWaypoint(InteractiveElastic const & elastic,
 		       InteractionHandle const & repulsor,
 		       double const & z_angle,
 		       Vector const * eegoal,
