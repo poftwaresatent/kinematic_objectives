@@ -34,17 +34,6 @@
 
 /* Author: Roland Philippsen */
 
-// #include "task.hpp"
-// #include "example_robot.hpp"
-// #include "example_waypoints.hpp"
-// #include "joint_limit_constraint.hpp"
-// #include "point_mindist_constraint.hpp"
-// #include "position_control.hpp"
-// #include "point_attraction.hpp"
-// #include "point_repulsion.hpp"
-// #include "posture_damping.hpp"
-// #include "print.hpp"
-// #include "pseudo_inverse.hpp"
 #include "example_interactive_elastic.hpp"
 #include <gtk/gtk.h>
 #include <cmath>

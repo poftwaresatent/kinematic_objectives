@@ -54,21 +54,21 @@ list (APPEND
   /usr/include/eigen3
   )
 
-### if (EIGEN3_DIR)
-###   list (APPEND CMAKE_REQUIRED_INCLUDES
-###     ${EIGEN3_DIR}/include
-###     ${EIGEN3_DIR}
-###     ${EIGEN3_DIR}/include/eigen3
-###     ${EIGEN3_DIR}/eigen3
-###     )
-###   include_directories (
-###     ${EIGEN3_DIR}/include
-###     ${EIGEN3_DIR}
-###     ${EIGEN3_DIR}/include/eigen3
-###     ${EIGEN3_DIR}/
-###     eigen3
-###     )
-### endif (EIGEN3_DIR)
+if (EIGEN3_DIR)
+  list (APPEND CMAKE_REQUIRED_INCLUDES
+    ${EIGEN3_DIR}/include
+    ${EIGEN3_DIR}
+    ${EIGEN3_DIR}/include/eigen3
+    ${EIGEN3_DIR}/eigen3
+    )
+  include_directories (
+    ${EIGEN3_DIR}/include
+    ${EIGEN3_DIR}
+    ${EIGEN3_DIR}/include/eigen3
+    ${EIGEN3_DIR}/
+    eigen3
+    )
+endif (EIGEN3_DIR)
 
 include (CheckIncludeFileCXX)
 
@@ -76,7 +76,7 @@ check_include_file_cxx (Eigen/Core HAVE_EIGEN3)
 if (HAVE_EIGEN3)
   message ("*** found Eigen3 (required)")
 else (HAVE_EIGEN3)
-  message (FATAL_ERROR "Please install Eigen3.")
+  message (FATAL_ERROR "Please install Eigen3 or set the EIGEN3_DIR variable to tell me where to find it.")
 endif (HAVE_EIGEN3)
 
 find_package(GTK2 REQUIRED gtk)
