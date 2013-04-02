@@ -43,10 +43,10 @@ namespace kinematic_objectives {
   
   
   ObstacleObjective::
-  ObstacleObjective(DistanceAPI const & distance_api,
+  ObstacleObjective(DistanceModel const & distance_model,
 		     size_t node,
 		     double mindist)
-    : distance_api_(distance_api),
+    : distance_model_(distance_model),
       node_(node),
       mindist_(mindist)
   {
@@ -64,7 +64,7 @@ namespace kinematic_objectives {
   void ObstacleObjective::
   update(KinematicModel const & model)
   {
-    double const dist(distance_api_.computeMinimumSeparation(node_, gpoint_, obstacle_));
+    double const dist(distance_model_.computeMinimumSeparation(node_, gpoint_, obstacle_));
     if (dist >= mindist_) {
       jacobian_.resize(0, 0);
       return;

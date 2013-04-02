@@ -34,17 +34,17 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/example_orientation_control.h>
-#include <kinematic_objectives/model.h>
+#include <kinematic_objectives/kinematic_model.h>
+#include "planar_orientation_objective.h"
 
 
 namespace kinematic_objectives {
   
-  namespace example {
+  namespace demo {
     
     
-    LinkOrientationObjective::
-    LinkOrientationObjective(size_t node,
+    PlanarOrientationObjective::
+    PlanarOrientationObjective(size_t node,
 		       double kp,
 		       double kd)
       : kp_(kp),
@@ -54,7 +54,7 @@ namespace kinematic_objectives {
     }
   
   
-    void LinkOrientationObjective::
+    void PlanarOrientationObjective::
     init(KinematicModel const & model)
     {
       Vector const ex(model.getLinkFrame(node_).linear().block(0, 0, 3, 1));
@@ -65,7 +65,7 @@ namespace kinematic_objectives {
     }
   
   
-    void LinkOrientationObjective::
+    void PlanarOrientationObjective::
     update(KinematicModel const & model)
     {
       Vector const ex(model.getLinkFrame(node_).linear().block(0, 0, 3, 1));

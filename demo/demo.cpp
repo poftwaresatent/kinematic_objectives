@@ -34,14 +34,14 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/example_interactive_blender.h>
+#include "interactive_blender.h"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
 #include <list>
 #include <err.h>
 
-using namespace kinematic_objectives::example;
+using namespace kinematic_objectives::demo;
 using namespace kinematic_objectives;
 
 

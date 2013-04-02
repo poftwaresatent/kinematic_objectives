@@ -34,12 +34,12 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/example_interactive_blender.h>
+#include "interactive_blender.h"
 
 
 namespace kinematic_objectives {
 
-  namespace example {
+  namespace demo {
     
     
     InteractiveBlender::

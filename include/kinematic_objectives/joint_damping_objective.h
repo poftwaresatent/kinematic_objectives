@@ -34,19 +34,19 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP
-#define KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP
+#ifndef KINEMATIC_OBJECTIVES_JOINT_DAMPING_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_JOINT_DAMPING_OBJECTIVE_HPP
 
 #include <kinematic_objectives/objective.h>
 
 
 namespace kinematic_objectives {
   
-  class PostureDamping
+  class JointDampingObjective
     : public Objective
   {
   public:
-    explicit PostureDamping(double gain);
+    explicit JointDampingObjective(double gain);
     
     virtual void init(KinematicModel const & model);
     virtual void update(KinematicModel const & model);
@@ -56,4 +56,4 @@ namespace kinematic_objectives {
 
 }
 
-#endif // KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP
+#endif // KINEMATIC_OBJECTIVES_JOINT_DAMPING_OBJECTIVE_HPP

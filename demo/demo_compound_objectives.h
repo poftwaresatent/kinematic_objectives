@@ -34,25 +34,25 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_COMPOUND_OBJECTIVES_HPP
-#define KINEMATIC_OBJECTIVES_EXAMPLE_COMPOUND_OBJECTIVES_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_COMPOUND_OBJECTIVES_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_COMPOUND_OBJECTIVES_HPP
 
-#include "compound.hpp"
-#include "joint_limit_constraint.hpp"
-#include "obstacle_constraint.hpp"
-#include "position_control.hpp"
-#include "point_attraction.hpp"
-#include "point_repulsion.hpp"
-#include "posture_damping.hpp"
-#include "example_orientation_control.hpp"
-#include "example_robot.hpp"
-#include "example_distance_api.hpp"
-#include "cairo_drawable.hpp"
+#include <kinematic_objectives/compound_objective.h>
+#include <kinematic_objectives/joint_limit_objective.h>
+#include <kinematic_objectives/obstacle_objective.h>
+#include <kinematic_objectives/link_position_objective.h>
+#include <kinematic_objectives/point_attraction_objective.h>
+#include <kinematic_objectives/point_repulsion_objective.h>
+#include <kinematic_objectives/joint_damping_objective.h>
+#include "planar_orientation_objective.h"
+#include "planar_robot.h"
+#include "planar_distance.h"
+#include "cairo_drawable.h"
 
 
 namespace kinematic_objectives {
   
-  namespace example {
+  namespace demo {
     
     class InteractiveBlender;
     
@@ -86,7 +86,7 @@ namespace kinematic_objectives {
       //// XXXX protected or so...
       
       PlanarRobot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
-      PlanarDistanceAPI distance_api_;
+      PlanarDistance distance_api_;
       
       InteractionHandle const & repulsor_;
       double const & z_angle_;
@@ -98,14 +98,14 @@ namespace kinematic_objectives {
       ObstacleObjective avoid_wrist_;
       ObstacleObjective avoid_ee_;
     
-      LinkOrientationObjective orient_ee_;
+      PlanarOrientationObjective orient_ee_;
     
       PointRepulsionObjective repulse_base_;
       PointRepulsionObjective repulse_ellbow_;
       PointRepulsionObjective repulse_wrist_;
       PointRepulsionObjective repulse_ee_;
     
-      PostureDamping joint_damping_;
+      JointDampingObjective joint_damping_;
     };
     
     
@@ -170,4 +170,4 @@ namespace kinematic_objectives {
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_EXAMPLE_COMPOUND_OBJECTIVES_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_COMPOUND_OBJECTIVES_HPP

@@ -34,18 +34,18 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/example_distance_api.h>
-#include <kinematic_objectives/example_robot.h>
-#include <kinematic_objectives/example_interactive_blender.h>
+#include "planar_distance.h"
+#include "planar_robot.h"
+#include "interactive_blender.h"
 #include <err.h>
 
 
 namespace kinematic_objectives {
   
-  namespace example {
+  namespace demo {
     
-    PlanarDistanceAPI::
-    PlanarDistanceAPI(PlanarRobot const & robot,
+    PlanarDistance::
+    PlanarDistance(PlanarRobot const & robot,
 		      InteractiveBlender const & blender)
       : robot_(robot),
 	blender_(blender)
@@ -53,7 +53,7 @@ namespace kinematic_objectives {
     }
      
     
-    double PlanarDistanceAPI::
+    double PlanarDistance::
     computeMinimumSeparation(size_t link,
 			     Vector & link_point,
 			     Vector & obstacle_point)
@@ -88,7 +88,7 @@ namespace kinematic_objectives {
 	len = robot_.len_c_;
 	break;
       default:
-	errx (EXIT_FAILURE, "PlanarDistanceAPI::handleRequest() called on invalid link %zu", link);
+	errx (EXIT_FAILURE, "PlanarDistance::handleRequest() called on invalid link %zu", link);
       }
 
       Vector delta(obstacle_point - link_point);

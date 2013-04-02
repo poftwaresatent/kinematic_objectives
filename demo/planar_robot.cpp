@@ -34,13 +34,13 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/example_robot.h>
+#include "planar_robot.h"
 #include <err.h>
 
 
 namespace kinematic_objectives {
 
-  namespace example {
+  namespace demo {
     
   
     PlanarRobot::

@@ -34,43 +34,35 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_DISTANCE_MODEL_HPP
-#define KINEMATIC_OBJECTIVES_EXAMPLE_DISTANCE_MODEL_HPP
+#ifndef KINEMATIC_OBJECTIVES_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP
 
-#include "distance_api.hpp"
+#include <kinematic_objectives/objective.h>
 
 namespace kinematic_objectives {
   
-  namespace example {
+  namespace demo {
     
-    class PlanarRobot;
-    class InteractiveBlender;
-    
-    
-    class PlanarDistanceAPI
-      : public DistanceAPI
+    class PlanarOrientationObjective
+      : public Objective
     {
     public:
-      PlanarDistanceAPI(PlanarRobot const & robot,
-			InteractiveBlender const & blender);
+      PlanarOrientationObjective(size_t node,
+			 double kp,
+			 double kd);
       
-      /**
-	 Implements DistanceAPI::computeMinimumSeparation().
-	 
-	 \note Do not use for production code, it calls exit() when
-	 you pass an invalid link.
-      */
-      virtual double computeMinimumSeparation(size_t link,
-					      Vector & link_point,
-					      Vector & obstacle_point) const;
+      virtual void init(KinematicModel const & model);
+      virtual void update(KinematicModel const & model);
       
-    protected:
-      PlanarRobot const & robot_;
-      InteractiveBlender const & blender_;
+      double kp_;
+      double kd_;
+      size_t node_;
+      double angle_;
+      double goal_;
     };
-
+    
   }
-
+  
 }
 
-#endif // KINEMATIC_OBJECTIVES_EXAMPLE_DISTANCE_MODEL_HPP
+#endif // KINEMATIC_OBJECTIVES_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP

@@ -91,11 +91,13 @@ list (APPEND SRCS
   src/obstacle_objective.cpp
   src/point_attraction_objective.cpp
   src/point_repulsion_objective.cpp
-  src/link_position_control.cpp
-  src/joint_position_control.cpp
-  posture_damping.cpp
+  src/link_position_objective.cpp
+  src/joint_position_objective.cpp
+  src/joint_damping_objective.cpp
   src/pseudo_inverse.cpp
   src/print.cpp
   )
 
 add_library (kinematic_objectives SHARED ${SRCS})
+
+add_subdirectory (demo)

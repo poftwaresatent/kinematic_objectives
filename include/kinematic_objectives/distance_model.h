@@ -43,10 +43,10 @@
 namespace kinematic_objectives {
   
   
-  class DistanceAPI
+  class DistanceModel
   {
   public:
-    virtual ~DistanceAPI() {}
+    virtual ~DistanceModel() {}
     
     /**
        \return The minimum separation distance of the given link. This

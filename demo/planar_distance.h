@@ -34,35 +34,43 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_LINK_ORIENTATION_OBJECTIVE_HPP
-#define KINEMATIC_OBJECTIVES_EXAMPLE_LINK_ORIENTATION_OBJECTIVE_HPP
+#ifndef KINEMATIC_OBJECTIVES_PLANAR_DISTANCE_HPP
+#define KINEMATIC_OBJECTIVES_PLANAR_DISTANCE_HPP
 
-#include "objective.hpp"
+#include <kinematic_objectives/distance_model.h>
 
 namespace kinematic_objectives {
   
-  namespace example {
+  namespace demo {
     
-    class LinkOrientationObjective
-      : public Objective
+    class PlanarRobot;
+    class InteractiveBlender;
+    
+    
+    class PlanarDistance
+      : public DistanceModel
     {
     public:
-      LinkOrientationObjective(size_t node,
-			 double kp,
-			 double kd);
+      PlanarDistance(PlanarRobot const & robot,
+			InteractiveBlender const & blender);
       
-      virtual void init(KinematicModel const & model);
-      virtual void update(KinematicModel const & model);
+      /**
+	 Implements DistanceModel::computeMinimumSeparation().
+	 
+	 \note Do not use for production code, it calls exit() when
+	 you pass an invalid link.
+      */
+      virtual double computeMinimumSeparation(size_t link,
+					      Vector & link_point,
+					      Vector & obstacle_point) const;
       
-      double kp_;
-      double kd_;
-      size_t node_;
-      double angle_;
-      double goal_;
+    protected:
+      PlanarRobot const & robot_;
+      InteractiveBlender const & blender_;
     };
-    
+
   }
-  
+
 }
 
-#endif // KINEMATIC_OBJECTIVES_EXAMPLE_LINK_ORIENTATION_OBJECTIVE_HPP
+#endif // KINEMATIC_OBJECTIVES_PLANAR_DISTANCE_HPP

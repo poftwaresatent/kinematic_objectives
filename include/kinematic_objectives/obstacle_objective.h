@@ -42,14 +42,14 @@
 
 namespace kinematic_objectives {
   
-  class DistanceAPI;
+  class DistanceModel;
   
   
   class ObstacleObjective
     : public Objective
   {
   public:
-    ObstacleObjective(DistanceAPI const & distance_api,
+    ObstacleObjective(DistanceModel const & distance_model,
 		       size_t node,
 		       double mindist);
     
@@ -59,7 +59,7 @@ namespace kinematic_objectives {
     
     virtual bool isActive() const;
     
-    DistanceAPI const & distance_api_;
+    DistanceModel const & distance_model_;
     size_t node_;
     double mindist_;
     Vector gpoint_;

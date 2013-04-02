@@ -34,15 +34,15 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/example_compounds.h>
 #include <kinematic_objectives/print.h>
+#include "demo_compound_objectives.h"
 
 #include <err.h>
 
 
 namespace kinematic_objectives {
 
-  namespace example {
+  namespace demo {
     
     
     InteractionHandle::
@@ -103,13 +103,13 @@ namespace kinematic_objectives {
       constraints_.push_back(&avoid_ellbow_);
       constraints_.push_back(&avoid_base_);
     
-      objectives_.push_back(&orient_ee_);
-    
-      objectives_.push_back(&repulse_base_);
-      objectives_.push_back(&repulse_ellbow_);
-      objectives_.push_back(&repulse_wrist_);
-      objectives_.push_back(&repulse_ee_);
-      objectives_.push_back(&joint_damping_);
+      hard_objectives_.push_back(&orient_ee_);
+      
+      soft_objectives_.push_back(&repulse_base_);
+      soft_objectives_.push_back(&repulse_ellbow_);
+      soft_objectives_.push_back(&repulse_wrist_);
+      soft_objectives_.push_back(&repulse_ee_);
+      soft_objectives_.push_back(&joint_damping_);
     }
   
   
@@ -322,29 +322,29 @@ namespace kinematic_objectives {
       
       pa = new PointAttractionObjective(0,           0.0, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
       pa = new PointAttractionObjective(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
       pa = new PointAttractionObjective(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
       pa = new PointAttractionObjective(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
       
       pa = new PointAttractionObjective(0,           0.0, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
       pa = new PointAttractionObjective(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
       pa = new PointAttractionObjective(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
       pa = new PointAttractionObjective(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
-      objectives_.push_back(pa);
+      soft_objectives_.push_back(pa);
     }
     
     
@@ -360,8 +360,8 @@ namespace kinematic_objectives {
 	eegoal_(eegoal),
 	baseattractor_(baseattractor)
     {
-      objectives_.push_back(&eeobjective_);
-      objectives_.push_back(&attract_base_);
+      hard_objectives_.push_back(&eeobjective_);
+      soft_objectives_.push_back(&attract_base_);
     }
     
     

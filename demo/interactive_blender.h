@@ -34,16 +34,16 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_INTERACTIVE_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_EXAMPLE_INTERACTIVE_BLENDER_HPP
+#ifndef KINEMATIC_OBJECTIVES_INTERACTIVE_BLENDER_HPP
+#define KINEMATIC_OBJECTIVES_INTERACTIVE_BLENDER_HPP
 
-#include "blender.hpp"
-#include "example_compounds.hpp"
+#include <kinematic_objectives/blender.h>
+#include "demo_compound_objectives.h"
 
 
 namespace kinematic_objectives {
 
-  namespace example {
+  namespace demo {
     
     class InteractiveBlender
       : public Blender,
@@ -78,4 +78,4 @@ namespace kinematic_objectives {
 
 }
 
-#endif // KINEMATIC_OBJECTIVES_EXAMPLE_INTERACTIVE_BLENDER_HPP
+#endif // KINEMATIC_OBJECTIVES_INTERACTIVE_BLENDER_HPP

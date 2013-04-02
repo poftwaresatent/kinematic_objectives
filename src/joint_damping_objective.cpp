@@ -34,80 +34,29 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_ROBOT_HPP
-#define KINEMATIC_OBJECTIVES_EXAMPLE_ROBOT_HPP
-
-#include "model.hpp"
-#include "cairo_drawable.hpp"
+#include <kinematic_objectives/joint_damping_objective.h>
+#include <kinematic_objectives/kinematic_model.h>
 
 
 namespace kinematic_objectives {
   
-  namespace example {
-    
-    class PlanarRobot
-      : public KinematicModel,
-	public CairoDrawable
-    {
-    public:
-      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   
-      PlanarRobot();
-    
-      virtual Vector const & getJointPosition() const;
-      virtual Vector const & getJointVelocity() const;
-    
-      /**
-	 \note Do not use in production code: this method calls exit()
-	 when you specify an invalid node!
-      */
-      virtual Transform getLinkFrame(size_t node) const;
-  
-      /**
-	 \note Do not use in production code: this method calls exit()
-	 when you specify an invalid node!
-      */
-      virtual Matrix getLinkJacobian(size_t node, Vector const & gpoint) const;
-    
-      /**
-	 \note Do not use in production code: this method calls exit()
-	 when you specify an invalid position or velocity!
-      */
-      virtual void update(Vector const & position, Vector const & velocity);
-      
-      virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
-      
-      //// XXXX make these protected or whatnot...
-  
-      double const radius_;
-      double const len_a_;
-      double const len_b_;
-      double const len_c_;
-  
-      Vector position_;
-      Vector velocity_;
-      Vector pos_a_;
-      Vector pos_b_;
-      Vector pos_c_;
-  
-      double c2_;
-      double s2_;
-      double c23_;
-      double s23_;
-      double c234_;
-      double s234_;
-      double q23_;
-      double q234_;
-      double ac2_;
-      double as2_;
-      double bc23_;
-      double bs23_;
-      double cc234_;
-      double cs234_;
-    };
-
+  JointDampingObjective::
+  JointDampingObjective(double gain)
+    : gain_(gain)
+  {
   }
   
-}
+  void JointDampingObjective::
+  init(KinematicModel const & model)
+  {
+    jacobian_ = Matrix::Identity(model.getJointPosition().size(), model.getJointPosition().size());
+  }
+  
+  void JointDampingObjective::
+  update(KinematicModel const & model)
+  {
+    bias_ = - gain_ * model.getJointVelocity();
+  }
 
-#endif // KINEMATIC_OBJECTIVES_EXAMPLE_ROBOT_HPP
+}
