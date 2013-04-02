@@ -34,64 +34,50 @@
 
 /* Author: Roland Philippsen */
 
-#include "point_mindist_constraint.hpp"
-#include <kinematic_objectives/kinematic_model.h>
+#ifndef KINEMATIC_OBJECTIVES_POINT_ATTRACTION_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_POINT_ATTRACTION_OBJECTIVE_HPP
+
+#include <kinematic_objectives/objective.h>
 
 
 namespace kinematic_objectives {
   
-  
-  PointMindistConstraint::
-  PointMindistConstraint(size_t node,
-			 double px,
-			 double py,
-			 double pz,
-			 double mindist)
-    : mindist_(mindist),
-      node_(node),
-      point_(3)
-  {
-    point_ << px, py, pz;
-    bias_ = Vector::Zero(1);
-    obstacle_.resize(0);
-  }
-  
-  
-  void PointMindistConstraint::
-  init(KinematicModel const & model)
-  {
-    bias_ = Vector::Zero(1);
-    gpoint_.resize(point_.size());
-    update(model);
-  }
-  
-  
-  void PointMindistConstraint::
-  update(KinematicModel const & model)
-  {
-    if (0 == obstacle_.size()) {
-      jacobian_.resize(0, 0);
-      return;
-    }
-    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
-    Vector tmp(gpoint_ - obstacle_);
-    double const dist(tmp.norm());
-    if ((dist >= mindist_) || (dist < 1e-9)){
-      jacobian_.resize(0, 0);
-      return;
-    }
-    tmp /= dist;
-    jacobian_
-      = tmp.transpose()
-      * model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
-    bias_[0] = mindist_ - dist;
-  }
-  
-  
-  bool PointMindistConstraint::
-  isActive() const
-  {
-    return jacobian_.rows() > 0;
-  }
 
+  class PointAttractionObjective
+    : public Objective
+  {
+  protected:
+    void construct(size_t node,
+		   Vector const & point,
+		   double gain,
+		   double distance);
+    
+  public:
+    PointAttractionObjective(size_t node,
+			     double gain,
+			     double distance);
+    
+    PointAttractionObjective(size_t node,
+			     double px,
+			     double py,
+			     double pz,
+			     double gain,
+			     double distance);
+    
+    virtual void init(KinematicModel const & model);
+    
+    virtual void update(KinematicModel const & model);
+    
+    virtual bool isActive() const;
+    
+    double gain_;
+    double distance_;
+    size_t node_;
+    Vector point_;
+    Vector gpoint_;
+    Vector attractor_;
+  };
+  
 }
+
+#endif // KINEMATIC_OBJECTIVES_POINT_ATTRACTION_OBJECTIVE_HPP

@@ -34,38 +34,43 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_BLENDER_HPP
+#define KINEMATIC_OBJECTIVES_BLENDER_HPP
 
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/kinematic_objectives.h>
+#include <list>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
+  class CompoundObjective;
+  
+  
+  class Blender
   {
   public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
+    typedef list<CompoundObjective *> path_t;
     
-    virtual void init(KinematicModel const & model);
+    Blender(double timestep, ostream * dbgos, string const & dbgpre);
     
-    virtual void update(KinematicModel const & model);
+    virtual ~Blender();
     
-    virtual bool isActive() const;
+    virtual void clear();
     
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
+    virtual void update();
+    
+    virtual void updateCompoundObjective(CompoundObjective * wpt);
+    
+    //// XXXX protected or so
+    
+    ostream * dbgos_;
+    string dbgpre_;
+    string dbgpre2_;
+    
+    double timestep_;
+    path_t path_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_BLENDER_HPP

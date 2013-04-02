@@ -34,64 +34,101 @@
 
 /* Author: Roland Philippsen */
 
-#include "point_mindist_constraint.hpp"
-#include <kinematic_objectives/kinematic_model.h>
+#include <kinematic_objectives/print.h>
+#include <iostream>
+#include <sstream>
+#include <stdio.h>
 
 
-namespace kinematic_objectives {
+namespace kinematic_objectives {  
   
   
-  PointMindistConstraint::
-  PointMindistConstraint(size_t node,
-			 double px,
-			 double py,
-			 double pz,
-			 double mindist)
-    : mindist_(mindist),
-      node_(node),
-      point_(3)
+  string pstring(Vector const & vv)
   {
-    point_ << px, py, pz;
-    bias_ = Vector::Zero(1);
-    obstacle_.resize(0);
+    ostringstream os;
+    print(vv, os, "", "", true);
+    return os.str();
+  }
+  
+    
+  string pstring(Matrix const & mm, string const & prefix)
+  {
+    ostringstream os;
+    print(mm, os, "", prefix);
+    return os.str();
+  }
+    
+    
+  void print(Vector const & vv, ostream & os,
+	     string const & title, string const & prefix,
+	     bool nonl)
+  {
+    print((Matrix const &) vv, os, title, prefix, true, nonl);
   }
   
   
-  void PointMindistConstraint::
-  init(KinematicModel const & model)
+  string pstring(double vv)
   {
-    bias_ = Vector::Zero(1);
-    gpoint_.resize(point_.size());
-    update(model);
-  }
-  
-  
-  void PointMindistConstraint::
-  update(KinematicModel const & model)
-  {
-    if (0 == obstacle_.size()) {
-      jacobian_.resize(0, 0);
-      return;
+    static int const buflen(32);
+    static char buf[buflen];
+    memset(buf, 0, sizeof(buf));
+    if (isinf(vv)) {
+      snprintf(buf, buflen-1, " inf    ");
     }
-    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
-    Vector tmp(gpoint_ - obstacle_);
-    double const dist(tmp.norm());
-    if ((dist >= mindist_) || (dist < 1e-9)){
-      jacobian_.resize(0, 0);
-      return;
+    else if (isnan(vv)) {
+      snprintf(buf, buflen-1, " nan    ");
     }
-    tmp /= dist;
-    jacobian_
-      = tmp.transpose()
-      * model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
-    bias_[0] = mindist_ - dist;
+    else if (fabs(fmod(vv, 1)) < 1e-6) {
+      snprintf(buf, buflen-1, "%- 7d  ", static_cast<int>(rint(vv)));
+    }
+    else {
+      snprintf(buf, buflen-1, "% 6.4f  ", vv);
+    }
+    string str(buf);
+    return str;
   }
   
   
-  bool PointMindistConstraint::
-  isActive() const
+  void print(Matrix const & mm, ostream & os,
+	     string const & title, string const & prefix,
+	     bool vecmode, bool nonl)
   {
-    return jacobian_.rows() > 0;
+    char const * nlornot("\n");
+    if (nonl) {
+      nlornot = "";
+    }
+    if ( ! title.empty()) {
+      os << prefix << title << nlornot;
+    }
+    if ((mm.rows() <= 0) || (mm.cols() <= 0)) {
+      os << prefix << "   (empty)" << nlornot;
+    }
+    else {
+      
+      if (vecmode) {
+	if ( ! prefix.empty())
+	  os << prefix;
+	os << "  ";
+	for (int ir(0); ir < mm.rows(); ++ir) {
+	  os << pstring(mm.coeff(ir, 0));
+	}
+	os << nlornot;
+	
+      }
+      else {
+
+	for (int ir(0); ir < mm.rows(); ++ir) {
+	  if ( ! prefix.empty())
+	    os << prefix;
+	  os << "  ";
+	  for (int ic(0); ic < mm.cols(); ++ic) {
+	    os << pstring(mm.coeff(ir, ic));
+	  }
+	  os << nlornot;
+	}
+	  
+      }
+    }
   }
 
 }

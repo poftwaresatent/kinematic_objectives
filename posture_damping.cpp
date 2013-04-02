@@ -35,7 +35,7 @@
 /* Author: Roland Philippsen */
 
 #include "posture_damping.hpp"
-#include "model.hpp"
+#include <kinematic_objectives/kinematic_model.h>
 
 
 namespace kinematic_objectives {

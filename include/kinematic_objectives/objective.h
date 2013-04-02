@@ -34,38 +34,58 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
 
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/kinematic_objectives.h>
+#include <limits>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
+  class KinematicModel;
+  
+  
+  class ObjectiveData
   {
   public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    virtual void init(KinematicModel const & model);
+    virtual ~ObjectiveData() {}
     
-    virtual void update(KinematicModel const & model);
+    void stack(ObjectiveData const & t1, ObjectiveData const & t2);
     
-    virtual bool isActive() const;
+    template<typename iterator_t>
+    void stack(iterator_t begin, iterator_t end)
+    {
+      size_t ttnrows(0);
+      for (iterator_t ii(begin); ii != end; ++ii) {
+	ttnrows += (*ii)->jacobian_.rows();
+      }
+      size_t const ndof((*begin)->jacobian_.cols());
+      bias_.resize(ttnrows);
+      jacobian_.resize(ttnrows, ndof);
+      for (size_t row(0); begin != end; row += (*begin++)->jacobian_.rows()) {
+	bias_.block(   row, 0, (*begin)->jacobian_.rows(),    1) = (*begin)->bias_;
+	jacobian_.block(row, 0, (*begin)->jacobian_.rows(), ndof) = (*begin)->jacobian_;
+      }
+    }
     
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
+    Vector bias_; // basically this is "desired - current" but may be different for objectives
+    Matrix jacobian_;
+  };
+  
+  
+  class Objective
+    : public ObjectiveData
+  {
+  public:
+    virtual void init(KinematicModel const & model) { }
+    virtual bool isActive() const { return true; }
+    
+    virtual void update(KinematicModel const & model) = 0;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_OBJECTIVE_HPP

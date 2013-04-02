@@ -34,38 +34,46 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_DISTANCE_MODEL_HPP
+#define KINEMATIC_OBJECTIVES_DISTANCE_MODEL_HPP
 
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/kinematic_objectives.h>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
+  
+  class DistanceAPI
   {
   public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
+    virtual ~DistanceAPI() {}
     
-    virtual void init(KinematicModel const & model);
-    
-    virtual void update(KinematicModel const & model);
-    
-    virtual bool isActive() const;
-    
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
+    /**
+       \return The minimum separation distance of the given link. This
+       is a positive number (corresponding to the minimum distance) in
+       case the link is collision-free, and a negative number in case
+       of collision (with magnitude equal to the smallest displacement
+       necessary to separate the link from the collision).
+       
+       \todo Does the moveit collision/distance API provide minimum
+       separation distances?
+       
+       \param[out] link_point point on the link, in global
+       coordinates, that is closest to the obstacle (in case of
+       positive return value) or which would have to move the minimum
+       amount (in case of negative return value). In case of multiple
+       such points, a (hopefully) reasonable one will be selected.
+       
+       \param[out] obstacle_point point on the obstacle, in global
+       coordinates, that is the returned distance away from \p
+       link_point. As for the latter, a reasonable choice is made when
+       there is more than one such point.
+    */
+    virtual double computeMinimumSeparation(size_t link,
+					    Vector & link_point,
+					    Vector & obstacle_point) const = 0;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_DISTANCE_MODEL_HPP

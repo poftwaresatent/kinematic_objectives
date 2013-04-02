@@ -34,38 +34,40 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP
+#define KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP
 
-#include <kinematic_objectives/objective.h>
-
+#include <kinematic_objectives/kinematic_objectives.h>
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
-  {
-  public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
-    
-    virtual void init(KinematicModel const & model);
-    
-    virtual void update(KinematicModel const & model);
-    
-    virtual bool isActive() const;
-    
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
-  };
+  void pseudo_inverse_nonsingular(Matrix const & mx,
+				  Matrix & inv);
+  
+  void pseudo_inverse_moore_penrose(Matrix const & mx,
+				    Matrix & inv,
+				    Matrix * dproj = 0,
+				    Vector * sigma = 0);
+  
+  void pseudo_inverse_damped(Matrix const & mx,
+			     double lambda,
+			     Matrix & inv);
+  
+  /**
+     Uses the scheme in [Baerlocher 2001] to determine damping factor
+     lambda based on the smallest sigma and the given d_damp
+     parameter. See equations (4.17) and figure 4.7. He computes
+     d_damp as dx.norm()/b_max where b_max is a fixed parameter.
+  */
+  void pseudo_inverse_baerlocher(Matrix const & mx,
+				 double d_damp,
+				 Matrix & inv,
+				 Matrix & bias_projector,
+				 Matrix * dbgU,
+				 Vector * dbgsigma,
+				 Matrix * dbgV,
+				 Vector * dbgdamping);
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP

@@ -34,61 +34,90 @@
 
 /* Author: Roland Philippsen */
 
-#include "point_mindist_constraint.hpp"
+#include <kinematic_objectives/point_attraction_objective.h>
 #include <kinematic_objectives/kinematic_model.h>
 
 
 namespace kinematic_objectives {
   
   
-  PointMindistConstraint::
-  PointMindistConstraint(size_t node,
-			 double px,
-			 double py,
-			 double pz,
-			 double mindist)
-    : mindist_(mindist),
-      node_(node),
-      point_(3)
+  PointAttractionObjective::
+  PointAttractionObjective(size_t node,
+		  double gain,
+		  double distance)
   {
-    point_ << px, py, pz;
-    bias_ = Vector::Zero(1);
-    obstacle_.resize(0);
+    construct(node, Vector::Zero(3), gain, distance);
   }
   
   
-  void PointMindistConstraint::
+  PointAttractionObjective::
+  PointAttractionObjective(size_t node,
+		  double px,
+		  double py,
+		  double pz,
+		  double gain,
+		  double distance)
+  {
+    Vector silly(3);
+    silly << px, py, pz;
+    construct(node, silly, gain, distance);
+  }
+  
+  
+  void PointAttractionObjective::
+  construct(size_t node,
+		  Vector const & point,
+		  double gain,
+		  double distance)
+  {
+    gain_ = gain;
+    distance_ = distance;
+    node_ = node;
+    point_ = point;
+    attractor_.resize(0);
+  }
+  
+  
+  void PointAttractionObjective::
   init(KinematicModel const & model)
   {
-    bias_ = Vector::Zero(1);
     gpoint_.resize(point_.size());
     update(model);
   }
   
   
-  void PointMindistConstraint::
+  void PointAttractionObjective::
   update(KinematicModel const & model)
   {
-    if (0 == obstacle_.size()) {
+    if (0 == attractor_.size()) {
       jacobian_.resize(0, 0);
       return;
     }
     gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
-    Vector tmp(gpoint_ - obstacle_);
-    double const dist(tmp.norm());
-    if ((dist >= mindist_) || (dist < 1e-9)){
+    bias_ = attractor_ - gpoint_;
+    double const dist(bias_.norm());
+    if (dist < 1e-9) {
       jacobian_.resize(0, 0);
       return;
     }
-    tmp /= dist;
-    jacobian_
-      = tmp.transpose()
-      * model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
-    bias_[0] = mindist_ - dist;
+    if (distance_ < 0.0) {
+      // no saturation
+      bias_ *= - gain_ / distance_;
+    }
+    else {
+      // saturate at the given distance
+      if (dist < distance_) {
+	bias_ *= gain_ / distance_;
+      }
+      else {
+	bias_ *= gain_ / dist;
+      }
+    }
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }
   
   
-  bool PointMindistConstraint::
+  bool PointAttractionObjective::
   isActive() const
   {
     return jacobian_.rows() > 0;

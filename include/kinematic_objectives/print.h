@@ -34,38 +34,27 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_PRINT_HPP
+#define KINEMATIC_OBJECTIVES_PRINT_HPP
 
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/kinematic_objectives.h>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
-  {
-  public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
-    
-    virtual void init(KinematicModel const & model);
-    
-    virtual void update(KinematicModel const & model);
-    
-    virtual bool isActive() const;
-    
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
-  };
+  using namespace std;
+  
+  string pstring(double vv);
+  string pstring(Vector const & vv);
+  string pstring(Matrix const & mm, string const & prefix);
+  
+  void print(Vector const & vv, ostream & os,
+	     string const & title, string const & prefix, bool nonl = false);
+  
+  void print(Matrix const & mm, ostream & os,
+	     string const & title, string const & prefix,
+	     bool vecmode = false, bool nonl = false);
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_PRINT_HPP

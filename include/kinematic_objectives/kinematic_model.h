@@ -34,38 +34,26 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP
+#define KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP
 
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/kinematic_objectives.h>
+#include <vector>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
+  
+  class KinematicModel
   {
   public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
-    
-    virtual void init(KinematicModel const & model);
-    
-    virtual void update(KinematicModel const & model);
-    
-    virtual bool isActive() const;
-    
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
+    virtual void update(Vector const & position, Vector const & velocity) = 0;
+    virtual Vector const & getJointPosition() const = 0;
+    virtual Vector const & getJointVelocity() const = 0;
+    virtual Transform getLinkFrame(size_t node) const = 0;
+    virtual Matrix getLinkJacobian(size_t node, Vector const & gpoint) const = 0;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP

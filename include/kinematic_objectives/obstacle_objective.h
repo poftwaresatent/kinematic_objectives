@@ -34,24 +34,24 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_OBSTACLE_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_OBSTACLE_OBJECTIVE_HPP
 
 #include <kinematic_objectives/objective.h>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
+  class DistanceAPI;
+  
+  
+  class ObstacleObjective
     : public Objective
   {
   public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
+    ObstacleObjective(DistanceAPI const & distance_api,
+		       size_t node,
+		       double mindist);
     
     virtual void init(KinematicModel const & model);
     
@@ -59,13 +59,13 @@ namespace kinematic_objectives {
     
     virtual bool isActive() const;
     
-    double mindist_;
+    DistanceAPI const & distance_api_;
     size_t node_;
-    Vector point_;
+    double mindist_;
     Vector gpoint_;
     Vector obstacle_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_OBSTACLE_OBJECTIVE_HPP

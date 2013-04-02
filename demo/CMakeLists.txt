@@ -7,7 +7,7 @@ if (COMMAND cmake_policy)
   endif (POLICY CMP0011)
 endif (COMMAND cmake_policy)
 
-project (kinematic_objectives)
+project (kinematic_elastic)
 
 set (CMAKE_VERBOSE_MAKEFILE ON)
 if (NOT BUILD_SHARED_LIBS)
@@ -80,22 +80,38 @@ else (HAVE_EIGEN3)
   message (FATAL_ERROR "Please install Eigen3 or set the EIGEN3_DIR variable to tell me where to find it.")
 endif (HAVE_EIGEN3)
 
+find_package(GTK2 REQUIRED gtk)
+if (GTK2_FOUND)
+  message ("*** found GTK2 (required)")
+  include_directories (${GTK2_INCLUDE_DIRS})
+else (GTK2_FOUND)
+  message (FATAL_ERROR "Please install GTK2 development files (or tweak build sys to skip GTK-dependent stuff).")
+endif (GTK2_FOUND)
+
 list (APPEND SRCS
-  src/kinematic_objectives.cpp
-  src/objective.cpp
-  src/kinematic_model.cpp
-  src/compound_objective.cpp
-  src/blender.cpp
-  src/joint_limit_objective.cpp
-  point_mindist_constraint.cpp
-  src/obstacle_objective.cpp
-  src/point_attraction_objective.cpp
-  src/point_repulsion_objective.cpp
-  src/link_position_control.cpp
-  src/joint_position_control.cpp
-  posture_damping.cpp
+  src/kinematic_elastic.cpp
+  src/task.cpp
+  src/model.cpp
+  src/waypoint.cpp
+  src/elastic.cpp
+  src/joint_limit_constraint.cpp
+  src/point_mindist_constraint.cpp
+  src/obstacle_constraint.cpp
+  src/point_attraction.cpp
+  src/point_repulsion.cpp
+  src/position_control.cpp
+  src/posture_control.cpp
+  src/posture_damping.cpp
   src/pseudo_inverse.cpp
   src/print.cpp
+  src/example_waypoints.cpp
+  src/example_robot.cpp
+  src/example_orientation_control.cpp
+  src/example_interactive_elastic.cpp
+  src/example_distance_api.cpp
   )
 
-add_library (kinematic_objectives SHARED ${SRCS})
+add_library (kinematic_elastic SHARED ${SRCS})
+
+add_executable (elastic_gtk elastic_gtk.cpp)
+target_link_libraries (elastic_gtk kinematic_elastic ${GTK2_LIBRARIES})

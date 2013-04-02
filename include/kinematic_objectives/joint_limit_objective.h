@@ -34,38 +34,45 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_JOINT_LIMIT_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_JOINT_LIMIT_OBJECTIVE_HPP
 
 #include <kinematic_objectives/objective.h>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
+  class JointLimitObjective
     : public Objective
   {
   public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
+    void init(size_t ndof);
     
-    virtual void init(KinematicModel const & model);
-    
+    /**
+       For every joint that lies outside hard joint limits, create a
+       objective dimension that brings it back to the corresponding soft
+       limit. All such dimensions are stacked into our ObjectiveData
+       fields. Furthermore, the list of violating joint indices is
+       placed in locked_joints_. If there are no joints that violate
+       their hard joint limits, the objective and locked list will be
+       empty.
+    */
     virtual void update(KinematicModel const & model);
     
     virtual bool isActive() const;
     
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
+    /**
+       Nx4 matrix, one row per joint, where
+       - col[0] is the lower hard limit
+       - col[1] is the lower soft limit
+       - col[2] is the upper soft limit
+       - col[3] is the upper hard limit
+    */
+    Matrix limits_;
+    
+    vector<size_t> locked_joints_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_JOINT_LIMIT_OBJECTIVE_HPP

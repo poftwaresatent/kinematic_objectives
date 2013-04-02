@@ -34,38 +34,34 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/joint_position_objective.h>
+#include <kinematic_objectives/kinematic_model.h>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
+  
+  JointPositionObjective::
+  JointPositionObjective()
+    : kp_(25.0),
+      kd_(10.0)
   {
-  public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
-    
-    virtual void init(KinematicModel const & model);
-    
-    virtual void update(KinematicModel const & model);
-    
-    virtual bool isActive() const;
-    
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
-  };
+  }
+  
+  
+  void JointPositionObjective::
+  init(KinematicModel const & model)
+  {
+    goal_ = model.getJointPosition();
+    bias_ = Vector::Zero(goal_.size());
+    jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
+  }
+  
+  
+  void JointPositionObjective::
+  update(KinematicModel const & model)
+  {
+    bias_ = kp_ * (goal_ - model.getJointPosition()) - kd_ * model.getJointVelocity();
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP

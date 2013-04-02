@@ -34,38 +34,69 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/joint_limit_objective.h>
+#include <kinematic_objectives/kinematic_model.h>
+#include <limits>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
+  
+  void JointLimitObjective::
+  init(size_t ndof)
   {
-  public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
+    limits_.resize(ndof, 4);
+    for (size_t ii(0); ii < ndof; ++ii) {
+      size_t jj(0);
+      for (; jj < 2; ++jj) {
+	limits_(ii, jj) = -numeric_limits<double>::max();
+      }
+      for (; jj < 4; ++jj) {
+	limits_(ii, jj) =  numeric_limits<double>::max();
+      }
+    }
+    locked_joints_.clear();
+    bias_.resize(0);
+    jacobian_.resize(0, 0);
+  }
+  
+  
+  void JointLimitObjective::
+  update(KinematicModel const & model)
+  {
+    Vector const & position(model.getJointPosition());
+    Vector const & velocity(model.getJointVelocity());
+    vector<double> delta;
+    locked_joints_.clear();
     
-    virtual void init(KinematicModel const & model);
+    for (ssize_t ii(0); ii < position.size(); ++ii) {
+      if ((position[ii] < limits_(ii, 0)) // violates lower hard limit
+	  || ((position[ii] < limits_(ii, 1)) // or is closing on it
+	      && (velocity[ii] < -1e-3))) {
+	locked_joints_.push_back(ii);
+	delta.push_back(limits_(ii, 0) - position[ii]);
+      }
+      else if ((position[ii] > limits_(ii, 3)) // violates hard limit
+	       || ((position[ii] > limits_(ii, 2)) // or is closing on it
+		   && (velocity[ii] > 1e-3))) {
+	locked_joints_.push_back(ii);
+	delta.push_back(limits_(ii, 3) - position[ii]);
+      }
+    }
     
-    virtual void update(KinematicModel const & model);
-    
-    virtual bool isActive() const;
-    
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
-  };
+    bias_ = Vector::Map(&delta[0], delta.size());
+    jacobian_ = Matrix::Zero(delta.size(), position.size());
+    for (size_t ii(0); ii < delta.size(); ++ii) {
+      jacobian_(ii, locked_joints_[ii]) = 1.0;
+    }
+  }
+  
+  
+  bool JointLimitObjective::
+  isActive()
+    const
+  {
+    return ! locked_joints_.empty();
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP

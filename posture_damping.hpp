@@ -37,7 +37,7 @@
 #ifndef KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP
 #define KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP
 
-#include "objective.hpp"
+#include <kinematic_objectives/objective.h>
 
 
 namespace kinematic_objectives {

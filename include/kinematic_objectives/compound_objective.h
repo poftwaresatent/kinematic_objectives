@@ -34,64 +34,37 @@
 
 /* Author: Roland Philippsen */
 
-#include "point_mindist_constraint.hpp"
-#include <kinematic_objectives/kinematic_model.h>
+#ifndef KINEMATIC_OBJECTIVES_WAYPOINT_HPP
+#define KINEMATIC_OBJECTIVES_WAYPOINT_HPP
+
+#include <kinematic_objectives/kinematic_objectives.h>
 
 
 namespace kinematic_objectives {
   
+  class KinematicModel;
+  class Objective;
   
-  PointMindistConstraint::
-  PointMindistConstraint(size_t node,
-			 double px,
-			 double py,
-			 double pz,
-			 double mindist)
-    : mindist_(mindist),
-      node_(node),
-      point_(3)
+  
+  class CompoundObjective
   {
-    point_ << px, py, pz;
-    bias_ = Vector::Zero(1);
-    obstacle_.resize(0);
-  }
+  public:
+    explicit CompoundObjective(KinematicModel & model);
+    
+    virtual ~CompoundObjective();
+    
+    virtual void init(Vector const & position, Vector const & velocity);
+    
+    virtual void preUpdateHook() = 0; // rfct
+    
+    //// XXXX make this protected or something...
+    KinematicModel & model_;
+    
+    vector<Objective *> constraints_;
+    vector<Objective *> hard_objectives_;
+    vector<Objective *> soft_objectives_;
+  };  
   
-  
-  void PointMindistConstraint::
-  init(KinematicModel const & model)
-  {
-    bias_ = Vector::Zero(1);
-    gpoint_.resize(point_.size());
-    update(model);
-  }
-  
-  
-  void PointMindistConstraint::
-  update(KinematicModel const & model)
-  {
-    if (0 == obstacle_.size()) {
-      jacobian_.resize(0, 0);
-      return;
-    }
-    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
-    Vector tmp(gpoint_ - obstacle_);
-    double const dist(tmp.norm());
-    if ((dist >= mindist_) || (dist < 1e-9)){
-      jacobian_.resize(0, 0);
-      return;
-    }
-    tmp /= dist;
-    jacobian_
-      = tmp.transpose()
-      * model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
-    bias_[0] = mindist_ - dist;
-  }
-  
-  
-  bool PointMindistConstraint::
-  isActive() const
-  {
-    return jacobian_.rows() > 0;
-  }
-
 }
+
+#endif // KINEMATIC_OBJECTIVES_WAYPOINT_HPP

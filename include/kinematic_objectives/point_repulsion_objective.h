@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_POINT_REPULSION_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_POINT_REPULSION_OBJECTIVE_HPP
 
 #include <kinematic_objectives/objective.h>
 
@@ -43,15 +43,26 @@
 namespace kinematic_objectives {
   
 
-  class PointMindistConstraint
+  class PointRepulsionObjective
     : public Objective
   {
+  protected:
+    void construct(size_t node,
+		   Vector const & point,
+		   double gain,
+		   double distance);
+    
   public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
+    PointRepulsionObjective(size_t node,
+			    double gain,
+			    double distance);
+    
+    PointRepulsionObjective(size_t node,
+			    double px,
+			    double py,
+			    double pz,
+			    double gain,
+			    double distance);
     
     virtual void init(KinematicModel const & model);
     
@@ -59,13 +70,14 @@ namespace kinematic_objectives {
     
     virtual bool isActive() const;
     
-    double mindist_;
+    double gain_;
+    double distance_;
     size_t node_;
     Vector point_;
     Vector gpoint_;
-    Vector obstacle_;
+    Vector repulsor_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_POINT_REPULSION_OBJECTIVE_HPP

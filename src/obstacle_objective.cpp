@@ -34,61 +34,51 @@
 
 /* Author: Roland Philippsen */
 
-#include "point_mindist_constraint.hpp"
+#include <kinematic_objectives/obstacle_objective.h>
 #include <kinematic_objectives/kinematic_model.h>
+#include <kinematic_objectives/distance_model.h>
 
 
 namespace kinematic_objectives {
   
   
-  PointMindistConstraint::
-  PointMindistConstraint(size_t node,
-			 double px,
-			 double py,
-			 double pz,
-			 double mindist)
-    : mindist_(mindist),
+  ObstacleObjective::
+  ObstacleObjective(DistanceAPI const & distance_api,
+		     size_t node,
+		     double mindist)
+    : distance_api_(distance_api),
       node_(node),
-      point_(3)
+      mindist_(mindist)
   {
-    point_ << px, py, pz;
-    bias_ = Vector::Zero(1);
-    obstacle_.resize(0);
   }
   
   
-  void PointMindistConstraint::
+  void ObstacleObjective::
   init(KinematicModel const & model)
   {
     bias_ = Vector::Zero(1);
-    gpoint_.resize(point_.size());
-    update(model);
+    jacobian_.resize(0, 0);
   }
   
   
-  void PointMindistConstraint::
+  void ObstacleObjective::
   update(KinematicModel const & model)
   {
-    if (0 == obstacle_.size()) {
+    double const dist(distance_api_.computeMinimumSeparation(node_, gpoint_, obstacle_));
+    if (dist >= mindist_) {
       jacobian_.resize(0, 0);
       return;
     }
-    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
     Vector tmp(gpoint_ - obstacle_);
-    double const dist(tmp.norm());
-    if ((dist >= mindist_) || (dist < 1e-9)){
-      jacobian_.resize(0, 0);
-      return;
-    }
     tmp /= dist;
     jacobian_
       = tmp.transpose()
-      * model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
+      * model.getLinkJacobian(node_, obstacle_).block(0, 0, 3, model.getJointPosition().size());
     bias_[0] = mindist_ - dist;
   }
   
   
-  bool PointMindistConstraint::
+  bool ObstacleObjective::
   isActive() const
   {
     return jacobian_.rows() > 0;

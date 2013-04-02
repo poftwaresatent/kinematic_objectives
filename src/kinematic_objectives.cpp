@@ -34,38 +34,29 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
-
-#include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/kinematic_objectives.h>
 
 
 namespace kinematic_objectives {
   
-
-  class PointMindistConstraint
-    : public Objective
+  
+  void stackVector (Vector const & v1,
+		    Vector const & v2,
+		    Vector & vv)
   {
-  public:
-    PointMindistConstraint(size_t node,
-			   double px,
-			   double py,
-			   double pz,
-			   double mindist);
-    
-    virtual void init(KinematicModel const & model);
-    
-    virtual void update(KinematicModel const & model);
-    
-    virtual bool isActive() const;
-    
-    double mindist_;
-    size_t node_;
-    Vector point_;
-    Vector gpoint_;
-    Vector obstacle_;
-  };
+    vv.resize(v1.size() + v2.size());
+    vv.block(0,         0, v1.size(), 1) = v1;
+    vv.block(v1.size(), 0, v2.size(), 1) = v2;
+  }
+  
+  
+  void stackMatrix (Matrix const & m1,
+		    Matrix const & m2,
+		    Matrix & mm)
+  {
+    mm.resize(m1.rows() + m2.rows(), m1.cols());
+    mm.block(0, 0, m1.rows(), m1.cols()) = m1;
+    mm.block(m1.rows(), 0, m2.rows(), m2.cols()) = m2;
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP

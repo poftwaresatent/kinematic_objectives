@@ -34,64 +34,44 @@
 
 /* Author: Roland Philippsen */
 
-#include "point_mindist_constraint.hpp"
+#include <kinematic_objectives/link_position_objective.h>
 #include <kinematic_objectives/kinematic_model.h>
 
 
 namespace kinematic_objectives {
   
-  
-  PointMindistConstraint::
-  PointMindistConstraint(size_t node,
-			 double px,
-			 double py,
-			 double pz,
-			 double mindist)
-    : mindist_(mindist),
+  LinkPositionObjective::
+  LinkPositionObjective(size_t node,
+		  double px,
+		  double py,
+		  double pz,
+		  double kp,
+		  double kd)
+    : kp_(kp),
+      kd_(kd),
       node_(node),
       point_(3)
   {
     point_ << px, py, pz;
-    bias_ = Vector::Zero(1);
-    obstacle_.resize(0);
   }
   
   
-  void PointMindistConstraint::
+  void LinkPositionObjective::
   init(KinematicModel const & model)
   {
-    bias_ = Vector::Zero(1);
-    gpoint_.resize(point_.size());
-    update(model);
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
+    goal_ = gpoint_;
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
+    bias_ = Vector::Zero(point_.size());
   }
   
   
-  void PointMindistConstraint::
+  void LinkPositionObjective::
   update(KinematicModel const & model)
   {
-    if (0 == obstacle_.size()) {
-      jacobian_.resize(0, 0);
-      return;
-    }
     gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
-    Vector tmp(gpoint_ - obstacle_);
-    double const dist(tmp.norm());
-    if ((dist >= mindist_) || (dist < 1e-9)){
-      jacobian_.resize(0, 0);
-      return;
-    }
-    tmp /= dist;
-    jacobian_
-      = tmp.transpose()
-      * model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
-    bias_[0] = mindist_ - dist;
-  }
-  
-  
-  bool PointMindistConstraint::
-  isActive() const
-  {
-    return jacobian_.rows() > 0;
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
+    bias_ = kp_ * (goal_ - gpoint_) - kd_ * jacobian_ * model.getJointVelocity();
   }
 
 }
