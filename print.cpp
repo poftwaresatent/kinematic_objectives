@@ -40,7 +40,7 @@
 #include <stdio.h>
 
 
-namespace kinematic_elastic {  
+namespace kinematic_objectives {  
   
   
   string pstring(Vector const & vv)

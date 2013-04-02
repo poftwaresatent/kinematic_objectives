@@ -34,17 +34,17 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_POINT_MINDIST_CONSTRAINT_HPP
-#define KINEMATIC_ELASTIC_POINT_MINDIST_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
+#define KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP
 
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
 
   class PointMindistConstraint
-    : public Task
+    : public Objective
   {
   public:
     PointMindistConstraint(size_t node,
@@ -53,9 +53,9 @@ namespace kinematic_elastic {
 			   double pz,
 			   double mindist);
     
-    virtual void init(Model const & model);
+    virtual void init(KinematicModel const & model);
     
-    virtual void update(Model const & model);
+    virtual void update(KinematicModel const & model);
     
     virtual bool isActive() const;
     
@@ -68,4 +68,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_POINT_MINDIST_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_POINT_MINDIST_CONSTRAINT_HPP

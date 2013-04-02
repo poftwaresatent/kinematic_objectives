@@ -34,27 +34,27 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_POSITION_CONTROL_HPP
-#define KINEMATIC_ELASTIC_POSITION_CONTROL_HPP
+#ifndef KINEMATIC_OBJECTIVES_LINK_POSITION_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_LINK_POSITION_OBJECTIVE_HPP
 
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
-  class PositionControl
-    : public Task
+  class LinkPositionObjective
+    : public Objective
   {
   public:
-    PositionControl(size_t node,
+    LinkPositionObjective(size_t node,
 		    double px,
 		    double py,
 		    double pz,
 		    double kp,
 		    double kd);
     
-    virtual void init(Model const & model);
-    virtual void update(Model const & model);
+    virtual void init(KinematicModel const & model);
+    virtual void update(KinematicModel const & model);
     
     double kp_;
     double kd_;
@@ -66,4 +66,4 @@ namespace kinematic_elastic {
 
 }
 
-#endif // KINEMATIC_ELASTIC_POSITION_CONTROL_HPP
+#endif // KINEMATIC_OBJECTIVES_LINK_POSITION_OBJECTIVE_HPP

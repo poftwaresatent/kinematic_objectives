@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_HPP
-#define KINEMATIC_ELASTIC_HPP
+#ifndef KINEMATIC_OBJECTIVES_HPP
+#define KINEMATIC_OBJECTIVES_HPP
 
 #include <Eigen/Core>
 #include <Eigen/StdVector>
@@ -43,7 +43,7 @@
 #include <cmath>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   typedef Eigen::VectorXd Vector;
   typedef Eigen::MatrixXd Matrix;
@@ -88,4 +88,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_HPP
+#endif // KINEMATIC_OBJECTIVES_HPP

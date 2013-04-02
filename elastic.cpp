@@ -34,25 +34,25 @@
 
 /* Author: Roland Philippsen */
 
-#include "elastic.hpp"
-#include "waypoint.hpp"
+#include "blender.hpp"
+#include "compound.hpp"
 #include "model.hpp"
 #include "pseudo_inverse.hpp"
 #include "print.hpp"
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
   static void perform_prioritization(Matrix const & N_init,
-				     vector<Task*> const & tasks,
-				     Vector & delta_res,
+				     vector<Objective*> const & objectives,
+				     Vector & bias_res,
 				     Matrix & N_res,
 				     ostream * dbgos,
 				     string const & dbgpre)
   {
-    delta_res = Vector::Zero(N_init.rows());
+    bias_res = Vector::Zero(N_init.rows());
     N_res = N_init;
     
     Matrix Jbinv;
@@ -71,33 +71,33 @@ namespace kinematic_elastic {
       print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
     }
     
-    for (size_t ii(0); ii < tasks.size(); ++ii) {
+    for (size_t ii(0); ii < objectives.size(); ++ii) {
       
-      if ( ! tasks[ii]->isActive()) {
+      if ( ! objectives[ii]->isActive()) {
 	if (dbgos) {
-	  *dbgos << dbgpre << "task " << ii << " is INACTIVE\n";
+	  *dbgos << dbgpre << "objective " << ii << " is INACTIVE\n";
 	}	
 	continue;
       }
       
       if (dbgos) {
-	*dbgos << dbgpre << "task " << ii << ":\n";
+	*dbgos << dbgpre << "objective " << ii << ":\n";
 	string pre (dbgpre);
 	pre += "  ";
-	print(tasks[ii]->delta_, *dbgos, "task delta", pre);
-	print(tasks[ii]->Jacobian_, *dbgos, "task Jacobian", pre);
+	print(objectives[ii]->bias_, *dbgos, "objective delta", pre);
+	print(objectives[ii]->jacobian_, *dbgos, "objective Jacobian", pre);
 	Eigen::JacobiSVD<Matrix> svd;
-	svd.compute(tasks[ii]->Jacobian_, Eigen::ComputeThinU | Eigen::ComputeThinV);
-	print(svd.singularValues(), *dbgos, "eigenvalues of task Jacobian", pre);
+	svd.compute(objectives[ii]->jacobian_, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	print(svd.singularValues(), *dbgos, "eigenvalues of objective Jacobian", pre);
 	Vector vtmp;
-	vtmp = tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res;
-	print(vtmp, *dbgos, "delta_comp", pre);
+	vtmp = objectives[ii]->bias_ - objectives[ii]->jacobian_ * bias_res;
+	print(vtmp, *dbgos, "bias_comp", pre);
 	Matrix mtmp;
-	mtmp = tasks[ii]->Jacobian_ * N_res;
+	mtmp = objectives[ii]->jacobian_ * N_res;
 	print(mtmp, *dbgos, "J_bar", pre);
       }
       
-      pseudo_inverse_moore_penrose(tasks[ii]->Jacobian_ * N_res, Jbinv, &Nup, dbgsigma);
+      pseudo_inverse_moore_penrose(objectives[ii]->jacobian_ * N_res, Jbinv, &Nup, dbgsigma);
       
       if (dbgos) {
         string pre (dbgpre);
@@ -106,15 +106,15 @@ namespace kinematic_elastic {
 	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
 	print(Nup, *dbgos, "nullspace update", pre);
 	Vector vtmp;
-        vtmp = Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
+        vtmp = Jbinv * (objectives[ii]->bias_ - objectives[ii]->jacobian_ * bias_res);
 	print(vtmp, *dbgos, "delta update", pre);
-        vtmp = tasks[ii]->Jacobian_ * vtmp;
-	print(vtmp, *dbgos, "biased task update", pre);
-        vtmp = tasks[ii]->Jacobian_ * Jbinv * tasks[ii]->delta_;
-	print(vtmp, *dbgos, "unbiased task update", pre);
+        vtmp = objectives[ii]->jacobian_ * vtmp;
+	print(vtmp, *dbgos, "biased objective update", pre);
+        vtmp = objectives[ii]->jacobian_ * Jbinv * objectives[ii]->bias_;
+	print(vtmp, *dbgos, "unbiased objective update", pre);
       }
       
-      delta_res += Jbinv * (tasks[ii]->delta_ - tasks[ii]->Jacobian_ * delta_res);
+      bias_res += Jbinv * (objectives[ii]->bias_ - objectives[ii]->jacobian_ * bias_res);
       
       if (Nup.cols() == 0) {
 	if (dbgos) {
@@ -128,7 +128,7 @@ namespace kinematic_elastic {
       if (dbgos) {
         string pre (dbgpre);
         pre += "  ";
-	print(delta_res, *dbgos, "accumulated delta", pre);
+	print(bias_res, *dbgos, "accumulated delta", pre);
 	print(N_res, *dbgos, "accumulated nullspace", pre);
 	Eigen::JacobiSVD<Matrix> svd;
 	svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -149,8 +149,8 @@ namespace kinematic_elastic {
   }
   
   
-  Elastic::
-  Elastic(double timestep, ostream * dbgos, string const & dbgpre)
+  Blender::
+  Blender(double timestep, ostream * dbgos, string const & dbgpre)
     : dbgos_(dbgos),
       dbgpre_(dbgpre),
       dbgpre2_(dbgpre + "  "),
@@ -159,14 +159,14 @@ namespace kinematic_elastic {
   }
   
   
-  Elastic::
-  ~Elastic()
+  Blender::
+  ~Blender()
   {
     clear();
   }
   
   
-  void Elastic::
+  void Blender::
   clear()
   {
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
@@ -176,7 +176,7 @@ namespace kinematic_elastic {
   }
   
   
-  void Elastic::
+  void Blender::
   update()
   {
     if (dbgos_) {
@@ -184,25 +184,25 @@ namespace kinematic_elastic {
 	      << dbgpre_ << "**************************************************\n";
     }
     for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      updateWaypoint(*ii);
+      updateCompoundObjective(*ii);
     }
   }
   
   
-  void Elastic::
-  updateWaypoint(Waypoint * wpt)
+  void Blender::
+  updateCompoundObjective(CompoundObjective * wpt)
   {
     wpt->preUpdateHook();
     
     if (dbgos_) {
       *dbgos_ << dbgpre_ << "==================================================\n"
-	      << dbgpre_ << "Elastic::updateWaypoint()\n";
-      print(wpt->model_.getPosition(), *dbgos_, "current position", dbgpre2_);
-      print(wpt->model_.getVelocity(), *dbgos_, "current velocity", dbgpre2_);
+	      << dbgpre_ << "Blender::updateCompoundObjective()\n";
+      print(wpt->model_.getJointPosition(), *dbgos_, "current position", dbgpre2_);
+      print(wpt->model_.getJointVelocity(), *dbgos_, "current velocity", dbgpre2_);
     }
     
-    for (size_t ii(0); ii < wpt->tasks_.size(); ++ii) {
-      wpt->tasks_[ii]->update(wpt->model_);
+    for (size_t ii(0); ii < wpt->objectives_.size(); ++ii) {
+      wpt->objectives_[ii]->update(wpt->model_);
     }
     for (size_t ii(0); ii < wpt->objectives_.size(); ++ii) {
       wpt->objectives_[ii]->update(wpt->model_);
@@ -213,28 +213,28 @@ namespace kinematic_elastic {
 	      << dbgpre_ << "trying without constraints first\n";
     }
     
-    ssize_t const ndof(wpt->model_.getPosition().size());
+    ssize_t const ndof(wpt->model_.getJointPosition().size());
     Vector qdd_t;
     Matrix N_t;
     perform_prioritization(Matrix::Identity(ndof, ndof),
-			   wpt->tasks_,
+			   wpt->objectives_,
 			   qdd_t,
 			   N_t,
 			   dbgos_,
-			   dbgpre_ + "task   ");
+			   dbgpre_ + "objective   ");
     
-    Vector qdd_o(Vector::Zero(wpt->model_.getPosition().size()));
+    Vector qdd_o(Vector::Zero(wpt->model_.getJointPosition().size()));
     for (size_t ii(0); ii < wpt->objectives_.size(); ++ii) {
       if (wpt->objectives_[ii]->isActive()) {
 	Matrix Jinv;
-	pseudo_inverse_moore_penrose(wpt->objectives_[ii]->Jacobian_, Jinv);
-	qdd_o += Jinv * wpt->objectives_[ii]->delta_;
+	pseudo_inverse_moore_penrose(wpt->objectives_[ii]->jacobian_, Jinv);
+	qdd_o += Jinv * wpt->objectives_[ii]->bias_;
       }
     }
     
     Vector qdd_res(qdd_t + N_t * qdd_o);
-    Vector qd_res(wpt->model_.getVelocity() + timestep_ * qdd_res);
-    Vector q_res(wpt->model_.getPosition() + timestep_ * qd_res);
+    Vector qd_res(wpt->model_.getJointVelocity() + timestep_ * qdd_res);
+    Vector q_res(wpt->model_.getJointPosition() + timestep_ * qd_res);
     
     if (dbgos_) {
       print(qdd_res, *dbgos_, "unconstrained acceleration", dbgpre2_);
@@ -242,8 +242,8 @@ namespace kinematic_elastic {
       print(q_res, *dbgos_, "resulting unconstrained position", dbgpre2_);
     }
     
-    Vector const oldpos(wpt->model_.getPosition()); // will need this in case of constraints
-    Vector const oldvel(wpt->model_.getVelocity()); // will need this in case of constraints
+    Vector const oldpos(wpt->model_.getJointPosition()); // will need this in case of constraints
+    Vector const oldvel(wpt->model_.getJointVelocity()); // will need this in case of constraints
     wpt->model_.update(q_res, qd_res);
     
     bool need_constraints(false);
@@ -284,7 +284,7 @@ namespace kinematic_elastic {
     //
     // Semi-open question: after repairing the position and velocity
     // to something consistent with the constraints, do we then then
-    // re-run the tasks and objectives? I think yes, to give tasks a
+    // re-run the objectives and objectives? I think yes, to give objectives a
     // chance to get fulfilled within the constraints. But that does
     // not seem to work quite yet...
     //
@@ -305,38 +305,38 @@ namespace kinematic_elastic {
     if (dbgos_) {
       print(dq_c, *dbgos_, "position correction to satisfy constraints", dbgpre2_);
       print(N_c, *dbgos_, "nullspace of constrains", dbgpre2_);
-      print(wpt->model_.getVelocity(), *dbgos_, "resulting constrained velocity", dbgpre2_);
-      print(wpt->model_.getPosition(), *dbgos_, "resulting constrained position", dbgpre2_);
+      print(wpt->model_.getJointVelocity(), *dbgos_, "resulting constrained velocity", dbgpre2_);
+      print(wpt->model_.getJointPosition(), *dbgos_, "resulting constrained position", dbgpre2_);
     }
     
-    for (size_t ii(0); ii < wpt->tasks_.size(); ++ii) {
-      wpt->tasks_[ii]->update(wpt->model_);
+    for (size_t ii(0); ii < wpt->objectives_.size(); ++ii) {
+      wpt->objectives_[ii]->update(wpt->model_);
     }
     for (size_t ii(0); ii < wpt->objectives_.size(); ++ii) {
       wpt->objectives_[ii]->update(wpt->model_);
     }
     
-    // Re-run task priority scheme, but seed it with the constraint nullspace this time.
+    // Re-run objective priority scheme, but seed it with the constraint nullspace this time.
     
     perform_prioritization(N_c,
-			   wpt->tasks_,
+			   wpt->objectives_,
 			   qdd_t,
 			   N_t,
 			   dbgos_,
-			   dbgpre_ + "task   ");
+			   dbgpre_ + "objective   ");
     
-    qdd_o = Vector::Zero(wpt->model_.getPosition().size());
+    qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
     for (size_t ii(0); ii < wpt->objectives_.size(); ++ii) {
       if (wpt->objectives_[ii]->isActive()) {
 	Matrix Jinv;
-	pseudo_inverse_moore_penrose(wpt->objectives_[ii]->Jacobian_, Jinv);
-	qdd_o += Jinv * wpt->objectives_[ii]->delta_;
+	pseudo_inverse_moore_penrose(wpt->objectives_[ii]->jacobian_, Jinv);
+	qdd_o += Jinv * wpt->objectives_[ii]->bias_;
       }
     }
     
     qdd_res = qdd_t + N_t * qdd_o;
-    qd_res = wpt->model_.getVelocity() + timestep_ * qdd_res;
-    q_res = wpt->model_.getPosition() + timestep_ * qd_res;
+    qd_res = wpt->model_.getJointVelocity() + timestep_ * qdd_res;
+    q_res = wpt->model_.getJointPosition() + timestep_ * qd_res;
     
     if (dbgos_) {
       print(qdd_res, *dbgos_, "constrained acceleration", dbgpre2_);

@@ -34,13 +34,13 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_DISTANCE_API_HPP
-#define KINEMATIC_ELASTIC_DISTANCE_API_HPP
+#ifndef KINEMATIC_OBJECTIVES_DISTANCE_MODEL_HPP
+#define KINEMATIC_OBJECTIVES_DISTANCE_MODEL_HPP
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
   class DistanceAPI
@@ -76,4 +76,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_DISTANCE_API_HPP
+#endif // KINEMATIC_OBJECTIVES_DISTANCE_MODEL_HPP

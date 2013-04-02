@@ -34,26 +34,26 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_POSTURE_DAMPING_HPP
-#define KINEMATIC_ELASTIC_POSTURE_DAMPING_HPP
+#ifndef KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP
+#define KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP
 
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   class PostureDamping
-    : public Task
+    : public Objective
   {
   public:
     explicit PostureDamping(double gain);
     
-    virtual void init(Model const & model);
-    virtual void update(Model const & model);
+    virtual void init(KinematicModel const & model);
+    virtual void update(KinematicModel const & model);
     
     double gain_;
   };
 
 }
 
-#endif // KINEMATIC_ELASTIC_POSTURE_DAMPING_HPP
+#endif // KINEMATIC_OBJECTIVES_POSTURE_DAMPING_HPP

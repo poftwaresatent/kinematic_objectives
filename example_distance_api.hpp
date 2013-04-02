@@ -34,17 +34,17 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_DISTANCE_API_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_DISTANCE_API_HPP
+#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_DISTANCE_MODEL_HPP
+#define KINEMATIC_OBJECTIVES_EXAMPLE_DISTANCE_MODEL_HPP
 
 #include "distance_api.hpp"
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   namespace example {
     
     class PlanarRobot;
-    class InteractiveElastic;
+    class InteractiveBlender;
     
     
     class PlanarDistanceAPI
@@ -52,7 +52,7 @@ namespace kinematic_elastic {
     {
     public:
       PlanarDistanceAPI(PlanarRobot const & robot,
-			InteractiveElastic const & elastic);
+			InteractiveBlender const & blender);
       
       /**
 	 Implements DistanceAPI::computeMinimumSeparation().
@@ -66,11 +66,11 @@ namespace kinematic_elastic {
       
     protected:
       PlanarRobot const & robot_;
-      InteractiveElastic const & elastic_;
+      InteractiveBlender const & blender_;
     };
 
   }
 
 }
 
-#endif // KINEMATIC_ELASTIC_EXAMPLE_DISTANCE_API_HPP
+#endif // KINEMATIC_OBJECTIVES_EXAMPLE_DISTANCE_MODEL_HPP

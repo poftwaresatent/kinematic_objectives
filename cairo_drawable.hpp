@@ -34,13 +34,13 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_CAIRO_DRAWABLE_HPP
-#define KINEMATIC_ELASTIC_CAIRO_DRAWABLE_HPP
+#ifndef KINEMATIC_OBJECTIVES_CAIRO_DRAWABLE_HPP
+#define KINEMATIC_OBJECTIVES_CAIRO_DRAWABLE_HPP
 
 #include <cairo/cairo.h>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   class CairoDrawable
   {
@@ -52,4 +52,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_CAIRO_DRAWABLE_HPP
+#endif // KINEMATIC_OBJECTIVES_CAIRO_DRAWABLE_HPP

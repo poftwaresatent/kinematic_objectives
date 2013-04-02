@@ -34,37 +34,37 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_WAYPOINT_HPP
-#define KINEMATIC_ELASTIC_WAYPOINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_COMPOUND_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_COMPOUND_OBJECTIVE_HPP
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
-  class Model;
-  class Task;
+  class KinematicModel;
+  class Objective;
   
   
-  class Waypoint
+  class CompoundObjective
   {
   public:
-    explicit Waypoint(Model & model);
+    explicit CompoundObjective(KinematicModel & model);
     
-    virtual ~Waypoint();
+    virtual ~CompoundObjective();
     
     virtual void init(Vector const & position, Vector const & velocity);
     
     virtual void preUpdateHook() = 0; // rfct
     
     //// XXXX make this protected or something...
-    Model & model_;
+    KinematicModel & model_;
     
-    vector<Task *> constraints_;
-    vector<Task *> tasks_;
-    vector<Task *> objectives_;
+    vector<Objective *> constraints_;
+    vector<Objective *> objectives_;
+    vector<Objective *> objectives_;
   };  
   
 }
 
-#endif // KINEMATIC_ELASTIC_WAYPOINT_HPP
+#endif // KINEMATIC_OBJECTIVES_COMPOUND_OBJECTIVE_HPP

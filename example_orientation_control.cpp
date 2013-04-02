@@ -38,13 +38,13 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   namespace example {
     
     
-    OrientationControl::
-    OrientationControl(size_t node,
+    LinkOrientationObjective::
+    LinkOrientationObjective(size_t node,
 		       double kp,
 		       double kd)
       : kp_(kp),
@@ -54,25 +54,25 @@ namespace kinematic_elastic {
     }
   
   
-    void OrientationControl::
-    init(Model const & model)
+    void LinkOrientationObjective::
+    init(KinematicModel const & model)
     {
-      Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+      Vector const ex(model.getLinkFrame(node_).linear().block(0, 0, 3, 1));
       angle_ = atan2(ex[1], ex[0]);
       goal_ = angle_;
-      delta_ = Vector::Zero(1);
-      Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
+      bias_ = Vector::Zero(1);
+      jacobian_ = model.getLinkJacobian(node_, Vector::Zero(3)).block(5, 0, 1, model.getJointPosition().size());
     }
   
   
-    void OrientationControl::
-    update(Model const & model)
+    void LinkOrientationObjective::
+    update(KinematicModel const & model)
     {
-      Vector const ex(model.frame(node_).linear().block(0, 0, 3, 1));
+      Vector const ex(model.getLinkFrame(node_).linear().block(0, 0, 3, 1));
       angle_ = atan2(ex[1], ex[0]);
-      Jacobian_ = model.computeJxo(node_, Vector::Zero(3)).block(5, 0, 1, model.getPosition().size());
-      delta_[0] = kp_ * (goal_ - angle_);
-      delta_ -= kd_ * Jacobian_ * model.getVelocity();
+      jacobian_ = model.getLinkJacobian(node_, Vector::Zero(3)).block(5, 0, 1, model.getJointPosition().size());
+      bias_[0] = kp_ * (goal_ - angle_);
+      bias_ -= kd_ * jacobian_ * model.getJointVelocity();
     }
 
   }

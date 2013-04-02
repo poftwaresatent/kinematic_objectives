@@ -34,19 +34,19 @@
 
 /* Author: Roland Philippsen */
 
-#include "example_interactive_elastic.hpp"
+#include "example_interactive_blender.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
 
   namespace example {
     
     
-    InteractiveElastic::
-    InteractiveElastic(double timestep,
+    InteractiveBlender::
+    InteractiveBlender(double timestep,
 		       ostream * dbgos,
 		       string const & dbgpre)
-      : Elastic(timestep, dbgos, dbgpre),
+      : Blender(timestep, dbgos, dbgpre),
 	eestart_(0.2, 0.0, 1.0, 0.0, 0.5),
 	eestartori_(0.1, 0.0, 1.0, 0.0, 0.3),
 	z_angle_(0),
@@ -66,24 +66,24 @@ namespace kinematic_elastic {
     }
     
     
-    void InteractiveElastic::
+    void InteractiveBlender::
     init(Vector const & state)
     {
       clear();
       
-      BoundaryWaypoint * start(new BoundaryWaypoint(*this,
+      BoundaryCompoundObjective * start(new BoundaryCompoundObjective(*this,
 						    repulsor_,
 						    z_angle_,
 						    &(eestart_.point_),
 						    &(basestart_.point_)));
-      BoundaryWaypoint * goal(new BoundaryWaypoint(*this,
+      BoundaryCompoundObjective * goal(new BoundaryCompoundObjective(*this,
 						   repulsor_,
 						   z_angle_,
 						   &(eegoal_.point_),
 						   &(basegoal_.point_)));
-      vector<NormalWaypoint *> wpt;
+      vector<NormalCompoundObjective *> wpt;
       for (size_t ii(0); ii < 10; ++ii) {
-	wpt.push_back(new NormalWaypoint(*this, repulsor_, z_angle_));
+	wpt.push_back(new NormalCompoundObjective(*this, repulsor_, z_angle_));
       }
       wpt[0]->setNeighbors(start, wpt[1]);
       for (size_t ii(1); ii < wpt.size() - 1; ++ii) {
@@ -103,15 +103,15 @@ namespace kinematic_elastic {
     }
       
       
-    void InteractiveElastic::
+    void InteractiveBlender::
     update()
     {
       z_angle_ = atan2(eestartori_.point_[1] - eestart_.point_[1], eestartori_.point_[0] - eestart_.point_[0]);
-      Elastic::update();
+      Blender::update();
     }
     
     
-    void InteractiveElastic::
+    void InteractiveBlender::
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {

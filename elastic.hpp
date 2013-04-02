@@ -34,32 +34,32 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_ELASTIC_HPP
-#define KINEMATIC_ELASTIC_ELASTIC_HPP
+#ifndef KINEMATIC_OBJECTIVES_BLENDER_HPP
+#define KINEMATIC_OBJECTIVES_BLENDER_HPP
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 #include <list>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
-  class Waypoint;
+  class CompoundObjective;
   
   
-  class Elastic
+  class Blender
   {
   public:
-    typedef list<Waypoint *> path_t;
+    typedef list<CompoundObjective *> path_t;
     
-    Elastic(double timestep, ostream * dbgos, string const & dbgpre);
+    Blender(double timestep, ostream * dbgos, string const & dbgpre);
     
-    virtual ~Elastic();
+    virtual ~Blender();
     
     virtual void clear();
     
     virtual void update();
     
-    virtual void updateWaypoint(Waypoint * wpt);
+    virtual void updateCompoundObjective(CompoundObjective * wpt);
     
     //// XXXX protected or so
     
@@ -73,4 +73,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_ELASTIC_HPP
+#endif // KINEMATIC_OBJECTIVES_BLENDER_HPP

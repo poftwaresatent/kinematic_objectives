@@ -40,7 +40,7 @@
 #include <iostream>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
   void pseudo_inverse_nonsingular (Matrix const & mx,
@@ -137,7 +137,7 @@ namespace kinematic_elastic {
   void pseudo_inverse_baerlocher (Matrix const & mx,
 				  double d_damp,
 				  Matrix & inv,
-				  Matrix & delta_projector,
+				  Matrix & bias_projector,
 				  Matrix * dbgU,
 				  Vector * dbgsigma,
 				  Matrix * dbgV,
@@ -146,7 +146,7 @@ namespace kinematic_elastic {
     Eigen::JacobiSVD<Matrix> svd(mx, Eigen::ComputeFullU | Eigen::ComputeFullV);
     if (0 == svd.nonzeroSingularValues()) {
       inv = Matrix::Zero(mx.cols(), mx.rows());
-      delta_projector = Matrix::Zero(mx.cols(), mx.cols());
+      bias_projector = Matrix::Zero(mx.cols(), mx.cols());
       return;
     }
     
@@ -219,11 +219,11 @@ namespace kinematic_elastic {
     }
     
     // the following could be sped up because it produces a symmetric matrix
-    delta_projector
+    bias_projector
       = svd.matrixV().col(0)
       * svd.matrixV().col(0).transpose();
     for (index_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
-      delta_projector
+      bias_projector
 	+= svd.matrixV().col(ii)
 	* svd.matrixV().col(ii).transpose();
     }

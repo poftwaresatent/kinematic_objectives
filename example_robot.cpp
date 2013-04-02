@@ -38,7 +38,7 @@
 #include <err.h>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
 
   namespace example {
     
@@ -57,21 +57,21 @@ namespace kinematic_elastic {
   
   
     Vector const & PlanarRobot::
-    getPosition() const
+    getJointPosition() const
     {
       return position_;
     }
   
   
     Vector const & PlanarRobot::
-    getVelocity() const
+    getJointVelocity() const
     {
       return velocity_;
     }
   
   
     Transform PlanarRobot::
-    frame(size_t node) const
+    getLinkFrame(size_t node) const
     {
       Transform tf(Transform::Identity());
       switch (node) {
@@ -91,14 +91,14 @@ namespace kinematic_elastic {
 	tf.linear() << c234_, -s234_, 0.0, s234_, c234_, 0.0, 0.0, 0.0, 1.0;
 	break;
       default:
-	errx (EXIT_FAILURE, "PlanarRobot::frame() called on invalid node %zu", node);
+	errx (EXIT_FAILURE, "PlanarRobot::getLinkFrame() called on invalid node %zu", node);
       }
       return tf;
     }
   
   
     Matrix PlanarRobot::
-    computeJxo(size_t node, Vector const & gpoint) const
+    getLinkJacobian(size_t node, Vector const & gpoint) const
     {
       Matrix Jxo(Matrix::Zero(6, 5));
       switch (node) {
@@ -119,7 +119,7 @@ namespace kinematic_elastic {
 	Jxo(1, 1) = 1.0;
 	break;
       default:
-	errx (EXIT_FAILURE, "Robot::computeJxo() called on invalid node %zu", node);
+	errx (EXIT_FAILURE, "Robot::getLinkJacobian() called on invalid node %zu", node);
       }
       return Jxo;
     }

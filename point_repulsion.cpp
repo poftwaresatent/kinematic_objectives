@@ -38,11 +38,11 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  PointRepulsion::
-  PointRepulsion(size_t node,
+  PointRepulsionObjective::
+  PointRepulsionObjective(size_t node,
 		 double gain,
 		 double distance)
   {
@@ -50,8 +50,8 @@ namespace kinematic_elastic {
   }
   
   
-  PointRepulsion::
-  PointRepulsion(size_t node,
+  PointRepulsionObjective::
+  PointRepulsionObjective(size_t node,
 		 double px,
 		 double py,
 		 double pz,
@@ -64,7 +64,7 @@ namespace kinematic_elastic {
   }
   
   
-  void PointRepulsion::
+  void PointRepulsionObjective::
   construct(size_t node,
 		 Vector const & point,
 		 double gain,
@@ -78,37 +78,37 @@ namespace kinematic_elastic {
   }
   
   
-  void PointRepulsion::
-  init(Model const & model)
+  void PointRepulsionObjective::
+  init(KinematicModel const & model)
   {
     gpoint_.resize(point_.size());
     update(model);
   }
   
   
-  void PointRepulsion::
-  update(Model const & model)
+  void PointRepulsionObjective::
+  update(KinematicModel const & model)
   {
     if (0 == repulsor_.size()) {
-      Jacobian_.resize(0, 0);
+      jacobian_.resize(0, 0);
       return;
     }
-    gpoint_ = model.frame(node_) * point_.homogeneous();
-    delta_ = gpoint_ - repulsor_;
-    double const dist(delta_.norm());
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
+    bias_ = gpoint_ - repulsor_;
+    double const dist(bias_.norm());
     if ((dist >= distance_) || (dist < 1e-9)) {
-      Jacobian_.resize(0, 0);
+      jacobian_.resize(0, 0);
       return;
     }
-    delta_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
-    Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
+    bias_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }
   
   
-  bool PointRepulsion::
+  bool PointRepulsionObjective::
   isActive() const
   {
-    return Jacobian_.rows() > 0;
+    return jacobian_.rows() > 0;
   }
 
 }

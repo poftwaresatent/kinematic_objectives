@@ -34,13 +34,13 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_PRINT_HPP
-#define KINEMATIC_ELASTIC_PRINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_PRINT_HPP
+#define KINEMATIC_OBJECTIVES_PRINT_HPP
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   using namespace std;
   
@@ -57,4 +57,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_PRINT_HPP
+#endif // KINEMATIC_OBJECTIVES_PRINT_HPP

@@ -38,7 +38,7 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
   PostureDamping::
@@ -48,15 +48,15 @@ namespace kinematic_elastic {
   }
   
   void PostureDamping::
-  init(Model const & model)
+  init(KinematicModel const & model)
   {
-    Jacobian_ = Matrix::Identity(model.getPosition().size(), model.getPosition().size());
+    jacobian_ = Matrix::Identity(model.getJointPosition().size(), model.getJointPosition().size());
   }
   
   void PostureDamping::
-  update(Model const & model)
+  update(KinematicModel const & model)
   {
-    delta_ = - gain_ * model.getVelocity();
+    bias_ = - gain_ * model.getJointVelocity();
   }
 
 }

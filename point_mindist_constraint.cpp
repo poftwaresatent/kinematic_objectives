@@ -38,7 +38,7 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
   PointMindistConstraint::
@@ -52,46 +52,46 @@ namespace kinematic_elastic {
       point_(3)
   {
     point_ << px, py, pz;
-    delta_ = Vector::Zero(1);
+    bias_ = Vector::Zero(1);
     obstacle_.resize(0);
   }
   
   
   void PointMindistConstraint::
-  init(Model const & model)
+  init(KinematicModel const & model)
   {
-    delta_ = Vector::Zero(1);
+    bias_ = Vector::Zero(1);
     gpoint_.resize(point_.size());
     update(model);
   }
   
   
   void PointMindistConstraint::
-  update(Model const & model)
+  update(KinematicModel const & model)
   {
     if (0 == obstacle_.size()) {
-      Jacobian_.resize(0, 0);
+      jacobian_.resize(0, 0);
       return;
     }
-    gpoint_ = model.frame(node_) * point_.homogeneous();
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
     Vector tmp(gpoint_ - obstacle_);
     double const dist(tmp.norm());
     if ((dist >= mindist_) || (dist < 1e-9)){
-      Jacobian_.resize(0, 0);
+      jacobian_.resize(0, 0);
       return;
     }
     tmp /= dist;
-    Jacobian_
+    jacobian_
       = tmp.transpose()
-      * model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
-    delta_[0] = mindist_ - dist;
+      * model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
+    bias_[0] = mindist_ - dist;
   }
   
   
   bool PointMindistConstraint::
   isActive() const
   {
-    return Jacobian_.rows() > 0;
+    return jacobian_.rows() > 0;
   }
 
 }

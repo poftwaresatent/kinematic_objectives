@@ -37,6 +37,6 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
 }

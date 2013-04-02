@@ -34,23 +34,23 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_INTERACTIVE_ELASTIC_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_INTERACTIVE_ELASTIC_HPP
+#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_INTERACTIVE_BLENDER_HPP
+#define KINEMATIC_OBJECTIVES_EXAMPLE_INTERACTIVE_BLENDER_HPP
 
-#include "elastic.hpp"
-#include "example_waypoints.hpp"
+#include "blender.hpp"
+#include "example_compounds.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
 
   namespace example {
     
-    class InteractiveElastic
-      : public Elastic,
+    class InteractiveBlender
+      : public Blender,
 	public CairoDrawable
     {
     public:
-      InteractiveElastic(double timestep,
+      InteractiveBlender(double timestep,
 			 ostream * dbgos,
 			 string const & dbgpre);
       
@@ -78,4 +78,4 @@ namespace kinematic_elastic {
 
 }
 
-#endif // KINEMATIC_ELASTIC_EXAMPLE_INTERACTIVE_ELASTIC_HPP
+#endif // KINEMATIC_OBJECTIVES_EXAMPLE_INTERACTIVE_BLENDER_HPP

@@ -34,30 +34,30 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_JOINT_LIMIT_CONSTRAINT_HPP
-#define KINEMATIC_ELASTIC_JOINT_LIMIT_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_JOINT_LIMIT_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_JOINT_LIMIT_OBJECTIVE_HPP
 
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
-  class JointLimitConstraint
-    : public Task
+  class JointLimitObjective
+    : public Objective
   {
   public:
     void init(size_t ndof);
     
     /**
        For every joint that lies outside hard joint limits, create a
-       task dimension that brings it back to the corresponding soft
-       limit. All such dimensions are stacked into our TaskData
+       objective dimension that brings it back to the corresponding soft
+       limit. All such dimensions are stacked into our ObjectiveData
        fields. Furthermore, the list of violating joint indices is
        placed in locked_joints_. If there are no joints that violate
-       their hard joint limits, the task and locked list will be
+       their hard joint limits, the objective and locked list will be
        empty.
     */
-    virtual void update(Model const & model);
+    virtual void update(KinematicModel const & model);
     
     virtual bool isActive() const;
     
@@ -75,4 +75,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_JOINT_LIMIT_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_JOINT_LIMIT_OBJECTIVE_HPP

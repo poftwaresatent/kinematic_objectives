@@ -34,58 +34,58 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_TASK_HPP
-#define KINEMATIC_ELASTIC_TASK_HPP
+#ifndef KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 #include <limits>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
-  class Model;
+  class KinematicModel;
   
   
-  class TaskData
+  class ObjectiveData
   {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    virtual ~TaskData() {}
+    virtual ~ObjectiveData() {}
     
-    void stack(TaskData const & t1, TaskData const & t2);
+    void stack(ObjectiveData const & t1, ObjectiveData const & t2);
     
     template<typename iterator_t>
     void stack(iterator_t begin, iterator_t end)
     {
       size_t ttnrows(0);
       for (iterator_t ii(begin); ii != end; ++ii) {
-	ttnrows += (*ii)->Jacobian_.rows();
+	ttnrows += (*ii)->jacobian_.rows();
       }
-      size_t const ndof((*begin)->Jacobian_.cols());
-      delta_.resize(ttnrows);
-      Jacobian_.resize(ttnrows, ndof);
-      for (size_t row(0); begin != end; row += (*begin++)->Jacobian_.rows()) {
-	delta_.block(   row, 0, (*begin)->Jacobian_.rows(),    1) = (*begin)->delta_;
-	Jacobian_.block(row, 0, (*begin)->Jacobian_.rows(), ndof) = (*begin)->Jacobian_;
+      size_t const ndof((*begin)->jacobian_.cols());
+      bias_.resize(ttnrows);
+      jacobian_.resize(ttnrows, ndof);
+      for (size_t row(0); begin != end; row += (*begin++)->jacobian_.rows()) {
+	bias_.block(   row, 0, (*begin)->jacobian_.rows(),    1) = (*begin)->bias_;
+	jacobian_.block(row, 0, (*begin)->jacobian_.rows(), ndof) = (*begin)->jacobian_;
       }
     }
     
-    Vector delta_; // basically this is "desired - current" but may be different for objectives
-    Matrix Jacobian_;
+    Vector bias_; // basically this is "desired - current" but may be different for objectives
+    Matrix jacobian_;
   };
   
   
-  class Task
-    : public TaskData
+  class Objective
+    : public ObjectiveData
   {
   public:
-    virtual void init(Model const & model) { }
+    virtual void init(KinematicModel const & model) { }
     virtual bool isActive() const { return true; }
     
-    virtual void update(Model const & model) = 0;
+    virtual void update(KinematicModel const & model) = 0;
   };
   
 }
 
-#endif // KINEMATIC_ELASTIC_TASK_HPP
+#endif // KINEMATIC_OBJECTIVES_OBJECTIVE_HPP

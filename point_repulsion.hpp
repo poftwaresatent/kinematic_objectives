@@ -34,17 +34,17 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_POINT_REPULSION_HPP
-#define KINEMATIC_ELASTIC_POINT_REPULSION_HPP
+#ifndef KINEMATIC_OBJECTIVES_POINT_REPULSION_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_POINT_REPULSION_OBJECTIVE_HPP
 
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
 
   class PointRepulsion
-    : public Task
+    : public Objective
   {
   protected:
     void construct(size_t node,
@@ -53,20 +53,20 @@ namespace kinematic_elastic {
 		   double distance);
     
   public:
-    PointRepulsion(size_t node,
+    PointRepulsionObjective(size_t node,
 		   double gain,
 		   double distance);
     
-    PointRepulsion(size_t node,
+    PointRepulsionObjective(size_t node,
 		   double px,
 		   double py,
 		   double pz,
 		   double gain,
 		   double distance);
     
-    virtual void init(Model const & model);
+    virtual void init(KinematicModel const & model);
     
-    virtual void update(Model const & model);
+    virtual void update(KinematicModel const & model);
     
     virtual bool isActive() const;
     
@@ -80,4 +80,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_POINT_REPULSION_HPP
+#endif // KINEMATIC_OBJECTIVES_POINT_REPULSION_OBJECTIVE_HPP

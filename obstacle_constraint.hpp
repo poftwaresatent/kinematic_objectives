@@ -34,28 +34,28 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_OBSTACLE_CONSTRAINT_HPP
-#define KINEMATIC_ELASTIC_OBSTACLE_CONSTRAINT_HPP
+#ifndef KINEMATIC_OBJECTIVES_OBSTACLE_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_OBSTACLE_OBJECTIVE_HPP
 
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   class DistanceAPI;
   
   
-  class ObstacleConstraint
-    : public Task
+  class ObstacleObjective
+    : public Objective
   {
   public:
-    ObstacleConstraint(DistanceAPI const & distance_api,
+    ObstacleObjective(DistanceAPI const & distance_api,
 		       size_t node,
 		       double mindist);
     
-    virtual void init(Model const & model);
+    virtual void init(KinematicModel const & model);
     
-    virtual void update(Model const & model);
+    virtual void update(KinematicModel const & model);
     
     virtual bool isActive() const;
     
@@ -68,4 +68,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_OBSTACLE_CONSTRAINT_HPP
+#endif // KINEMATIC_OBJECTIVES_OBSTACLE_OBJECTIVE_HPP

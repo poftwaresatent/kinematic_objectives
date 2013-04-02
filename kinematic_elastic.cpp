@@ -34,10 +34,10 @@
 
 /* Author: Roland Philippsen */
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
   void stackVector (Vector const & v1,

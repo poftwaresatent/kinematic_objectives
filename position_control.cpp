@@ -38,10 +38,10 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
-  PositionControl::
-  PositionControl(size_t node,
+  LinkPositionObjective::
+  LinkPositionObjective(size_t node,
 		  double px,
 		  double py,
 		  double pz,
@@ -56,22 +56,22 @@ namespace kinematic_elastic {
   }
   
   
-  void PositionControl::
-  init(Model const & model)
+  void LinkPositionObjective::
+  init(KinematicModel const & model)
   {
-    gpoint_ = model.frame(node_) * point_.homogeneous();
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
     goal_ = gpoint_;
-    Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
-    delta_ = Vector::Zero(point_.size());
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
+    bias_ = Vector::Zero(point_.size());
   }
   
   
-  void PositionControl::
-  update(Model const & model)
+  void LinkPositionObjective::
+  update(KinematicModel const & model)
   {
-    gpoint_ = model.frame(node_) * point_.homogeneous();
-    Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
-    delta_ = kp_ * (goal_ - gpoint_) - kd_ * Jacobian_ * model.getVelocity();
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
+    bias_ = kp_ * (goal_ - gpoint_) - kd_ * jacobian_ * model.getJointVelocity();
   }
 
 }

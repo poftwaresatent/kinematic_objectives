@@ -34,19 +34,19 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
+#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_ROBOT_HPP
+#define KINEMATIC_OBJECTIVES_EXAMPLE_ROBOT_HPP
 
 #include "model.hpp"
 #include "cairo_drawable.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   namespace example {
     
     class PlanarRobot
-      : public Model,
+      : public KinematicModel,
 	public CairoDrawable
     {
     public:
@@ -54,20 +54,20 @@ namespace kinematic_elastic {
   
       PlanarRobot();
     
-      virtual Vector const & getPosition() const;
-      virtual Vector const & getVelocity() const;
+      virtual Vector const & getJointPosition() const;
+      virtual Vector const & getJointVelocity() const;
     
       /**
 	 \note Do not use in production code: this method calls exit()
 	 when you specify an invalid node!
       */
-      virtual Transform frame(size_t node) const;
+      virtual Transform getLinkFrame(size_t node) const;
   
       /**
 	 \note Do not use in production code: this method calls exit()
 	 when you specify an invalid node!
       */
-      virtual Matrix computeJxo(size_t node, Vector const & gpoint) const;
+      virtual Matrix getLinkJacobian(size_t node, Vector const & gpoint) const;
     
       /**
 	 \note Do not use in production code: this method calls exit()
@@ -110,4 +110,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_EXAMPLE_ROBOT_HPP
+#endif // KINEMATIC_OBJECTIVES_EXAMPLE_ROBOT_HPP

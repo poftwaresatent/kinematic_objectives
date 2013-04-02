@@ -34,28 +34,28 @@
 
 /* Author: Roland Philippsen */
 
-#include "waypoint.hpp"
+#include "compound.hpp"
 #include "model.hpp"
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  Waypoint::
-  Waypoint(Model & model)
+  CompoundObjective::
+  CompoundObjective(KinematicModel & model)
     : model_(model)
   {
   }
   
   
-  Waypoint::
-  ~Waypoint()
+  CompoundObjective::
+  ~CompoundObjective()
   {
   }
   
   
-  void Waypoint::
+  void CompoundObjective::
   init(Vector const & position, Vector const & velocity)
   {
     model_.update(position, velocity);
@@ -63,8 +63,8 @@ namespace kinematic_elastic {
     for (size_t ii(0); ii < constraints_.size(); ++ii) {
       constraints_[ii]->init(model_);
     }
-    for (size_t ii(0); ii < tasks_.size(); ++ii) {
-      tasks_[ii]->init(model_);
+    for (size_t ii(0); ii < objectives_.size(); ++ii) {
+      objectives_[ii]->init(model_);
     }
     for (size_t ii(0); ii < objectives_.size(); ++ii) {
       objectives_[ii]->init(model_);

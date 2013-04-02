@@ -39,11 +39,11 @@
 #include "distance_api.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  ObstacleConstraint::
-  ObstacleConstraint(DistanceAPI const & distance_api,
+  ObstacleObjective::
+  ObstacleObjective(DistanceAPI const & distance_api,
 		     size_t node,
 		     double mindist)
     : distance_api_(distance_api),
@@ -53,35 +53,35 @@ namespace kinematic_elastic {
   }
   
   
-  void ObstacleConstraint::
-  init(Model const & model)
+  void ObstacleObjective::
+  init(KinematicModel const & model)
   {
-    delta_ = Vector::Zero(1);
-    Jacobian_.resize(0, 0);
+    bias_ = Vector::Zero(1);
+    jacobian_.resize(0, 0);
   }
   
   
-  void ObstacleConstraint::
-  update(Model const & model)
+  void ObstacleObjective::
+  update(KinematicModel const & model)
   {
     double const dist(distance_api_.computeMinimumSeparation(node_, gpoint_, obstacle_));
     if (dist >= mindist_) {
-      Jacobian_.resize(0, 0);
+      jacobian_.resize(0, 0);
       return;
     }
     Vector tmp(gpoint_ - obstacle_);
     tmp /= dist;
-    Jacobian_
+    jacobian_
       = tmp.transpose()
-      * model.computeJxo(node_, obstacle_).block(0, 0, 3, model.getPosition().size());
-    delta_[0] = mindist_ - dist;
+      * model.getLinkJacobian(node_, obstacle_).block(0, 0, 3, model.getJointPosition().size());
+    bias_[0] = mindist_ - dist;
   }
   
   
-  bool ObstacleConstraint::
+  bool ObstacleObjective::
   isActive() const
   {
-    return Jacobian_.rows() > 0;
+    return jacobian_.rows() > 0;
   }
 
 }

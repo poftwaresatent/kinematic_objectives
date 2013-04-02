@@ -34,12 +34,12 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_PSEUDO_INVERSE_HPP
-#define KINEMATIC_ELASTIC_PSEUDO_INVERSE_HPP
+#ifndef KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP
+#define KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   void pseudo_inverse_nonsingular(Matrix const & mx,
 				  Matrix & inv);
@@ -62,7 +62,7 @@ namespace kinematic_elastic {
   void pseudo_inverse_baerlocher(Matrix const & mx,
 				 double d_damp,
 				 Matrix & inv,
-				 Matrix & delta_projector,
+				 Matrix & bias_projector,
 				 Matrix * dbgU,
 				 Vector * dbgsigma,
 				 Matrix * dbgV,
@@ -70,4 +70,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_PSEUDO_INVERSE_HPP
+#endif // KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP

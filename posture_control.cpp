@@ -38,30 +38,30 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  PostureControl::
-  PostureControl()
+  JointPositionObjective::
+  JointPositionObjective()
     : kp_(25.0),
       kd_(10.0)
   {
   }
   
   
-  void PostureControl::
-  init(Model const & model)
+  void JointPositionObjective::
+  init(KinematicModel const & model)
   {
-    goal_ = model.getPosition();
-    delta_ = Vector::Zero(goal_.size());
-    Jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
+    goal_ = model.getJointPosition();
+    bias_ = Vector::Zero(goal_.size());
+    jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
   }
   
   
-  void PostureControl::
-  update(Model const & model)
+  void JointPositionObjective::
+  update(KinematicModel const & model)
   {
-    delta_ = kp_ * (goal_ - model.getPosition()) - kd_ * model.getVelocity();
+    bias_ = kp_ * (goal_ - model.getJointPosition()) - kd_ * model.getJointVelocity();
   }
   
 }

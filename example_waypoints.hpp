@@ -34,10 +34,10 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_EXAMPLE_WAYPOINTS_HPP
-#define KINEMATIC_ELASTIC_EXAMPLE_WAYPOINTS_HPP
+#ifndef KINEMATIC_OBJECTIVES_EXAMPLE_COMPOUND_OBJECTIVES_HPP
+#define KINEMATIC_OBJECTIVES_EXAMPLE_COMPOUND_OBJECTIVES_HPP
 
-#include "waypoint.hpp"
+#include "compound.hpp"
 #include "joint_limit_constraint.hpp"
 #include "obstacle_constraint.hpp"
 #include "position_control.hpp"
@@ -50,11 +50,11 @@
 #include "cairo_drawable.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   namespace example {
     
-    class InteractiveElastic;
+    class InteractiveBlender;
     
     
     class InteractionHandle
@@ -70,12 +70,12 @@ namespace kinematic_elastic {
     };
     
     
-    class BaseWaypoint
-      : public Waypoint,
+    class BaseCompoundObjective
+      : public CompoundObjective,
 	public CairoDrawable
     {
     public:
-      BaseWaypoint(InteractiveElastic const & elastic,
+      BaseCompoundObjective(InteractiveBlender const & blender,
 		   InteractionHandle const & repulsor,
 		   double const & z_angle);
     
@@ -91,33 +91,33 @@ namespace kinematic_elastic {
       InteractionHandle const & repulsor_;
       double const & z_angle_;
       
-      JointLimitConstraint joint_limits_;
+      JointLimitObjective joint_limits_;
     
-      ObstacleConstraint avoid_base_;
-      ObstacleConstraint avoid_ellbow_;
-      ObstacleConstraint avoid_wrist_;
-      ObstacleConstraint avoid_ee_;
+      ObstacleObjective avoid_base_;
+      ObstacleObjective avoid_ellbow_;
+      ObstacleObjective avoid_wrist_;
+      ObstacleObjective avoid_ee_;
     
-      OrientationControl orient_ee_;
+      LinkOrientationObjective orient_ee_;
     
-      PointRepulsion repulse_base_;
-      PointRepulsion repulse_ellbow_;
-      PointRepulsion repulse_wrist_;
-      PointRepulsion repulse_ee_;
+      PointRepulsionObjective repulse_base_;
+      PointRepulsionObjective repulse_ellbow_;
+      PointRepulsionObjective repulse_wrist_;
+      PointRepulsionObjective repulse_ee_;
     
       PostureDamping joint_damping_;
     };
     
     
-    class NormalWaypoint
-      : public BaseWaypoint
+    class NormalCompoundObjective
+      : public BaseCompoundObjective
     {
     public:
-      NormalWaypoint(InteractiveElastic const & elastic,
+      NormalCompoundObjective(InteractiveBlender const & blender,
 		     InteractionHandle const & repulsor,
 		     double const & z_angle);
       
-      virtual ~NormalWaypoint();
+      virtual ~NormalCompoundObjective();
       
       /**
 	 \note Do not use in production code: calls exit() on error.
@@ -131,24 +131,24 @@ namespace kinematic_elastic {
       /**
 	 \note Do not use in production code: calls exit() on error.
       */
-      void setNeighbors(BaseWaypoint const * prev,
-			BaseWaypoint const * next);
+      void setNeighbors(BaseCompoundObjective const * prev,
+			BaseCompoundObjective const * next);
       
       //// XXXX protected or so...
       
-      BaseWaypoint const * prev_;
-      BaseWaypoint const * next_;
+      BaseCompoundObjective const * prev_;
+      BaseCompoundObjective const * next_;
       
-      vector<PointAttraction*> attract_prev_;
-      vector<PointAttraction*> attract_next_;
+      vector<PointAttractionObjective*> attract_prev_;
+      vector<PointAttractionObjective*> attract_next_;
     };
     
     
-    class BoundaryWaypoint
-      : public BaseWaypoint
+    class BoundaryCompoundObjective
+      : public BaseCompoundObjective
     {
     public:
-      BoundaryWaypoint(InteractiveElastic const & elastic,
+      BoundaryCompoundObjective(InteractiveBlender const & blender,
 		       InteractionHandle const & repulsor,
 		       double const & z_angle,
 		       Vector const * eegoal,
@@ -160,8 +160,8 @@ namespace kinematic_elastic {
 
       //// XXXX protected or so...
       
-      PositionControl eetask_;
-      PointAttraction attract_base_;
+      LinkPositionObjective eeobjective_;
+      PointAttractionObjective attract_base_;
       Vector const * eegoal_;
       Vector const * baseattractor_;
     };
@@ -170,4 +170,4 @@ namespace kinematic_elastic {
   
 }
 
-#endif // KINEMATIC_ELASTIC_EXAMPLE_WAYPOINTS_HPP
+#endif // KINEMATIC_OBJECTIVES_EXAMPLE_COMPOUND_OBJECTIVES_HPP

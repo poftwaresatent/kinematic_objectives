@@ -34,17 +34,17 @@
 
 /* Author: Roland Philippsen */
 
-#include "task.hpp"
+#include "objective.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  void TaskData::
-  stack(TaskData const & t1, TaskData const & t2)
+  void ObjectiveData::
+  stack(ObjectiveData const & t1, ObjectiveData const & t2)
   {
-    stackVector(t1.delta_, t2.delta_, delta_);
-    stackMatrix(t1.Jacobian_, t2.Jacobian_, Jacobian_);
+    stackVector(t1.bias_, t2.bias_, bias_);
+    stackMatrix(t1.jacobian_, t2.jacobian_, jacobian_);
   }
   
 }

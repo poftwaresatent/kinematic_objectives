@@ -34,15 +34,15 @@
 
 /* Author: Roland Philippsen */
 
-#include "example_interactive_elastic.hpp"
+#include "example_interactive_blender.hpp"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
 #include <list>
 #include <err.h>
 
-using namespace kinematic_elastic::example;
-using namespace kinematic_elastic;
+using namespace kinematic_objectives::example;
+using namespace kinematic_objectives;
 
 
 static double const dimx(10.);
@@ -56,7 +56,7 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 
-static InteractiveElastic * elastic;
+static InteractiveBlender * blender;
 static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
 
@@ -64,7 +64,7 @@ static Vector grab_offset(3);
 
 static void update()
 {
-  elastic->update();
+  blender->update();
   gtk_widget_queue_draw(gw);
 }
 
@@ -82,8 +82,8 @@ static void cb_play(GtkWidget * ww, gpointer data)
 
 static void cb_normalize(GtkWidget * ww, gpointer data)
 {
-  for (Elastic::path_t::iterator ii(elastic->path_.begin()); ii != elastic->path_.end(); ++ii) {
-    BaseWaypoint * wpt(dynamic_cast<BaseWaypoint*>(*ii));
+  for (Blender::path_t::iterator ii(blender->path_.begin()); ii != blender->path_.end(); ++ii) {
+    BaseCompoundObjective * wpt(dynamic_cast<BaseCompoundObjective*>(*ii));
     if ( ! wpt) {
       continue;
     }
@@ -130,7 +130,7 @@ static gint cb_expose(GtkWidget * ww,
   cairo_translate(cr, gw_x0, gw_y0);
   cairo_scale(cr, gw_sx, gw_sy);
   
-  elastic->draw(cr, lwscale, gw_sx);
+  blender->draw(cr, lwscale, gw_sx);
   
   cairo_destroy(cr);
   
@@ -173,11 +173,11 @@ static gint cb_click(GtkWidget * ww,
   if (bb->type == GDK_BUTTON_PRESS) {
     Vector point(3);
     point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy, 0.0;
-    for (size_t ii(0); ii < elastic->handles_.size(); ++ii) {
-      Vector offset = elastic->handles_[ii]->point_ - point;
-      if (offset.norm() <= elastic->handles_[ii]->radius_) {
+    for (size_t ii(0); ii < blender->handles_.size(); ++ii) {
+      Vector offset = blender->handles_[ii]->point_ - point;
+      if (offset.norm() <= blender->handles_[ii]->radius_) {
     	grab_offset = offset;
-    	grabbed = elastic->handles_[ii];
+    	grabbed = blender->handles_[ii];
     	break;
       }
     }
@@ -281,19 +281,19 @@ int main(int argc, char ** argv)
   
   if ((argc > 1) && (0 == strcmp("-v", argv[1]))) {
     verbose = true;
-    elastic = new InteractiveElastic(1.0e-2, &cout, "");
+    blender = new InteractiveBlender(1.0e-2, &cout, "");
   }
   else {
-    elastic = new InteractiveElastic(1.0e-2, 0, "");
+    blender = new InteractiveBlender(1.0e-2, 0, "");
   }
   
-  elastic->eestart_.point_    <<         1.0, dimy / 2.0      ,     0.0;
-  elastic->eestartori_.point_ <<         2.0, dimy / 2.0 + 1.0,     0.0;
-  elastic->basestart_.point_  <<         1.0,              1.0,     0.0;
-  elastic->eegoal_.point_     <<  dimx - 1.0, dimy / 2.0      ,     0.0;
-  elastic->basegoal_.point_   <<  dimx - 1.0,              1.0,     0.0;
-  elastic->repulsor_.point_   <<  dimx / 2.0,              1.0,     0.0;
-  elastic->obstacle_.point_   <<  dimx / 2.0,       dimy - 1.0,     0.0;
+  blender->eestart_.point_    <<         1.0, dimy / 2.0      ,     0.0;
+  blender->eestartori_.point_ <<         2.0, dimy / 2.0 + 1.0,     0.0;
+  blender->basestart_.point_  <<         1.0,              1.0,     0.0;
+  blender->eegoal_.point_     <<  dimx - 1.0, dimy / 2.0      ,     0.0;
+  blender->basegoal_.point_   <<  dimx - 1.0,              1.0,     0.0;
+  blender->repulsor_.point_   <<  dimx / 2.0,              1.0,     0.0;
+  blender->obstacle_.point_   <<  dimx / 2.0,       dimy - 1.0,     0.0;
   
   Vector posture(5);
   posture <<
@@ -302,11 +302,11 @@ int main(int argc, char ** argv)
     80.0 * deg,
     - 40.0 * deg,
     25.0 * deg;
-  elastic->init(posture);
+  blender->init(posture);
   
   gtk_main();
   
-  delete elastic;
+  delete blender;
   
   return 0;
 }

@@ -34,26 +34,26 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_ELASTIC_MODEL_HPP
-#define KINEMATIC_ELASTIC_MODEL_HPP
+#ifndef KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP
+#define KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP
 
-#include "kinematic_elastic.hpp"
+#include "kinematic_objectives.hpp"
 #include <vector>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  class Model
+  class KinematicModel
   {
   public:
     virtual void update(Vector const & position, Vector const & velocity) = 0;
-    virtual Vector const & getPosition() const = 0;
-    virtual Vector const & getVelocity() const = 0;
-    virtual Transform frame(size_t node) const = 0;
-    virtual Matrix computeJxo(size_t node, Vector const & gpoint) const = 0;
+    virtual Vector const & getJointPosition() const = 0;
+    virtual Vector const & getJointVelocity() const = 0;
+    virtual Transform getLinkFrame(size_t node) const = 0;
+    virtual Matrix getLinkJacobian(size_t node, Vector const & gpoint) const = 0;
   };
   
 }
 
-#endif // KINEMATIC_ELASTIC_MODEL_HPP
+#endif // KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP

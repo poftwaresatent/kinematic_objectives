@@ -38,11 +38,11 @@
 #include "model.hpp"
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  PointAttraction::
-  PointAttraction(size_t node,
+  PointAttractionObjective::
+  PointAttractionObjective(size_t node,
 		  double gain,
 		  double distance)
   {
@@ -50,8 +50,8 @@ namespace kinematic_elastic {
   }
   
   
-  PointAttraction::
-  PointAttraction(size_t node,
+  PointAttractionObjective::
+  PointAttractionObjective(size_t node,
 		  double px,
 		  double py,
 		  double pz,
@@ -64,7 +64,7 @@ namespace kinematic_elastic {
   }
   
   
-  void PointAttraction::
+  void PointAttractionObjective::
   construct(size_t node,
 		  Vector const & point,
 		  double gain,
@@ -78,49 +78,49 @@ namespace kinematic_elastic {
   }
   
   
-  void PointAttraction::
-  init(Model const & model)
+  void PointAttractionObjective::
+  init(KinematicModel const & model)
   {
     gpoint_.resize(point_.size());
     update(model);
   }
   
   
-  void PointAttraction::
-  update(Model const & model)
+  void PointAttractionObjective::
+  update(KinematicModel const & model)
   {
     if (0 == attractor_.size()) {
-      Jacobian_.resize(0, 0);
+      jacobian_.resize(0, 0);
       return;
     }
-    gpoint_ = model.frame(node_) * point_.homogeneous();
-    delta_ = attractor_ - gpoint_;
-    double const dist(delta_.norm());
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
+    bias_ = attractor_ - gpoint_;
+    double const dist(bias_.norm());
     if (dist < 1e-9) {
-      Jacobian_.resize(0, 0);
+      jacobian_.resize(0, 0);
       return;
     }
     if (distance_ < 0.0) {
       // no saturation
-      delta_ *= - gain_ / distance_;
+      bias_ *= - gain_ / distance_;
     }
     else {
       // saturate at the given distance
       if (dist < distance_) {
-	delta_ *= gain_ / distance_;
+	bias_ *= gain_ / distance_;
       }
       else {
-	delta_ *= gain_ / dist;
+	bias_ *= gain_ / dist;
       }
     }
-    Jacobian_ = model.computeJxo(node_, gpoint_).block(0, 0, 3, model.getPosition().size());
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }
   
   
-  bool PointAttraction::
+  bool PointAttractionObjective::
   isActive() const
   {
-    return Jacobian_.rows() > 0;
+    return jacobian_.rows() > 0;
   }
 
 }

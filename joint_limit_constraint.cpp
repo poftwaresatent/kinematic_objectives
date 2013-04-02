@@ -39,10 +39,10 @@
 #include <limits>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   
-  void JointLimitConstraint::
+  void JointLimitObjective::
   init(size_t ndof)
   {
     limits_.resize(ndof, 4);
@@ -56,16 +56,16 @@ namespace kinematic_elastic {
       }
     }
     locked_joints_.clear();
-    delta_.resize(0);
-    Jacobian_.resize(0, 0);
+    bias_.resize(0);
+    jacobian_.resize(0, 0);
   }
   
   
-  void JointLimitConstraint::
-  update(Model const & model)
+  void JointLimitObjective::
+  update(KinematicModel const & model)
   {
-    Vector const & position(model.getPosition());
-    Vector const & velocity(model.getVelocity());
+    Vector const & position(model.getJointPosition());
+    Vector const & velocity(model.getJointVelocity());
     vector<double> delta;
     locked_joints_.clear();
     
@@ -84,15 +84,15 @@ namespace kinematic_elastic {
       }
     }
     
-    delta_ = Vector::Map(&delta[0], delta.size());
-    Jacobian_ = Matrix::Zero(delta.size(), position.size());
+    bias_ = Vector::Map(&delta[0], delta.size());
+    jacobian_ = Matrix::Zero(delta.size(), position.size());
     for (size_t ii(0); ii < delta.size(); ++ii) {
-      Jacobian_(ii, locked_joints_[ii]) = 1.0;
+      jacobian_(ii, locked_joints_[ii]) = 1.0;
     }
   }
   
   
-  bool JointLimitConstraint::
+  bool JointLimitObjective::
   isActive()
     const
   {

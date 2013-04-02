@@ -36,19 +36,19 @@
 
 #include "example_distance_api.hpp"
 #include "example_robot.hpp"
-#include "example_interactive_elastic.hpp"
+#include "example_interactive_blender.hpp"
 #include <err.h>
 
 
-namespace kinematic_elastic {
+namespace kinematic_objectives {
   
   namespace example {
     
     PlanarDistanceAPI::
     PlanarDistanceAPI(PlanarRobot const & robot,
-		      InteractiveElastic const & elastic)
+		      InteractiveBlender const & blender)
       : robot_(robot),
-	elastic_(elastic)
+	blender_(blender)
     {
     }
      
@@ -60,7 +60,7 @@ namespace kinematic_elastic {
       const
     {
       link_point.resize(3);
-      obstacle_point = elastic_.obstacle_.point_;
+      obstacle_point = blender_.obstacle_.point_;
       Vector unit(3);
       double len;
       switch (link) {
@@ -70,8 +70,8 @@ namespace kinematic_elastic {
 	len = unit.norm();
 	unit /= len;
 	link_point += robot_.radius_ * unit;
-	obstacle_point -= elastic_.obstacle_.radius_ * unit;
-	return len - robot_.radius_ - elastic_.obstacle_.radius_;
+	obstacle_point -= blender_.obstacle_.radius_ * unit;
+	return len - robot_.radius_ - blender_.obstacle_.radius_;
       case 1:
 	link_point << robot_.position_[0], robot_.position_[1], 0.0;
 	unit << robot_.c2_, robot_.s2_, 0.0;
@@ -105,8 +105,8 @@ namespace kinematic_elastic {
       
       len = delta.norm();
       unit = delta / len;
-      obstacle_point -= elastic_.obstacle_.radius_ * unit;
-      return len - elastic_.obstacle_.radius_;
+      obstacle_point -= blender_.obstacle_.radius_ * unit;
+      return len - blender_.obstacle_.radius_;
     }
     
   }
