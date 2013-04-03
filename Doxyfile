@@ -101,9 +101,9 @@ WARN_LOGFILE           =
 # configuration options related to the input files
 #---------------------------------------------------------------------------
 
-INPUT                  = .
+INPUT                  = include/kinematic_objectives src demo
 INPUT_ENCODING         = UTF-8
-FILE_PATTERNS          = *.hpp *.cpp
+FILE_PATTERNS          = *.h *.cpp
 RECURSIVE              = NO
 EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
