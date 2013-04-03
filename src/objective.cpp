@@ -35,13 +35,14 @@
 /* Author: Roland Philippsen */
 
 #include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/util.h>
 
 
 namespace kinematic_objectives {
   
   
-  void ObjectiveData::
-  stack(ObjectiveData const & t1, ObjectiveData const & t2)
+  void Objective::
+  stack(Objective const & t1, Objective const & t2)
   {
     stackVector(t1.bias_, t2.bias_, bias_);
     stackMatrix(t1.jacobian_, t2.jacobian_, jacobian_);

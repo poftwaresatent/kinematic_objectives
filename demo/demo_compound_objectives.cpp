@@ -35,6 +35,7 @@
 /* Author: Roland Philippsen */
 
 #include <kinematic_objectives/print.h>
+#include <kinematic_objectives/util.h>
 #include "demo_compound_objectives.h"
 
 #include <err.h>

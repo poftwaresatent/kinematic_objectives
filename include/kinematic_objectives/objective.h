@@ -37,7 +37,7 @@
 #ifndef KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
 #define KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
 
-#include <kinematic_objectives/kinematic_objectives.h>
+#include <kinematic_objectives/types.h>
 #include <limits>
 
 
@@ -72,7 +72,7 @@ namespace kinematic_objectives {
     /**
        \todo [low] find a somewhat less hacky way for stacking multiple objectives on top of each other.
     */
-    void stack(ObjectiveData const & t1, ObjectiveData const & t2);
+    void stack(Objective const & t1, Objective const & t2);
     
     /**
        \todo [low] find a somewhat less hacky way for stacking multiple objectives on top of each other.

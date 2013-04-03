@@ -34,6 +34,7 @@
 
 /* Author: Roland Philippsen */
 
+#include <kinematic_objectives/util.h>
 #include "interactive_blender.h"
 #include <gtk/gtk.h>
 #include <cmath>

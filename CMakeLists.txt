@@ -81,13 +81,11 @@ else (HAVE_EIGEN3)
 endif (HAVE_EIGEN3)
 
 list (APPEND SRCS
-  src/kinematic_objectives.cpp
+  src/util.cpp
   src/objective.cpp
-  src/kinematic_model.cpp
   src/compound_objective.cpp
   src/blender.cpp
   src/joint_limit_objective.cpp
-  point_mindist_constraint.cpp
   src/obstacle_objective.cpp
   src/point_attraction_objective.cpp
   src/point_repulsion_objective.cpp

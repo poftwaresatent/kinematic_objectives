@@ -43,8 +43,8 @@ namespace kinematic_objectives {
   
   PointAttractionObjective::
   PointAttractionObjective(size_t node,
-		  double gain,
-		  double distance)
+			   double gain,
+			   double distance)
   {
     construct(node, Vector::Zero(3), gain, distance);
   }
@@ -52,11 +52,11 @@ namespace kinematic_objectives {
   
   PointAttractionObjective::
   PointAttractionObjective(size_t node,
-		  double px,
-		  double py,
-		  double pz,
-		  double gain,
-		  double distance)
+			   double px,
+			   double py,
+			   double pz,
+			   double gain,
+			   double distance)
   {
     Vector silly(3);
     silly << px, py, pz;
@@ -66,9 +66,9 @@ namespace kinematic_objectives {
   
   void PointAttractionObjective::
   construct(size_t node,
-		  Vector const & point,
-		  double gain,
-		  double distance)
+	    Vector const & point,
+	    double gain,
+	    double distance)
   {
     gain_ = gain;
     distance_ = distance;

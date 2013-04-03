@@ -37,7 +37,7 @@
 #ifndef KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP
 #define KINEMATIC_OBJECTIVES_KINEMATIC_MODEL_HPP
 
-#include <kinematic_objectives/kinematic_objectives.h>
+#include <kinematic_objectives/types.h>
 #include <vector>
 
 

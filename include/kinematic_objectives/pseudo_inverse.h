@@ -37,13 +37,21 @@
 #ifndef KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP
 #define KINEMATIC_OBJECTIVES_PSEUDO_INVERSE_HPP
 
-#include <kinematic_objectives/kinematic_objectives.h>
+#include <kinematic_objectives/types.h>
 
 namespace kinematic_objectives {
   
   void pseudo_inverse_nonsingular(Matrix const & mx,
 				  Matrix & inv);
   
+  /**
+     \note I think this ended up being the only pseudo-inverse
+     implementation actually used by the blender. I'm keeing the
+     others around though for the (hopefully soon) split of Blender
+     into a generic superclass with a handfull of specific
+     implementations based on existing state of the art and novel
+     developments.
+  */
   void pseudo_inverse_moore_penrose(Matrix const & mx,
 				    Matrix & inv,
 				    Matrix * dproj = 0,
@@ -54,7 +62,7 @@ namespace kinematic_objectives {
 			     Matrix & inv);
   
   /**
-     Uses the scheme in [Baerlocher 2001] to determine damping factor
+     Uses the scheme in [Baerlocher:2001] to determine damping factor
      lambda based on the smallest sigma and the given d_damp
      parameter. See equations (4.17) and figure 4.7. He computes
      d_damp as dx.norm()/b_max where b_max is a fixed parameter.

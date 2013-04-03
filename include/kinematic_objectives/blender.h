@@ -37,7 +37,7 @@
 #ifndef KINEMATIC_OBJECTIVES_BLENDER_HPP
 #define KINEMATIC_OBJECTIVES_BLENDER_HPP
 
-#include <kinematic_objectives/kinematic_objectives.h>
+#include <kinematic_objectives/types.h>
 #include <list>
 
 
@@ -74,6 +74,16 @@ namespace kinematic_objectives {
     
     virtual void update();
     
+    /**
+       \note This is still under somewhat active development, see
+       comments in the implementation. Inspired by a combination of
+       Chiaverini:1997 and Baerlocher:2001 with the aim of achieving
+       proper decoupling between priority levels while also switching
+       unilateral constraints (e.g. joint limits and obstacle
+       avoidance) on and off based on the current joint positions and
+       velocities. The latter is an important feature, but the
+       implementation is rather more convoluted than hoped.
+    */
     virtual void updateCompoundObjective(CompoundObjective * wpt);
     
     ostream * dbgos_;

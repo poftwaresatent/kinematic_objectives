@@ -34,7 +34,7 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/kinematic_objectives.h>
+#include <kinematic_objectives/util.h>
 
 
 namespace kinematic_objectives {
