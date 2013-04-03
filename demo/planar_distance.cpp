@@ -46,7 +46,7 @@ namespace kinematic_objectives {
     
     PlanarDistance::
     PlanarDistance(PlanarRobot const & robot,
-		      InteractiveBlender const & blender)
+		   InteractiveBlender const & blender)
       : robot_(robot),
 	blender_(blender)
     {

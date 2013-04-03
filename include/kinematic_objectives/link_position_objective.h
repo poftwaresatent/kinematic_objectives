@@ -42,16 +42,24 @@
 
 namespace kinematic_objectives {
   
+  /**
+     Euclidean position objective for a point specified wrt some given
+     link. Based on PD control to drive the link-local point_ to the
+     specified global goal_. The gpoint_ attribute gets updated to the
+     global position of point_ at each update().
+     
+     \todo [low] make the attributes protected or private
+  */
   class LinkPositionObjective
     : public Objective
   {
   public:
     LinkPositionObjective(size_t node,
-		    double px,
-		    double py,
-		    double pz,
-		    double kp,
-		    double kd);
+			  double px,
+			  double py,
+			  double pz,
+			  double kp,
+			  double kd);
     
     virtual void init(KinematicModel const & model);
     virtual void update(KinematicModel const & model);

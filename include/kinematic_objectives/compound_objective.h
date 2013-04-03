@@ -46,6 +46,21 @@ namespace kinematic_objectives {
   class Objective;
   
   
+  /**
+     A collection of objectives that can be turned into a prioritized
+     and/or summed overall update using a blender. Currently hardcodes
+     the notion of "constraint" (delta-position-based update with
+     corresponding nullspace), "hard objective" (a.k.a. task in the
+     controls community, here implemented as an acceleration-based
+     update with corresponding nullspace), and "soft objective" (which
+     is acceleration based and provides the somewhat novel way of
+     pretending we have virtual forces in the absence of system
+     dynamic models).
+     
+     \todo [high] generalize this (away from the old "waypoint" idea
+     which is still present in the demo code); [medium] make the
+     attributes protected or private.
+   */  
   class CompoundObjective
   {
   public:
@@ -57,7 +72,6 @@ namespace kinematic_objectives {
     
     virtual void preUpdateHook() = 0; // rfct
     
-    //// XXXX make this protected or something...
     KinematicModel & model_;
     
     vector<Objective *> constraints_;

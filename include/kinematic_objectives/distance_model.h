@@ -43,6 +43,10 @@
 namespace kinematic_objectives {
   
   
+  /**
+     Functionality adapter that provides independence wrt the way
+     distances are computed.
+   */
   class DistanceModel
   {
   public:

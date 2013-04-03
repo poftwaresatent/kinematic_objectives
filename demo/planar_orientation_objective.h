@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP
-#define KINEMATIC_OBJECTIVES_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP
 
 #include <kinematic_objectives/objective.h>
 
@@ -43,13 +43,16 @@ namespace kinematic_objectives {
   
   namespace demo {
     
+    /**
+       \todo [low] attributes should be protected or private
+    */
     class PlanarOrientationObjective
       : public Objective
     {
     public:
       PlanarOrientationObjective(size_t node,
-			 double kp,
-			 double kd);
+				 double kp,
+				 double kd);
       
       virtual void init(KinematicModel const & model);
       virtual void update(KinematicModel const & model);
@@ -65,4 +68,4 @@ namespace kinematic_objectives {
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_PLANAR_ORIENTATION_ORIENTATION_OBJECTIVE_HPP

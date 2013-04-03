@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_PLANAR_ROBOT_HPP
-#define KINEMATIC_OBJECTIVES_PLANAR_ROBOT_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_PLANAR_ROBOT_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_PLANAR_ROBOT_HPP
 
 #include <kinematic_objectives/kinematic_model.h>
 #include "cairo_drawable.h"
@@ -45,6 +45,11 @@ namespace kinematic_objectives {
   
   namespace demo {
     
+    /**
+       \todo [medium] avoid multiple inheritance (just a single
+       abstract method here though); [low] attributes should be
+       protected or private
+    */
     class PlanarRobot
       : public KinematicModel,
 	public CairoDrawable
@@ -77,8 +82,6 @@ namespace kinematic_objectives {
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      //// XXXX make these protected or whatnot...
-  
       double const radius_;
       double const len_a_;
       double const len_b_;
@@ -110,4 +113,4 @@ namespace kinematic_objectives {
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_PLANAR_ROBOT_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_PLANAR_ROBOT_HPP

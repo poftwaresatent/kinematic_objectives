@@ -45,7 +45,22 @@ namespace kinematic_objectives {
   
   class CompoundObjective;
   
-  
+
+  /**
+     The algorithm which takes a compound objective and turns it into
+     an overall update. Slated to become an abstract base class at
+     some point, and provide generic inspection (introspection?)
+     capabilities so that users get informaed why some aspect of the
+     motion they expect is not getting fulfilled (e.g. "why is the
+     tray tilting although I had told the robot to keep it horizontal"
+     --> "it is because of an interference between a joint limit and
+     obstacle avoidance").
+     
+     \todo [medium] make the attributes protected or private; [medium]
+     extract a nice base class and provide at least two implementation
+     (based on Chiaverini:1997 and Baerlocher:2001, maybe also one for
+     Siciliano:1991); [low] find a better name.
+  */  
   class Blender
   {
   public:
@@ -60,8 +75,6 @@ namespace kinematic_objectives {
     virtual void update();
     
     virtual void updateCompoundObjective(CompoundObjective * wpt);
-    
-    //// XXXX protected or so
     
     ostream * dbgos_;
     string dbgpre_;

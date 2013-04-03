@@ -46,15 +46,37 @@ namespace kinematic_objectives {
   class KinematicModel;
   
   
-  class ObjectiveData
+  /**
+     \todo [high] attributes should be protected or private
+  */
+  class Objective
   {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    virtual ~ObjectiveData() {}
+    virtual ~Objective() {}
     
+    virtual void init(KinematicModel const & model) { }
+    
+    /**
+       \todo [low] consider moving this into a lower subclass, it
+       seems to be relevant only for constraints.
+    */
+    virtual bool isActive() const { return true; }
+    
+    /**
+       Subclasses have to set the bias_ and jacobian_ fields.
+    */
+    virtual void update(KinematicModel const & model) = 0;
+    
+    /**
+       \todo [low] find a somewhat less hacky way for stacking multiple objectives on top of each other.
+    */
     void stack(ObjectiveData const & t1, ObjectiveData const & t2);
     
+    /**
+       \todo [low] find a somewhat less hacky way for stacking multiple objectives on top of each other.
+    */
     template<typename iterator_t>
     void stack(iterator_t begin, iterator_t end)
     {
@@ -71,19 +93,17 @@ namespace kinematic_objectives {
       }
     }
     
-    Vector bias_; // basically this is "desired - current" but may be different for objectives
-    Matrix jacobian_;
-  };
-  
-  
-  class Objective
-    : public ObjectiveData
-  {
-  public:
-    virtual void init(KinematicModel const & model) { }
-    virtual bool isActive() const { return true; }
+    /**
+       For target-based objectives, this is basically "desired -
+       current." For potential-field-based (a.k.a. gradient-based)
+       objectives, this is just the gradient. For constraints, this is
+       directly the desired joint position change, whereas for hard
+       and soft objectives, this is (usually) interpreted as an
+       acceleration.
+    */
+    Vector bias_;
     
-    virtual void update(KinematicModel const & model) = 0;
+    Matrix jacobian_;
   };
   
 }

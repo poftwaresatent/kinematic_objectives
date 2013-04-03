@@ -72,15 +72,15 @@ namespace kinematic_objectives {
       clear();
       
       BoundaryCompoundObjective * start(new BoundaryCompoundObjective(*this,
-						    repulsor_,
-						    z_angle_,
-						    &(eestart_.point_),
-						    &(basestart_.point_)));
+								      repulsor_,
+								      z_angle_,
+								      &(eestart_.point_),
+								      &(basestart_.point_)));
       BoundaryCompoundObjective * goal(new BoundaryCompoundObjective(*this,
-						   repulsor_,
-						   z_angle_,
-						   &(eegoal_.point_),
-						   &(basegoal_.point_)));
+								     repulsor_,
+								     z_angle_,
+								     &(eegoal_.point_),
+								     &(basegoal_.point_)));
       vector<NormalCompoundObjective *> wpt;
       for (size_t ii(0); ii < 10; ++ii) {
 	wpt.push_back(new NormalCompoundObjective(*this, repulsor_, z_angle_));

@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_INTERACTIVE_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_INTERACTIVE_BLENDER_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP
 
 #include <kinematic_objectives/blender.h>
 #include "demo_compound_objectives.h"
@@ -45,6 +45,9 @@ namespace kinematic_objectives {
 
   namespace demo {
     
+    /**
+       \todo [low] attributes should be protected or private
+    */
     class InteractiveBlender
       : public Blender,
 	public CairoDrawable
@@ -60,7 +63,6 @@ namespace kinematic_objectives {
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      //// XXXX protected or whatnot...
       
       InteractionHandle eestart_;
       InteractionHandle eestartori_;
@@ -78,4 +80,4 @@ namespace kinematic_objectives {
 
 }
 
-#endif // KINEMATIC_OBJECTIVES_INTERACTIVE_BLENDER_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP

@@ -43,6 +43,13 @@
 namespace kinematic_objectives {
   
 
+  /**
+     Acceleration-based attraction of a link-local point to a global
+     position. Intended to be used as a soft objective to create some
+     workspace (Euclidean) bias.
+     
+     \todo [medium] make attributes protected or private.
+  */
   class PointAttractionObjective
     : public Objective
   {

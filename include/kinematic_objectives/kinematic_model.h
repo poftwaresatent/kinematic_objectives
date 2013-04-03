@@ -43,7 +43,11 @@
 
 namespace kinematic_objectives {
   
-  
+
+  /**
+     Functionality adapter that provides independence wrt the forward
+     kinematics interface.
+  */  
   class KinematicModel
   {
   public:

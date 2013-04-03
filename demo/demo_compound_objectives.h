@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_DEMO_COMPOUND_OBJECTIVES_HPP
-#define KINEMATIC_OBJECTIVES_DEMO_COMPOUND_OBJECTIVES_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_DEMO_COMPOUND_OBJECTIVES_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_DEMO_COMPOUND_OBJECTIVES_HPP
 
 #include <kinematic_objectives/compound_objective.h>
 #include <kinematic_objectives/joint_limit_objective.h>
@@ -70,22 +70,31 @@ namespace kinematic_objectives {
     };
     
     
+    /**
+       \todo [low] attributes should be protected or private
+    */
     class BaseCompoundObjective
       : public CompoundObjective,
 	public CairoDrawable
     {
     public:
       BaseCompoundObjective(InteractiveBlender const & blender,
-		   InteractionHandle const & repulsor,
-		   double const & z_angle);
+			    InteractionHandle const & repulsor,
+			    double const & z_angle);
     
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      virtual void preUpdateHook(); // rfct
+      /**
+	 \todo [low] find a less ugly way of customizing behavior
+      */
+      virtual void preUpdateHook();
       
-      //// XXXX protected or so...
-      
-      PlanarRobot robot_; // XXXX keep this before any constraints so we can use its values for initializing them
+      /**
+	 \note Keep this declaration before any objectives that are
+	 used as constraints. That way, the robot can be used to
+	 initialize constraints.
+      */
+      PlanarRobot robot_;
       PlanarDistance distance_api_;
       
       InteractionHandle const & repulsor_;
@@ -109,13 +118,16 @@ namespace kinematic_objectives {
     };
     
     
+    /**
+       \todo [low] attributes should be protected or private
+    */
     class NormalCompoundObjective
       : public BaseCompoundObjective
     {
     public:
       NormalCompoundObjective(InteractiveBlender const & blender,
-		     InteractionHandle const & repulsor,
-		     double const & z_angle);
+			      InteractionHandle const & repulsor,
+			      double const & z_angle);
       
       virtual ~NormalCompoundObjective();
       
@@ -134,8 +146,6 @@ namespace kinematic_objectives {
       void setNeighbors(BaseCompoundObjective const * prev,
 			BaseCompoundObjective const * next);
       
-      //// XXXX protected or so...
-      
       BaseCompoundObjective const * prev_;
       BaseCompoundObjective const * next_;
       
@@ -144,22 +154,23 @@ namespace kinematic_objectives {
     };
     
     
+    /**
+       \todo [low] attributes should be protected or private
+    */
     class BoundaryCompoundObjective
       : public BaseCompoundObjective
     {
     public:
       BoundaryCompoundObjective(InteractiveBlender const & blender,
-		       InteractionHandle const & repulsor,
-		       double const & z_angle,
-		       Vector const * eegoal,
-		       Vector const * baseattractor);
+				InteractionHandle const & repulsor,
+				double const & z_angle,
+				Vector const * eegoal,
+				Vector const * baseattractor);
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
       virtual void preUpdateHook(); // rfct
 
-      //// XXXX protected or so...
-      
       LinkPositionObjective eeobjective_;
       PointAttractionObjective attract_base_;
       Vector const * eegoal_;
@@ -170,4 +181,4 @@ namespace kinematic_objectives {
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_DEMO_COMPOUND_OBJECTIVES_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_DEMO_COMPOUND_OBJECTIVES_HPP

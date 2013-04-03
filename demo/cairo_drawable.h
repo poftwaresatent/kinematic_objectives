@@ -34,14 +34,19 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CAIRO_DRAWABLE_HPP
-#define KINEMATIC_OBJECTIVES_CAIRO_DRAWABLE_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_CAIRO_DRAWABLE_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_CAIRO_DRAWABLE_HPP
 
 #include <cairo/cairo.h>
 
 
 namespace kinematic_objectives {
   
+  /**
+     \todo [medium] find a way to provide this interface without
+     resorting to multiple inheritance... or maybe that's okay after
+     all, because we just mix-in a single abstract method.
+  */
   class CairoDrawable
   {
   public:
@@ -52,4 +57,4 @@ namespace kinematic_objectives {
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_CAIRO_DRAWABLE_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_CAIRO_DRAWABLE_HPP

@@ -70,8 +70,8 @@ namespace kinematic_objectives {
     
     BaseCompoundObjective::
     BaseCompoundObjective(InteractiveBlender const & blender,
-		 InteractionHandle const & repulsor,
-		 double const & z_angle)
+			  InteractionHandle const & repulsor,
+			  double const & z_angle)
       : CompoundObjective(robot_),
 	distance_api_(robot_, blender),
 	repulsor_(repulsor),
@@ -234,8 +234,8 @@ namespace kinematic_objectives {
     
     NormalCompoundObjective::
     NormalCompoundObjective(InteractiveBlender const & blender,
-		   InteractionHandle const & repulsor,
-		   double const & z_angle)
+			    InteractionHandle const & repulsor,
+			    double const & z_angle)
       : BaseCompoundObjective(blender, repulsor, z_angle)
     {
     }
@@ -261,31 +261,6 @@ namespace kinematic_objectives {
       }
       BaseCompoundObjective::init(position, velocity);
     }
-    
-    
-    // virtual void draw(cairo_t * cr, double weight, double pixelsize)
-    // {
-    //   BaseCompoundObjective::draw(cr, pixelsize);
-    
-    //   cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
-    //   cairo_set_line_width(cr, weight * 1.0 / pixelsize);
-    
-    //   for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
-    //     if (attract_prev_[ii]->isActive()) {
-    // 	cairo_move_to(cr, attract_prev_[ii]->gpoint_[0], attract_prev_[ii]->gpoint_[1]);
-    // 	cairo_line_to(cr, attract_prev_[ii]->gpoint_[0] + attract_prev_[ii]->bias_[0] / attract_prev_[ii]->gain_, attract_prev_[ii]->gpoint_[1] + attract_prev_[ii]->bias_[1] / attract_prev_[ii]->gain_);
-    // 	cairo_stroke(cr);
-    //     }
-    //   }
-    //
-    //   for (size_t ii(0); ii < attract_next_.size(); ++ii) {
-    //     if (attract_next_[ii]->isActive()) {
-    // 	cairo_move_to(cr, attract_next_[ii]->gpoint_[0], attract_next_[ii]->gpoint_[1]);
-    // 	cairo_line_to(cr, attract_next_[ii]->gpoint_[0] + attract_next_[ii]->bias_[0] / attract_next_[ii]->gain_, attract_next_[ii]->gpoint_[1] + attract_next_[ii]->bias_[1] / attract_next_[ii]->gain_);
-    // 	cairo_stroke(cr);
-    //     }
-    //   }
-    // }
     
     
     void NormalCompoundObjective::
@@ -350,10 +325,10 @@ namespace kinematic_objectives {
     
     BoundaryCompoundObjective::
     BoundaryCompoundObjective(InteractiveBlender const & blender,
-		     InteractionHandle const & repulsor,
-		     double const & z_angle,
-		     Vector const * eegoal,
-		     Vector const * baseattractor)
+			      InteractionHandle const & repulsor,
+			      double const & z_angle,
+			      Vector const * eegoal,
+			      Vector const * baseattractor)
       : BaseCompoundObjective(blender, repulsor, z_angle),
 	eeobjective_      (3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
 	attract_base_(0,           0.0, 0.0, 0.0, 100.0, 2.0),
@@ -383,7 +358,9 @@ namespace kinematic_objectives {
 	cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
 	cairo_set_line_width(cr, weight * 1.0 / pixelsize);
 	cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
-	cairo_line_to(cr, attract_base_.gpoint_[0] + attract_base_.bias_[0] / attract_base_.gain_, attract_base_.gpoint_[1] + attract_base_.bias_[1] / attract_base_.gain_);
+	cairo_line_to(cr,
+		      attract_base_.gpoint_[0] + attract_base_.bias_[0] / attract_base_.gain_,
+		      attract_base_.gpoint_[1] + attract_base_.bias_[1] / attract_base_.gain_);
 	cairo_stroke(cr);
       }
     }

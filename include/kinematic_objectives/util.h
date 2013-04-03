@@ -34,30 +34,24 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_HPP
-#define KINEMATIC_OBJECTIVES_HPP
+#ifndef KINEMATIC_OBJECTIVES_UTIL_HPP
+#define KINEMATIC_OBJECTIVES_UTIL_HPP
 
-#include <Eigen/Core>
-#include <Eigen/StdVector>
-#include <Eigen/Geometry>
+#include <kinematic_objectives/types.h>
 #include <cmath>
-
 
 namespace kinematic_objectives {
   
-  typedef Eigen::VectorXd Vector;
-  typedef Eigen::MatrixXd Matrix;
-  typedef Eigen::Isometry3d Transform;
-  
-  using namespace std;
   
   void stackVector (Vector const & v1,
 		    Vector const & v2,
 		    Vector & vv);
   
+  
   void stackMatrix (Matrix const & m1,
 		    Matrix const & m2,
 		    Matrix & mm);
+  
   
   template<typename value_t>
   inline value_t bound(value_t lower, value_t value, value_t upper)
@@ -84,8 +78,9 @@ namespace kinematic_objectives {
     return phi;
   }
   
+  
   static double const deg(M_PI / 180.);
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_HPP
+#endif // KINEMATIC_OBJECTIVES_UTIL_HPP

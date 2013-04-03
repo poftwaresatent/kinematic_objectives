@@ -45,8 +45,8 @@ namespace kinematic_objectives {
     
     PlanarOrientationObjective::
     PlanarOrientationObjective(size_t node,
-		       double kp,
-		       double kd)
+			       double kp,
+			       double kd)
       : kp_(kp),
 	kd_(kd),
 	node_(node)

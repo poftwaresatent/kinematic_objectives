@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_PLANAR_DISTANCE_HPP
-#define KINEMATIC_OBJECTIVES_PLANAR_DISTANCE_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_PLANAR_DISTANCE_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_PLANAR_DISTANCE_HPP
 
 #include <kinematic_objectives/distance_model.h>
 
@@ -52,7 +52,7 @@ namespace kinematic_objectives {
     {
     public:
       PlanarDistance(PlanarRobot const & robot,
-			InteractiveBlender const & blender);
+		     InteractiveBlender const & blender);
       
       /**
 	 Implements DistanceModel::computeMinimumSeparation().
@@ -73,4 +73,4 @@ namespace kinematic_objectives {
 
 }
 
-#endif // KINEMATIC_OBJECTIVES_PLANAR_DISTANCE_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_PLANAR_DISTANCE_HPP

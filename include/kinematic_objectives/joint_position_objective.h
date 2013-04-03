@@ -42,6 +42,12 @@
 
 namespace kinematic_objectives {
   
+  /**
+     Classically called "posture controller," this objective drives
+     the joint configuration to some goal_ based on PD control.
+     
+     \todo [medium] make the attributes protected or private.
+   */
   class JointPositionObjective
     : public Objective
   {

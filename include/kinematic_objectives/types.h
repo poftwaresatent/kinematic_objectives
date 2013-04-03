@@ -34,33 +34,21 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_JOINT_DAMPING_OBJECTIVE_HPP
-#define KINEMATIC_OBJECTIVES_JOINT_DAMPING_OBJECTIVE_HPP
+#ifndef KINEMATIC_OBJECTIVES_TYPES_HPP
+#define KINEMATIC_OBJECTIVES_TYPES_HPP
 
-#include <kinematic_objectives/objective.h>
-
+#include <Eigen/Core>
+#include <Eigen/StdVector>
+#include <Eigen/Geometry>
 
 namespace kinematic_objectives {
-
-  /**
-     An acceleration-based objective implementing simple
-     viscosity-based damping of joint-space motions.
-     
-     \todo [medium] consider making the attributes protected or
-     private.
-   */
-  class JointDampingObjective
-    : public Objective
-  {
-  public:
-    explicit JointDampingObjective(double gain);
-    
-    virtual void init(KinematicModel const & model);
-    virtual void update(KinematicModel const & model);
-    
-    double gain_;
-  };
-
+  
+  typedef Eigen::VectorXd Vector;
+  typedef Eigen::MatrixXd Matrix;
+  typedef Eigen::Isometry3d Transform;
+  
+  using namespace std;
+  
 }
 
-#endif // KINEMATIC_OBJECTIVES_JOINT_DAMPING_OBJECTIVE_HPP
+#endif // KINEMATIC_OBJECTIVES_TYPES_HPP

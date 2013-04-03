@@ -42,6 +42,13 @@
 
 namespace kinematic_objectives {
   
+  /**
+     An attempt at generic joint limit avoidance. Handles all joints
+     at once, and thus changes dimensionality based on the number of
+     joints that are at their limits.
+     
+     \todo [medium] make attributes protected or private.
+  */
   class JointLimitObjective
     : public Objective
   {
