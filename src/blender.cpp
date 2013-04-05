@@ -45,20 +45,26 @@
 namespace kinematic_objectives {
   
   
-  static void perform_prioritization(Matrix const & N_init,
+  static void perform_prioritization(/** initial nullspace projector */
+				     Matrix const & N_init,
+				     /** hierarchy of objectives to fuse/blend */
 				     vector<Objective*> const & objectives,
+				     /** resulting (fused/blended) bias */
 				     Vector & bias_res,
+				     /** accumulated nullspace projector at the end of the fusion */
 				     Matrix & N_res,
+				     /** stream for debug output (use 0 for silent operation) */
 				     ostream * dbgos,
+				     /** prefix for debug output (prepended to each line) */
 				     string const & dbgpre)
   {
     bias_res = Vector::Zero(N_init.rows());
     N_res = N_init;
     
-    Matrix Jbinv;
-    Matrix Nup;
+    Matrix Jbinv;		// pseudo-inverse of J_bar (which is J * N)
+    Matrix Nup;			// nullspace updater: N -= N_up at each hierarchy level
     
-    Vector sigma;
+    Vector sigma;		// eigenvalues of J_bar
     Vector * dbgsigma(0);
     if (dbgos) {
       dbgsigma = &sigma;
@@ -107,7 +113,7 @@ namespace kinematic_objectives {
 	print(Nup, *dbgos, "nullspace update", pre);
 	Vector vtmp;
         vtmp = Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
-	print(vtmp, *dbgos, "delta update", pre);
+	print(vtmp, *dbgos, "bias update", pre);
         vtmp = objectives[ii]->getJacobian() * vtmp;
 	print(vtmp, *dbgos, "biased objective update", pre);
         vtmp = objectives[ii]->getJacobian() * Jbinv * objectives[ii]->getBias();
@@ -128,7 +134,7 @@ namespace kinematic_objectives {
       if (dbgos) {
         string pre (dbgpre);
         pre += "  ";
-	print(bias_res, *dbgos, "accumulated delta", pre);
+	print(bias_res, *dbgos, "accumulated bias", pre);
 	print(N_res, *dbgos, "accumulated nullspace", pre);
 	Eigen::JacobiSVD<Matrix> svd;
 	svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);

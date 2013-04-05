@@ -47,9 +47,36 @@ namespace kinematic_objectives {
   
   
   /**
-     \todo Working title, name and contents will depend on what turns
-     out to actually work. Could also be termed a ProgressMonitor or
+     Working title, name and contents will depend on what turns out to
+     actually work. Could also be termed a ProgressMonitor or
      BlenderFeedback or something along those lines.
+     
+     Ideas for things to store here:
+     
+     From blender.cpp perform_prioritization():
+     - J_bar = J * N
+     - N_up (nullspace updater: N -= N_up at each hierarchy level)
+     - sigma (eigenvalues of J_bar, might be interesting to
+       distinguish before / after regularization)
+     - maybe eigenvalues of J
+     - maybe eigenvalues of nullspace
+     - probably input / output spaces of J_bar SVD (or some data
+       derived from them)
+     - maybe the same for the non-projected J (or something derived)
+     - maybe compensated bias, or conversely the amount to which
+       higher levels "help" achieving this one
+     - biased and unbiased "objective update" (this is the gist behind
+       Chiaverini's reconstruction error I think)
+     - number of dimensions left after the objective
+          
+     From Blender::updateCompoundObjective():
+     - current position (and velocity?) in objective space
+     - 
+
+     
+     
+
+
   */
   struct Achievability {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

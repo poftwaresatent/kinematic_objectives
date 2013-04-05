@@ -56,6 +56,15 @@ namespace kinematic_objectives {
      --> "it is because of an interference between a joint limit and
      obstacle avoidance").
      
+     The Blender should provide some quantitative "meta feedback"
+     about its results. For example, which unilateral constraints were
+     activated, the resulting constraint nullspace, whether that
+     created any conflicts with hard objectives, whether there were
+     any algorithmic singularities between constraints and hard
+     objectives. For soft objectives, it should at least be possible
+     to specify the remaining space of motion freedom they had
+     available collectively.
+     
      \todo [medium] make the attributes protected or private; [medium]
      extract a nice base class and provide at least two implementation
      (based on Chiaverini:1997 and Baerlocher:2001, maybe also one for
