@@ -84,20 +84,20 @@ namespace kinematic_objectives {
 	*dbgos << dbgpre << "objective " << ii << ":\n";
 	string pre (dbgpre);
 	pre += "  ";
-	print(objectives[ii]->bias_, *dbgos, "objective bias", pre);
-	print(objectives[ii]->jacobian_, *dbgos, "objective Jacobian", pre);
+	print(objectives[ii]->getBias(), *dbgos, "objective bias", pre);
+	print(objectives[ii]->getJacobian(), *dbgos, "objective Jacobian", pre);
 	Eigen::JacobiSVD<Matrix> svd;
-	svd.compute(objectives[ii]->jacobian_, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	svd.compute(objectives[ii]->getJacobian(), Eigen::ComputeThinU | Eigen::ComputeThinV);
 	print(svd.singularValues(), *dbgos, "eigenvalues of objective Jacobian", pre);
 	Vector vtmp;
-	vtmp = objectives[ii]->bias_ - objectives[ii]->jacobian_ * bias_res;
+	vtmp = objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res;
 	print(vtmp, *dbgos, "bias_comp", pre);
 	Matrix mtmp;
-	mtmp = objectives[ii]->jacobian_ * N_res;
+	mtmp = objectives[ii]->getJacobian() * N_res;
 	print(mtmp, *dbgos, "J_bar", pre);
       }
       
-      pseudo_inverse_moore_penrose(objectives[ii]->jacobian_ * N_res, Jbinv, &Nup, dbgsigma);
+      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian() * N_res, Jbinv, &Nup, dbgsigma);
       
       if (dbgos) {
         string pre (dbgpre);
@@ -106,15 +106,15 @@ namespace kinematic_objectives {
 	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
 	print(Nup, *dbgos, "nullspace update", pre);
 	Vector vtmp;
-        vtmp = Jbinv * (objectives[ii]->bias_ - objectives[ii]->jacobian_ * bias_res);
+        vtmp = Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
 	print(vtmp, *dbgos, "delta update", pre);
-        vtmp = objectives[ii]->jacobian_ * vtmp;
+        vtmp = objectives[ii]->getJacobian() * vtmp;
 	print(vtmp, *dbgos, "biased objective update", pre);
-        vtmp = objectives[ii]->jacobian_ * Jbinv * objectives[ii]->bias_;
+        vtmp = objectives[ii]->getJacobian() * Jbinv * objectives[ii]->getBias();
 	print(vtmp, *dbgos, "unbiased objective update", pre);
       }
       
-      bias_res += Jbinv * (objectives[ii]->bias_ - objectives[ii]->jacobian_ * bias_res);
+      bias_res += Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
       
       if (Nup.cols() == 0) {
 	if (dbgos) {
@@ -227,8 +227,8 @@ namespace kinematic_objectives {
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
-	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->jacobian_, Jinv);
-	qdd_o += Jinv * wpt->soft_objectives_[ii]->bias_;
+	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->getJacobian(), Jinv);
+	qdd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
       }
     }
     
@@ -329,8 +329,8 @@ namespace kinematic_objectives {
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
-	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->jacobian_, Jinv);
-	qdd_o += Jinv * wpt->soft_objectives_[ii]->bias_;
+	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->getJacobian(), Jinv);
+	qdd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
       }
     }
     

@@ -47,8 +47,17 @@ namespace kinematic_objectives {
   
   
   /**
-     \todo [high] attributes should be protected or private
+     \todo Working title, name and contents will depend on what turns
+     out to actually work. Could also be termed a ProgressMonitor or
+     BlenderFeedback or something along those lines.
   */
+  struct Achievability {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    
+    Vector placeholder;
+  };
+  
+  
   class Objective
   {
   public:
@@ -93,6 +102,16 @@ namespace kinematic_objectives {
       }
     }
     
+    inline Vector const & getBias() const
+    { return bias_; }
+    
+    inline Matrix const & getJacobian() const
+    { return jacobian_; }
+    
+    inline Achievability const & getAchievability() const
+    { return achievability_; }
+    
+  protected:
     /**
        For target-based objectives, this is basically "desired -
        current." For potential-field-based (a.k.a. gradient-based)
@@ -104,6 +123,8 @@ namespace kinematic_objectives {
     Vector bias_;
     
     Matrix jacobian_;
+    
+    Achievability achievability_;
   };
   
 }
