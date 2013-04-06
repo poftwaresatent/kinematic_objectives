@@ -41,8 +41,25 @@
 
 namespace kinematic_objectives {
   
+  /**
+     For well-behaved matrices, \f$ M^{\#} = M^T (M M^T) ^{-1} \f$.
+  */
   void pseudo_inverse_nonsingular(Matrix const & mx,
 				  Matrix & inv);
+  
+  /**
+     In case you need to subsequently inspect what went on during
+     matrix inversion.
+  */
+  struct MoorePenroseSVDFeedback {
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    
+    size_t original_range;
+    size_t truncated_range;
+    Vector singular_values;
+    Matrix output_space;	/**< a.k.a. "matrix U" */
+    Matrix input_space;		/**< a.k.a. "matrix V" */
+  };
   
   /**
      \note I think this ended up being the only pseudo-inverse
@@ -51,11 +68,28 @@ namespace kinematic_objectives {
      into a generic superclass with a handfull of specific
      implementations based on existing state of the art and novel
      developments.
+     
+     \todo [high] contains a magic number (prec = 1e-3) that gets
+     converted into an eigenvaluee threshold.
   */
-  void pseudo_inverse_moore_penrose(Matrix const & mx,
+  void pseudo_inverse_moore_penrose(/**
+				       Matrix to be inverted
+				    */
+				    Matrix const & mx,
+				    /**
+				       Inverse computed via thresholded SVD.
+				    */
 				    Matrix & inv,
+				    /**
+				       Optional output parameter:
+				       nullspace projection update
+				       (N_proj -= *dproj)
+				    */
 				    Matrix * dproj = 0,
-				    Vector * sigma = 0);
+				    /**
+				       Optional output parameter.
+				    */
+				    MoorePenroseSVDFeedback * fb = 0);
   
   void pseudo_inverse_damped(Matrix const & mx,
 			     double lambda,

@@ -71,17 +71,16 @@ namespace kinematic_objectives {
           
      From Blender::updateCompoundObjective():
      - current position (and velocity?) in objective space
-     - 
-
-     
-     
-
-
   */
   struct Achievability {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    Vector placeholder;
+    Matrix jbar_inverse;
+    size_t jbar_range;
+    Vector residual_error;
+    
+    // requires SVD of J: Matrix nullspace_residuals;
+    // requires SVD of J: Matrix removed_directions;
   };
   
   

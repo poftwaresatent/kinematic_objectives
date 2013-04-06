@@ -51,23 +51,26 @@ namespace kinematic_objectives {
   }
   
   
-  /*
-    Cobbled together from
-    http://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_pseudoinverse
-    and
-    http://eigen.tuxfamily.org/index.php?title=FAQ
-    with some inspiration, too, from Baerlocher's thesis.
+  /**
+     \note This implementation is based on
+     http://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_pseudoinverse
+     and http://eigen.tuxfamily.org/index.php?title=FAQ with some
+     inspiration, too, from Baerlocher's thesis. The feedback aspects
+     are moderately special.
   */
   void pseudo_inverse_moore_penrose (Matrix const & mx,
 				     Matrix & inv,
 				     Matrix * dproj,
-				     Vector * sigma)
+				     MoorePenroseSVDFeedback * fb)
   {
     if (mx.rows() > mx.cols()) {
       // apparently in this case it is cheaper to use the transpose...
       Matrix tmp;
-      pseudo_inverse_moore_penrose(mx.transpose(), tmp, dproj);
+      pseudo_inverse_moore_penrose(mx.transpose(), tmp, dproj, fb);
       inv = tmp.transpose();
+      if (fb) {
+	fb->output_space.swap(fb->input_space);
+      }
       return;
     }
     
@@ -75,7 +78,8 @@ namespace kinematic_objectives {
     static double const prec(1e-3);  // numeric_limits<double>::epsilon() is way too small...
     double const thresh(mx.cols() * prec * svd.singularValues()[0]);
     inv = Matrix::Zero(mx.cols(), mx.rows());
-    for (ssize_t ii(0); ii < svd.nonzeroSingularValues(); ++ii) {
+    ssize_t ii;			// reused for fb if needed
+    for (ii = 0; ii < svd.nonzeroSingularValues(); ++ii) {
       if (svd.singularValues()[ii] <= thresh) {
 	break;
       }
@@ -91,15 +95,19 @@ namespace kinematic_objectives {
       *dproj
 	= svd.matrixV().col(0)
 	* svd.matrixV().col(0).transpose();
-      for (ssize_t ii(1); ii < svd.nonzeroSingularValues(); ++ii) {
+      for (ssize_t jj(1); jj < svd.nonzeroSingularValues(); ++jj) {
 	*dproj
-	  += svd.matrixV().col(ii)
-	  * svd.matrixV().col(ii).transpose();
+	  += svd.matrixV().col(jj)
+	  * svd.matrixV().col(jj).transpose();
       }
     }
     
-    if (sigma) {
-      *sigma = svd.singularValues();
+    if (fb) {
+      fb->original_range = svd.nonzeroSingularValues();
+      fb->truncated_range = ii > 0 ? ii - 1 : 0;
+      fb->singular_values = svd.singularValues();
+      fb->output_space = svd.matrixU();
+      fb->input_space = svd.matrixV();
     }
   }
   

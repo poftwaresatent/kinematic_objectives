@@ -64,11 +64,9 @@ namespace kinematic_objectives {
     Matrix Jbinv;		// pseudo-inverse of J_bar (which is J * N)
     Matrix Nup;			// nullspace updater: N -= N_up at each hierarchy level
     
-    Vector sigma;		// eigenvalues of J_bar
-    Vector * dbgsigma(0);
+    MoorePenroseSVDFeedback fb;
+    
     if (dbgos) {
-      dbgsigma = &sigma;
-      
       string pre (dbgpre);
       pre += "  ";
       print(N_res, *dbgos, "initial nullspace", pre);
@@ -103,12 +101,12 @@ namespace kinematic_objectives {
 	print(mtmp, *dbgos, "J_bar", pre);
       }
       
-      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian() * N_res, Jbinv, &Nup, dbgsigma);
+      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian() * N_res, Jbinv, &Nup, dbgos ? &fb : 0);
       
       if (dbgos) {
         string pre (dbgpre);
         pre += "  ";
-	print(sigma, *dbgos, "eigenvalues of J_bar", pre);
+	print(fb.singular_values, *dbgos, "eigenvalues of J_bar", pre);
 	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
 	print(Nup, *dbgos, "nullspace update", pre);
 	Vector vtmp;
