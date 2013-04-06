@@ -38,6 +38,7 @@
 #define KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
 
 #include <kinematic_objectives/types.h>
+#include <kinematic_objectives/pseudo_inverse.h> // just to get the typedef for MoorePenroseSVDFeedback
 #include <limits>
 
 
@@ -75,9 +76,10 @@ namespace kinematic_objectives {
   struct Achievability {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    Matrix jbar_inverse;
-    size_t jbar_range;
-    Vector residual_error;
+    MoorePenroseSVDFeedback jbar_svd;
+    // Matrix jbar_inverse;
+    // size_t jbar_range;
+    // Vector residual_error;
     
     // requires SVD of J: Matrix nullspace_residuals;
     // requires SVD of J: Matrix removed_directions;
@@ -150,6 +152,7 @@ namespace kinematic_objectives {
     
     Matrix jacobian_;
     
+  public:
     Achievability achievability_;
   };
   

@@ -104,7 +104,7 @@ namespace kinematic_objectives {
     
     if (fb) {
       fb->original_range = svd.nonzeroSingularValues();
-      fb->truncated_range = ii > 0 ? ii - 1 : 0;
+      fb->truncated_range = ii;
       fb->singular_values = svd.singularValues();
       fb->output_space = svd.matrixU();
       fb->input_space = svd.matrixV();

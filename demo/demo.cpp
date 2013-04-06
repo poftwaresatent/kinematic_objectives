@@ -35,6 +35,7 @@
 /* Author: Roland Philippsen */
 
 #include <kinematic_objectives/util.h>
+#include <kinematic_objectives/print.h>
 #include "interactive_blender.h"
 #include <gtk/gtk.h>
 #include <cmath>
@@ -63,10 +64,38 @@ static Vector grab_offset(3);
 
 
 
+static void dump_achievability(string const & type, size_t index, Objective const * obj)
+{
+  if (obj->isActive()) {
+    Achievability const & ac(obj->getAchievability());
+    MoorePenroseSVDFeedback const & fb(ac.jbar_svd);
+    cout << type << " #" << index << " range " << fb.truncated_range << " (original " << fb.original_range << ")\n";
+    print(fb.singular_values, cout, "singular values", "  ");
+    print(fb.input_space, cout, "input_space", "  ");
+    print(fb.output_space, cout, "output_space", "  ");
+  }
+  else {
+    cout << type << " #" << index << " inactive\n";
+  }
+  fflush(stdout);
+}
+
+
 static void update()
 {
   blender->update();
   gtk_widget_queue_draw(gw);
+  
+  CompoundObjective const * co(*blender->path_.begin());
+  for (size_t ii(0); ii < co->constraints_.size(); ++ii) {
+    dump_achievability("constraint", ii, co->constraints_[ii]);
+  }
+  for (size_t ii(0); ii < co->hard_objectives_.size(); ++ii) {
+    dump_achievability("hard_objective", ii, co->hard_objectives_[ii]);
+  }
+  for (size_t ii(0); ii < co->soft_objectives_.size(); ++ii) {
+    dump_achievability("soft_objective", ii, co->soft_objectives_[ii]);
+  }
 }
 
 
