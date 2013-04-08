@@ -36,6 +36,7 @@
 
 #include <kinematic_objectives/constraint_teleporting_blender.h>
 #include <kinematic_objectives/compound_objective.h>
+#include <kinematic_objectives/prioritization.h>
 #include <kinematic_objectives/kinematic_model.h>
 #include <kinematic_objectives/pseudo_inverse.h>
 #include <kinematic_objectives/print.h>
@@ -43,113 +44,6 @@
 
 
 namespace kinematic_objectives {
-  
-  
-  static void perform_prioritization(/** initial nullspace projector */
-				     Matrix const & N_init,
-				     /** hierarchy of objectives to fuse/blend */
-				     vector<Objective*> const & objectives,
-				     /** resulting (fused/blended) bias */
-				     Vector & bias_res,
-				     /** accumulated nullspace projector at the end of the fusion */
-				     Matrix & N_res,
-				     /** stream for debug output (use 0 for silent operation) */
-				     ostream * dbgos,
-				     /** prefix for debug output (prepended to each line) */
-				     string const & dbgpre)
-  {
-    bias_res = Vector::Zero(N_init.rows());
-    N_res = N_init;
-    
-    Matrix Jbinv;		// pseudo-inverse of J_bar (which is J * N)
-    Matrix Nup;			// nullspace updater: N -= N_up at each hierarchy level
-    
-    if (dbgos) {
-      string pre (dbgpre);
-      pre += "  ";
-      print(N_res, *dbgos, "initial nullspace", pre);
-      Eigen::JacobiSVD<Matrix> svd;
-      svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-      print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
-    }
-    
-    for (size_t ii(0); ii < objectives.size(); ++ii) {
-      
-      if ( ! objectives[ii]->isActive()) {
-	if (dbgos) {
-	  *dbgos << dbgpre << "objective " << ii << " is INACTIVE\n";
-	}	
-	continue;
-      }
-      
-      if (dbgos) {
-	*dbgos << dbgpre << "objective " << ii << " \"" << objectives[ii]->name_ << "\":\n";
-	string pre (dbgpre);
-	pre += "  ";
-	print(objectives[ii]->getBias(), *dbgos, "objective bias", pre);
-	print(objectives[ii]->getJacobian(), *dbgos, "objective Jacobian", pre);
-	Eigen::JacobiSVD<Matrix> svd;
-	svd.compute(objectives[ii]->getJacobian(), Eigen::ComputeThinU | Eigen::ComputeThinV);
-	print(svd.singularValues(), *dbgos, "eigenvalues of objective Jacobian", pre);
-	Vector vtmp;
-	vtmp = objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res;
-	print(vtmp, *dbgos, "bias_comp", pre);
-	Matrix mtmp;
-	mtmp = objectives[ii]->getJacobian() * N_res;
-	print(mtmp, *dbgos, "J_bar", pre);
-      }
-      
-      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian() * N_res, Jbinv, &Nup,
-				   &objectives[ii]->jbar_svd_);
-      
-      if (dbgos) {
-        string pre (dbgpre);
-        pre += "  ";
-	print(objectives[ii]->jbar_svd_.singular_values, *dbgos, "eigenvalues of J_bar", pre);
-	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
-	print(Nup, *dbgos, "nullspace projector update", pre);
-	Vector vtmp;
-        vtmp = Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
-	print(vtmp, *dbgos, "bias update", pre);
-        vtmp = objectives[ii]->getJacobian() * vtmp;
-	print(vtmp, *dbgos, "biased objective update", pre);
-        vtmp = objectives[ii]->getJacobian() * Jbinv * objectives[ii]->getBias();
-	print(vtmp, *dbgos, "unbiased objective update", pre);
-      }
-      
-      bias_res += Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
-      
-      if (Nup.cols() == 0) {
-	if (dbgos) {
-	  *dbgos << dbgpre << "NO DEGREES OF FREEDOM LEFT\n";
-	}
-	break;
-      }
-      
-      N_res -= Nup;
-      
-      if (dbgos) {
-        string pre (dbgpre);
-        pre += "  ";
-	print(bias_res, *dbgos, "accumulated bias", pre);
-	print(N_res, *dbgos, "accumulated nullspace projector", pre);
-	Eigen::JacobiSVD<Matrix> svd;
-	svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-	print(svd.singularValues(), *dbgos, "eigenvalues of nullspace projector", pre);
-      }
-      
-    }
-    
-    if (dbgos) {
-      string pre (dbgpre);
-      pre += "  ";
-      print(N_res, *dbgos, "final nullspace projectir", pre);
-      Eigen::JacobiSVD<Matrix> svd;
-      svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-      print(svd.singularValues(), *dbgos, "eigenvalues of final nullspace projector", pre);
-    }
-
-  }
   
   
   ConstraintTeleportingBlender::
@@ -190,12 +84,12 @@ namespace kinematic_objectives {
     ssize_t const ndof(wpt->model_.getJointPosition().size());
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
-    perform_prioritization(Matrix::Identity(ndof, ndof),
-			   wpt->hard_objectives_,
-			   qdd_t,
-			   N_t,
-			   dbgos_,
-			   dbgpre_ + "  ");
+    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
+				 wpt->hard_objectives_,
+				 qdd_t,
+				 N_t,
+				 dbgos_,
+				 dbgpre_ + "  ");
     
     Vector & qdd_o(wpt->fb_.soft_objective_bias_);
     qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
@@ -249,12 +143,12 @@ namespace kinematic_objectives {
     
     Vector & dq_c(wpt->fb_.constraint_bias_);
     Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
-    perform_prioritization(Matrix::Identity(ndof, ndof),
-			   wpt->constraints_,
-			   dq_c,
-			   N_c,
-			   dbgos_,
-			   dbgpre_ + "  ");
+    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
+				 wpt->constraints_,
+				 dq_c,
+				 N_c,
+				 dbgos_,
+				 dbgpre_ + "  ");
     
     // The constraints cheat with the robot state: they directly work
     // on the positions that would have been achieved without
@@ -296,12 +190,12 @@ namespace kinematic_objectives {
     
     // Re-run objective priority scheme, but seed it with the constraint nullspace this time.
     
-    perform_prioritization(N_c,
-			   wpt->hard_objectives_,
-			   qdd_t,
-			   N_t,
-			   dbgos_,
-			   dbgpre_ + "objective   ");
+    prioritization_siciliano1991(N_c,
+				 wpt->hard_objectives_,
+				 qdd_t,
+				 N_t,
+				 dbgos_,
+				 dbgpre_ + "  ");
     
     qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
