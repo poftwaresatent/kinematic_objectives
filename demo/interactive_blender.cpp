@@ -43,11 +43,10 @@ namespace kinematic_objectives {
     
     
     InteractiveBlender::
-    InteractiveBlender(double timestep,
+    InteractiveBlender(Blender * blender,
 		       ostream * dbgos,
 		       string const & dbgpre)
-      : ConstraintTeleportingBlender(timestep, dbgos, dbgpre),
-	ee_      (0.2, 0.0, 1.0, 0.0, 0.5),
+      : ee_      (0.2, 0.0, 1.0, 0.0, 0.5),
 	ee_ori_  (0.1, 0.0, 1.0, 0.0, 0.3),
 	z_angle_ (0),
 	base_    (0.2, 0.0, 1.0, 0.5, 0.5),
@@ -57,7 +56,8 @@ namespace kinematic_objectives {
 	       repulsor_,
 	       z_angle_,
 	       &(ee_.point_),
-	       &(base_.point_))
+	       &(base_.point_)),
+	blender_(blender)
     {
       handles_.push_back(&ee_);
       handles_.push_back(&ee_ori_);
@@ -88,7 +88,7 @@ namespace kinematic_objectives {
     update()
     {
       z_angle_ = atan2(ee_ori_.point_[1] - ee_.point_[1], ee_ori_.point_[0] - ee_.point_[0]);
-      ConstraintTeleportingBlender::update(&robot_);
+      blender_->update(&robot_);
     }
     
     

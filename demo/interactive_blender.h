@@ -37,7 +37,7 @@
 #ifndef KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP
 #define KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP
 
-#include <kinematic_objectives/constraint_teleporting_blender.h> // see to-do note below
+#include <kinematic_objectives/blender.h>
 #include "demo_compound_objectives.h"
 
 
@@ -46,25 +46,27 @@ namespace kinematic_objectives {
   namespace demo {
     
     /**
-       \todo [medium+easy] decouple from Blender hierarchy via
-       composition or decoration; [low] attributes should be protected
-       or private
+       Decorator to add interactivity (and drawability) to an existing
+       Blender instance.
+       
+       \todo [low] consider subclassing Blender to make it more
+       transparently reusable (not needed right now though); [low]
+       consider making more attributes protected or private
     */
     class InteractiveBlender
-      : public ConstraintTeleportingBlender,
-	public CairoDrawable
+      : public CairoDrawable
     {
     public:
-      InteractiveBlender(double timestep,
+      InteractiveBlender(/** Blender to be decorated with interactivity. */
+			 Blender * blender,
 			 ostream * dbgos,
 			 string const & dbgpre);
       
       void init(Vector const & state);
       
-      virtual void update();
+      /*virtual*/ void update();
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
-      
       
       InteractionHandle ee_;
       InteractionHandle ee_ori_;
@@ -76,6 +78,9 @@ namespace kinematic_objectives {
       vector<InteractionHandle*> handles_;
       
       BoundaryCompoundObjective robot_;
+      
+    private:
+      Blender * blender_;
     };
     
   }

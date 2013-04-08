@@ -36,6 +36,7 @@
 
 #include <kinematic_objectives/util.h>
 #include <kinematic_objectives/print.h>
+#include <kinematic_objectives/constraint_teleporting_blender.h>
 #include "interactive_blender.h"
 #include <gtk/gtk.h>
 #include <cmath>
@@ -314,12 +315,15 @@ int main(int argc, char ** argv)
 {
   init_gui(&argc, &argv);
   
+  Blender * blender_imp; // XXXX make this runtime configurable (timestep is another good candidate for that)
   if ((argc > 1) && (0 == strcmp("-v", argv[1]))) {
     verbose = true;
-    blender = new InteractiveBlender(1.0e-2, &cout, "");
+    blender_imp = new ConstraintTeleportingBlender(1.0e-2, &cout, "ctb  ");
+    blender = new InteractiveBlender(blender_imp, &cout, "");
   }
   else {
-    blender = new InteractiveBlender(1.0e-2, 0, "");
+    blender_imp = new ConstraintTeleportingBlender(1.0e-2, 0, "");
+    blender = new InteractiveBlender(blender_imp, 0, "");
   }
   
   blender->ee_.point_         <<         1.0, dimy / 2.0      ,     0.0;
@@ -342,6 +346,7 @@ int main(int argc, char ** argv)
   gtk_main();
   
   delete blender;
+  delete blender_imp;
   
   return 0;
 }
