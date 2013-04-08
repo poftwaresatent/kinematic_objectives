@@ -53,7 +53,8 @@ namespace kinematic_objectives {
     : public Objective
   {
   public:
-    explicit JointDampingObjective(double gain);
+    JointDampingObjective(string const & name,
+			  double gain);
     
     virtual void init(KinematicModel const & model);
     virtual void update(KinematicModel const & model);

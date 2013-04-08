@@ -51,7 +51,7 @@ namespace kinematic_objectives {
      In case you need to subsequently inspect what went on during
      matrix inversion.
   */
-  struct MoorePenroseSVDFeedback {
+  struct PseudoInverseFeedback {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
     size_t original_range;
@@ -89,7 +89,7 @@ namespace kinematic_objectives {
 				    /**
 				       Optional output parameter.
 				    */
-				    MoorePenroseSVDFeedback * fb = 0);
+				    PseudoInverseFeedback * fb = 0);
   
   void pseudo_inverse_damped(Matrix const & mx,
 			     double lambda,

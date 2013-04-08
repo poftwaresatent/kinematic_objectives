@@ -66,16 +66,21 @@ static Vector grab_offset(3);
 
 static void dump_achievability(string const & type, size_t index, Objective const * obj)
 {
+  cout << type << " #" << index << " \"" << obj->name_ << "\"";
   if (obj->isActive()) {
-    Achievability const & ac(obj->getAchievability());
-    MoorePenroseSVDFeedback const & fb(ac.jbar_svd);
-    cout << type << " #" << index << " range " << fb.truncated_range << " (original " << fb.original_range << ")\n";
-    print(fb.singular_values, cout, "singular values", "  ");
-    print(fb.input_space, cout, "input_space", "  ");
-    print(fb.output_space, cout, "output_space", "  ");
+    PseudoInverseFeedback const & fb(obj->jbar_svd_);
+    if (0 == fb.truncated_range) {
+      cout << " zero range (original " << fb.original_range << ")\n";
+    }
+    else {
+      cout << "\n  range " << fb.truncated_range << " (original " << fb.original_range << ")\n";
+      print(fb.singular_values, cout, "singular values", "  ");
+      print(fb.input_space, cout, "input_space", "  ");
+      print(fb.output_space, cout, "output_space", "  ");
+    }
   }
   else {
-    cout << type << " #" << index << " inactive\n";
+    cout << " inactive\n";
   }
   fflush(stdout);
 }

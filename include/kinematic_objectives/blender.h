@@ -45,7 +45,6 @@ namespace kinematic_objectives {
   
   class CompoundObjective;
   
-
   /**
      The algorithm which takes a compound objective and turns it into
      an overall update. Slated to become an abstract base class at

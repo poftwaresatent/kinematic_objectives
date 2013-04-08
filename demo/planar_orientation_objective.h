@@ -50,7 +50,8 @@ namespace kinematic_objectives {
       : public Objective
     {
     public:
-      PlanarOrientationObjective(size_t node,
+      PlanarOrientationObjective(string const & name,
+				 size_t node,
 				 double kp,
 				 double kd);
       

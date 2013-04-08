@@ -41,13 +41,15 @@
 namespace kinematic_objectives {
   
   LinkPositionObjective::
-  LinkPositionObjective(size_t node,
+  LinkPositionObjective(string const & name,
+			size_t node,
 			double px,
 			double py,
 			double pz,
 			double kp,
 			double kd)
-    : kp_(kp),
+    : Objective(name),
+      kp_(kp),
       kd_(kd),
       node_(node),
       point_(3)

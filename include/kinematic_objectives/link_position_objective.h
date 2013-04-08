@@ -54,7 +54,8 @@ namespace kinematic_objectives {
     : public Objective
   {
   public:
-    LinkPositionObjective(size_t node,
+    LinkPositionObjective(string const & name,
+			  size_t node,
 			  double px,
 			  double py,
 			  double pz,

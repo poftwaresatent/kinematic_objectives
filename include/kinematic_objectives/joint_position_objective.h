@@ -52,7 +52,7 @@ namespace kinematic_objectives {
     : public Objective
   {
   public:
-    JointPositionObjective();
+    JointPositionObjective(string const & name);
     
     virtual void init(KinematicModel const & model);
     virtual void update(KinematicModel const & model);

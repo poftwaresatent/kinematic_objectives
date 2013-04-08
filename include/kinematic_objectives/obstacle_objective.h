@@ -49,9 +49,10 @@ namespace kinematic_objectives {
     : public Objective
   {
   public:
-    ObstacleObjective(DistanceModel const & distance_model,
-		       size_t node,
-		       double mindist);
+    ObstacleObjective(string const & name,
+		      DistanceModel const & distance_model,
+		      size_t node,
+		      double mindist);
     
     virtual void init(KinematicModel const & model);
     

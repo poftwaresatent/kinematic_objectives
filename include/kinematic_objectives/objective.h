@@ -38,7 +38,7 @@
 #define KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
 
 #include <kinematic_objectives/types.h>
-#include <kinematic_objectives/pseudo_inverse.h> // just to get the typedef for MoorePenroseSVDFeedback
+#include <kinematic_objectives/pseudo_inverse.h> // just to get the typedef for PseudoInverseFeedback
 #include <limits>
 
 
@@ -47,59 +47,31 @@ namespace kinematic_objectives {
   class KinematicModel;
   
   
-  /**
-     Working title, name and contents will depend on what turns out to
-     actually work. Could also be termed a ProgressMonitor or
-     BlenderFeedback or something along those lines.
-     
-     Ideas for things to store here:
-     
-     From blender.cpp perform_prioritization():
-     - J_bar = J * N
-     - N_up (nullspace updater: N -= N_up at each hierarchy level)
-     - sigma (eigenvalues of J_bar, might be interesting to
-       distinguish before / after regularization)
-     - maybe eigenvalues of J
-     - maybe eigenvalues of nullspace
-     - probably input / output spaces of J_bar SVD (or some data
-       derived from them)
-     - maybe the same for the non-projected J (or something derived)
-     - maybe compensated bias, or conversely the amount to which
-       higher levels "help" achieving this one
-     - biased and unbiased "objective update" (this is the gist behind
-       Chiaverini's reconstruction error I think)
-     - number of dimensions left after the objective
-          
-     From Blender::updateCompoundObjective():
-     - current position (and velocity?) in objective space
-  */
-  struct Achievability {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    MoorePenroseSVDFeedback jbar_svd;
-    // Matrix jbar_inverse;
-    // size_t jbar_range;
-    // Vector residual_error;
-    
-    // requires SVD of J: Matrix nullspace_residuals;
-    // requires SVD of J: Matrix removed_directions;
-  };
-  
-  
   class Objective
   {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    virtual ~Objective() {}
+    string const name_;
     
-    virtual void init(KinematicModel const & model) { }
+    
+    explicit Objective(string const & name)
+      : name_(name) { }
+    
+    virtual ~Objective()
+    { /* nop */ }
+    
+    virtual void init(KinematicModel const & model)
+    { /* nop */ }
     
     /**
+       Default implementation: always returns true.
+       
        \todo [low] consider moving this into a lower subclass, it
        seems to be relevant only for constraints.
     */
-    virtual bool isActive() const { return true; }
+    virtual bool isActive() const
+    { return true; }
     
     /**
        Subclasses have to set the bias_ and jacobian_ fields.
@@ -107,12 +79,17 @@ namespace kinematic_objectives {
     virtual void update(KinematicModel const & model) = 0;
     
     /**
-       \todo [low] find a somewhat less hacky way for stacking multiple objectives on top of each other.
+       Turn this objective into a stack of the two given
+       objectives. This simply stacks the Jacobians and the bias
+       vectors of t1 onto those of t2.
     */
     void stack(Objective const & t1, Objective const & t2);
     
     /**
-       \todo [low] find a somewhat less hacky way for stacking multiple objectives on top of each other.
+       Turn this objective into a stack of a collection of
+       objectives. The collection (or range) to use is simply given as
+       iterators in a semi-generic way. Should work as-is for
+       std::vector<Objective*> and std::list<Objective*>.
     */
     template<typename iterator_t>
     void stack(iterator_t begin, iterator_t end)
@@ -136,9 +113,6 @@ namespace kinematic_objectives {
     inline Matrix const & getJacobian() const
     { return jacobian_; }
     
-    inline Achievability const & getAchievability() const
-    { return achievability_; }
-    
   protected:
     /**
        For target-based objectives, this is basically "desired -
@@ -153,7 +127,13 @@ namespace kinematic_objectives {
     Matrix jacobian_;
     
   public:
-    Achievability achievability_;
+    PseudoInverseFeedback jbar_svd_;
+    
+    // XXXX Vector residual_error_;
+    // Matrix jbar_inverse_;
+    // size_t jbar_range_;
+    // requires SVD of J: Matrix nullspace_residuals_;
+    // requires SVD of J: Matrix removed_directions_;
   };
   
 }

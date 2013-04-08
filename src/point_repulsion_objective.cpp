@@ -42,21 +42,25 @@ namespace kinematic_objectives {
   
   
   PointRepulsionObjective::
-  PointRepulsionObjective(size_t node,
+  PointRepulsionObjective(string const & name,
+			  size_t node,
 			  double gain,
 			  double distance)
+    : Objective(name)
   {
     construct(node, Vector::Zero(3), gain, distance);
   }
   
   
   PointRepulsionObjective::
-  PointRepulsionObjective(size_t node,
+  PointRepulsionObjective(string const & name,
+			  size_t node,
 			  double px,
 			  double py,
 			  double pz,
 			  double gain,
 			  double distance)
+    : Objective(name)
   {
     Vector silly(3);
     silly << px, py, pz;

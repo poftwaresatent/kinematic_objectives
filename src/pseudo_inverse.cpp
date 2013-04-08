@@ -61,7 +61,7 @@ namespace kinematic_objectives {
   void pseudo_inverse_moore_penrose (Matrix const & mx,
 				     Matrix & inv,
 				     Matrix * dproj,
-				     MoorePenroseSVDFeedback * fb)
+				     PseudoInverseFeedback * fb)
   {
     if (mx.rows() > mx.cols()) {
       // apparently in this case it is cheaper to use the transpose...

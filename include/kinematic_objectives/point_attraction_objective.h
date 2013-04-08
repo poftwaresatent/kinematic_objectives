@@ -60,11 +60,13 @@ namespace kinematic_objectives {
 		   double distance);
     
   public:
-    PointAttractionObjective(size_t node,
+    PointAttractionObjective(string const & name,
+			     size_t node,
 			     double gain,
 			     double distance);
     
-    PointAttractionObjective(size_t node,
+    PointAttractionObjective(string const & name,
+			     size_t node,
 			     double px,
 			     double py,
 			     double pz,

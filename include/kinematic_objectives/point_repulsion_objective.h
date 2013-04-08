@@ -53,11 +53,13 @@ namespace kinematic_objectives {
 		   double distance);
     
   public:
-    PointRepulsionObjective(size_t node,
+    PointRepulsionObjective(string const & name,
+			    size_t node,
 			    double gain,
 			    double distance);
     
-    PointRepulsionObjective(size_t node,
+    PointRepulsionObjective(string const & name,
+			    size_t node,
 			    double px,
 			    double py,
 			    double pz,

@@ -83,7 +83,7 @@ namespace kinematic_objectives {
       }
       
       if (dbgos) {
-	*dbgos << dbgpre << "objective " << ii << ":\n";
+	*dbgos << dbgpre << "objective " << ii << " \"" << objectives[ii]->name_ << "\":\n";
 	string pre (dbgpre);
 	pre += "  ";
 	print(objectives[ii]->getBias(), *dbgos, "objective bias", pre);
@@ -100,14 +100,14 @@ namespace kinematic_objectives {
       }
       
       pseudo_inverse_moore_penrose(objectives[ii]->getJacobian() * N_res, Jbinv, &Nup,
-				   &objectives[ii]->achievability_.jbar_svd);
+				   &objectives[ii]->jbar_svd_);
       
       if (dbgos) {
         string pre (dbgpre);
         pre += "  ";
-	print(objectives[ii]->achievability_.jbar_svd.singular_values, *dbgos, "eigenvalues of J_bar", pre);
+	print(objectives[ii]->jbar_svd_.singular_values, *dbgos, "eigenvalues of J_bar", pre);
 	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
-	print(Nup, *dbgos, "nullspace update", pre);
+	print(Nup, *dbgos, "nullspace projector update", pre);
 	Vector vtmp;
         vtmp = Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
 	print(vtmp, *dbgos, "bias update", pre);
@@ -132,10 +132,10 @@ namespace kinematic_objectives {
         string pre (dbgpre);
         pre += "  ";
 	print(bias_res, *dbgos, "accumulated bias", pre);
-	print(N_res, *dbgos, "accumulated nullspace", pre);
+	print(N_res, *dbgos, "accumulated nullspace projector", pre);
 	Eigen::JacobiSVD<Matrix> svd;
 	svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-	print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
+	print(svd.singularValues(), *dbgos, "eigenvalues of nullspace projector", pre);
       }
       
     }
@@ -143,10 +143,10 @@ namespace kinematic_objectives {
     if (dbgos) {
       string pre (dbgpre);
       pre += "  ";
-      print(N_res, *dbgos, "final nullspace", pre);
+      print(N_res, *dbgos, "final nullspace projectir", pre);
       Eigen::JacobiSVD<Matrix> svd;
       svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-      print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
+      print(svd.singularValues(), *dbgos, "eigenvalues of final nullspace projector", pre);
     }
 
   }
@@ -217,16 +217,17 @@ namespace kinematic_objectives {
     }
     
     ssize_t const ndof(wpt->model_.getJointPosition().size());
-    Vector qdd_t;
-    Matrix N_t;
+    Vector & qdd_t(wpt->fb_.hard_objective_bias_);
+    Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
     perform_prioritization(Matrix::Identity(ndof, ndof),
 			   wpt->hard_objectives_,
 			   qdd_t,
 			   N_t,
 			   dbgos_,
-			   dbgpre_ + "objective   ");
+			   dbgpre_ + "  ");
     
-    Vector qdd_o(Vector::Zero(wpt->model_.getJointPosition().size()));
+    Vector & qdd_o(wpt->fb_.soft_objective_bias_);
+    qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
@@ -234,8 +235,9 @@ namespace kinematic_objectives {
 	qdd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
       }
     }
+    qdd_o = N_t * qdd_o;
     
-    Vector qdd_res(qdd_t + N_t * qdd_o);
+    Vector qdd_res(qdd_t + qdd_o);
     Vector qd_res(wpt->model_.getJointVelocity() + timestep_ * qdd_res);
     Vector q_res(wpt->model_.getJointPosition() + timestep_ * qd_res);
     
@@ -264,6 +266,8 @@ namespace kinematic_objectives {
       if (dbgos_) {
 	*dbgos_ << dbgpre_ << "all constraints are inactive\n";
       }
+      wpt->fb_.constraint_bias_.resize(0);
+      wpt->fb_.constraint_nullspace_projector_.resize(0, 0);
       return;
     }
     
@@ -272,14 +276,14 @@ namespace kinematic_objectives {
 	      << dbgpre_ << "recomputing with constraints enabled\n";
     }
     
-    Vector dq_c;
-    Matrix N_c;
+    Vector & dq_c(wpt->fb_.constraint_bias_);
+    Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
     perform_prioritization(Matrix::Identity(ndof, ndof),
 			   wpt->constraints_,
 			   dq_c,
 			   N_c,
 			   dbgos_,
-			   dbgpre_ + "constr ");
+			   dbgpre_ + "  ");
     
     // The constraints cheat with the robot state: they directly work
     // on the positions that would have been achieved without

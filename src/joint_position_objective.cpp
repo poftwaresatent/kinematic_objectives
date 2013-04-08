@@ -42,8 +42,9 @@ namespace kinematic_objectives {
   
   
   JointPositionObjective::
-  JointPositionObjective()
-    : kp_(25.0),
+  JointPositionObjective(string const & name)
+    : Objective(name),
+      kp_(25.0),
       kd_(10.0)
   {
   }

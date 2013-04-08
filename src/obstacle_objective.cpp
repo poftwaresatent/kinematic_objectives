@@ -43,10 +43,12 @@ namespace kinematic_objectives {
   
   
   ObstacleObjective::
-  ObstacleObjective(DistanceModel const & distance_model,
+  ObstacleObjective(string const & name,
+		    DistanceModel const & distance_model,
 		    size_t node,
 		    double mindist)
-    : distance_model_(distance_model),
+    : Objective(name),
+      distance_model_(distance_model),
       node_(node),
       mindist_(mindist)
   {

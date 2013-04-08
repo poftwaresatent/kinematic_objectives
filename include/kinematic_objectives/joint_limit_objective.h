@@ -53,6 +53,9 @@ namespace kinematic_objectives {
     : public Objective
   {
   public:
+    JointLimitObjective(string const & name)
+      : Objective(name) { }
+    
     void init(size_t ndof);
     
     /**

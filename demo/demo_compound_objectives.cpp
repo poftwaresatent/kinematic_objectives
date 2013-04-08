@@ -77,16 +77,17 @@ namespace kinematic_objectives {
 	distance_api_(robot_, blender),
 	repulsor_(repulsor),
 	z_angle_(z_angle),
-	avoid_base_    (distance_api_, 0, 0.0),
-	avoid_ellbow_  (distance_api_, 1, 0.0),
-	avoid_wrist_   (distance_api_, 2, 0.0),
-	avoid_ee_      (distance_api_, 3, 0.0),
-	orient_ee_     (3, 100.0, 20.0),
-	repulse_base_  (0,                 0.0, 0.0, 0.0, 100.0, repulsor.radius_),
-	repulse_ellbow_(1,       robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
-	repulse_wrist_ (2,       robot_.len_b_, 0.0, 0.0, 100.0, repulsor.radius_),
-	repulse_ee_    (3,       robot_.len_c_, 0.0, 0.0, 100.0, repulsor.radius_),
-	joint_damping_ (10.0)
+	joint_limits_  ("joint_limits"),
+	avoid_base_    ("avoid_base",   distance_api_, 0, 0.0),
+	avoid_ellbow_  ("avoid_ellbow", distance_api_, 1, 0.0),
+	avoid_wrist_   ("avoid_wrist",  distance_api_, 2, 0.0),
+	avoid_ee_      ("avoid_ee",     distance_api_, 3, 0.0),
+	orient_ee_     ("orient_ee", 3, 100.0, 20.0),
+	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, 100.0, repulsor.radius_),
+	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
+	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, 100.0, repulsor.radius_),
+	repulse_ee_    ("repulse_ee",     3,   robot_.len_c_, 0.0, 0.0, 100.0, repulsor.radius_),
+	joint_damping_ ("joint_damping", 10.0)
     {
       joint_limits_.init(5);
       joint_limits_.limits_(3, 0) = -120.0 * deg;
@@ -296,29 +297,29 @@ namespace kinematic_objectives {
       
       PointAttractionObjective * pa;
       
-      pa = new PointAttractionObjective(0,           0.0, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_prev_0", 0,           0.0, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
       soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_prev_1", 1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
       soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_prev_2", 2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
       soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_prev_3", 3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
       attract_prev_.push_back(pa);
       soft_objectives_.push_back(pa);
       
-      pa = new PointAttractionObjective(0,           0.0, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_next_0", 0,           0.0, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
       soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective(1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_next_1", 1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
       soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective(2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_next_2", 2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
       soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective(3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
+      pa = new PointAttractionObjective("attract_next_3", 3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
       attract_next_.push_back(pa);
       soft_objectives_.push_back(pa);
     }
@@ -331,8 +332,8 @@ namespace kinematic_objectives {
 			      Vector const * eegoal,
 			      Vector const * baseattractor)
       : BaseCompoundObjective(blender, repulsor, z_angle),
-	eeobjective_      (3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
-	attract_base_(0,           0.0, 0.0, 0.0, 100.0, 2.0),
+	eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
+	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 100.0,  2.0),
 	eegoal_(eegoal),
 	baseattractor_(baseattractor)
     {

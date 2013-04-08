@@ -42,8 +42,10 @@ namespace kinematic_objectives {
   
   
   JointDampingObjective::
-  JointDampingObjective(double gain)
-    : gain_(gain)
+  JointDampingObjective(string const & name,
+			double gain)
+    : Objective(name),
+      gain_(gain)
   {
   }
   
