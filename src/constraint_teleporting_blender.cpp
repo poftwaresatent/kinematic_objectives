@@ -205,8 +205,9 @@ namespace kinematic_objectives {
 	qdd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
       }
     }
+    qdd_o = N_t * qdd_o;
     
-    qdd_res = qdd_t + N_t * qdd_o;
+    qdd_res = qdd_t + qdd_o;
     qd_res = wpt->model_.getJointVelocity() + timestep_ * qdd_res;
     q_res = wpt->model_.getJointPosition() + timestep_ * qd_res;
     

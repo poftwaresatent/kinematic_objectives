@@ -67,17 +67,21 @@ static Vector grab_offset(3);
 
 static void dump_achievability(string const & type, size_t index, Objective const * obj)
 {
-  cout << type << " #" << index << " \"" << obj->name_ << "\"";
+  cout << "  " << type << " #" << index << " \"" << obj->name_ << "\"";
   if (obj->isActive()) {
     PseudoInverseFeedback const & fb(obj->jbar_svd_);
     if (0 == fb.truncated_range) {
       cout << " zero range (original " << fb.original_range << ")\n";
     }
     else {
-      cout << "\n  range " << fb.truncated_range << " (original " << fb.original_range << ")\n";
-      print(fb.singular_values, cout, "singular values", "  ");
-      print(fb.input_space, cout, "input_space", "  ");
-      print(fb.output_space, cout, "output_space", "  ");
+      cout << "\n    range " << fb.truncated_range << " (original " << fb.original_range << ")\n";
+      // print(obj->getBias(), cout, "bias", "    ");
+      // print(obj->getJacobian(), cout, "Jacobian", "    ");
+      // // ? print(obj->projected_jacobian_, cout, "projected Jacobian", "    ");
+      // // ? projected bias
+      print(fb.singular_values, cout, "singular values", "    ");
+      print(fb.input_space, cout, "input_space", "    ");
+      print(fb.output_space, cout, "output_space", "    ");
     }
   }
   else {
@@ -87,21 +91,69 @@ static void dump_achievability(string const & type, size_t index, Objective cons
 }
 
 
+static void analyze()
+{
+  CompoundObjective const & co(blender->robot_);
+  
+  if (verbose) {
+    for (size_t ii(0); ii < co.constraints_.size(); ++ii) {
+      dump_achievability("constraint", ii, co.constraints_[ii]);
+    }
+    print(co.fb_.constraint_bias_, cout, "blended constraint bias", "  ");
+    print(co.fb_.constraint_nullspace_projector_, cout, "blended constraint nullspace", "  ");
+    
+    for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
+      dump_achievability("hard_objective", ii, co.hard_objectives_[ii]);
+    }
+    print(co.fb_.hard_objective_bias_, cout, "blended hard objective bias", "  ");
+    print(co.fb_.hard_objective_nullspace_projector_, cout, "blended hard objective nullspace", "  ");
+    
+    for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
+      Objective const * obj(co.soft_objectives_[ii]);
+      if (obj->isActive()) {
+	cout << "  soft_objective #" << ii << " \"" << obj->name_ << "\"\n";
+	print(obj->getBias(), cout, "bias", "    ");
+	print(obj->getJacobian(), cout, "Jacobian", "    ");
+      }
+      else {
+	cout << "  soft_objective #" << ii << " \"" << obj->name_ << "\" inactive\n";
+      }
+    }
+    print(co.fb_.soft_objective_bias_, cout, "blended soft objective bias", "  ");
+    print(Vector(co.fb_.hard_objective_bias_ + co.fb_.soft_objective_bias_), cout,
+	  "blended total objective bias", "  ");
+  }
+  
+  cout << "--------------------------------------------------\n";
+  
+  for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
+    Objective const * obj(co.hard_objectives_[ii]);
+    if (obj->isActive()) {
+      ostringstream os;
+      os << "hard objective #" << ii << " \"" << obj->name_ << "\"";
+      Vector re(obj->getBias() - obj->getJacobian() * co.model_.getJointVelocity());
+      print(re, cout, os.str() + " reprojection error", "  ");
+    }
+  }
+  
+  for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
+    Objective const * obj(co.soft_objectives_[ii]);
+    if (obj->isActive()) {
+      ostringstream os;
+      os << "soft objective #" << ii << " \"" << obj->name_ << "\"";
+      Vector re(obj->getBias() - obj->getJacobian() * co.model_.getJointVelocity());
+      print(re, cout, os.str() + " reprojection error", "  ");
+    }
+  }
+  
+}
+
+
 static void update()
 {
   blender->update();
   gtk_widget_queue_draw(gw);
-  
-  CompoundObjective const & co(blender->robot_);
-  for (size_t ii(0); ii < co.constraints_.size(); ++ii) {
-    dump_achievability("constraint", ii, co.constraints_[ii]);
-  }
-  for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
-    dump_achievability("hard_objective", ii, co.hard_objectives_[ii]);
-  }
-  for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
-    dump_achievability("soft_objective", ii, co.soft_objectives_[ii]);
-  }
+  analyze();
 }
 
 
