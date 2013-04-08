@@ -46,21 +46,22 @@ namespace kinematic_objectives {
     InteractiveBlender(double timestep,
 		       ostream * dbgos,
 		       string const & dbgpre)
-      : Blender(timestep, dbgos, dbgpre),
-	eestart_(0.2, 0.0, 1.0, 0.0, 0.5),
-	eestartori_(0.1, 0.0, 1.0, 0.0, 0.3),
-	z_angle_(0),
-	basestart_(0.2, 0.0, 1.0, 0.5, 0.5),
-	eegoal_(0.2, 0.0, 0.0, 1.0, 0.5),
-	basegoal_(0.2, 0.0, 0.5, 1.0, 0.5),
+      : ConstraintTeleportingBlender(timestep, dbgos, dbgpre),
+	ee_      (0.2, 0.0, 1.0, 0.0, 0.5),
+	ee_ori_  (0.1, 0.0, 1.0, 0.0, 0.3),
+	z_angle_ (0),
+	base_    (0.2, 0.0, 1.0, 0.5, 0.5),
 	repulsor_(1.5, 1.0, 0.5, 0.0, 0.2),
-	obstacle_(1.5, 0.7, 0.0, 0.2, 0.5)
+	obstacle_(1.5, 0.7, 0.0, 0.2, 0.5),
+	robot_(*this,
+	       repulsor_,
+	       z_angle_,
+	       &(ee_.point_),
+	       &(base_.point_))
     {
-      handles_.push_back(&eestart_);
-      handles_.push_back(&eestartori_);
-      handles_.push_back(&basestart_);
-      handles_.push_back(&eegoal_);
-      handles_.push_back(&basegoal_);
+      handles_.push_back(&ee_);
+      handles_.push_back(&ee_ori_);
+      handles_.push_back(&base_);
       handles_.push_back(&repulsor_);
       handles_.push_back(&obstacle_);
     }
@@ -69,45 +70,25 @@ namespace kinematic_objectives {
     void InteractiveBlender::
     init(Vector const & state)
     {
-      clear();
+      // vector<NormalCompoundObjective *> wpt;
+      // for (size_t ii(0); ii < 10; ++ii) {
+      // 	wpt.push_back(new NormalCompoundObjective(*this, repulsor_, z_angle_));
+      // }
+      // wpt[0]->setNeighbors(start, wpt[1]);
+      // for (size_t ii(1); ii < wpt.size() - 1; ++ii) {
+      // 	wpt[ii]->setNeighbors(wpt[ii-1], wpt[ii+1]);
+      // }
+      // wpt[wpt.size() - 1]->setNeighbors(wpt[wpt.size() - 2], goal);
       
-      BoundaryCompoundObjective * start(new BoundaryCompoundObjective(*this,
-								      repulsor_,
-								      z_angle_,
-								      &(eestart_.point_),
-								      &(basestart_.point_)));
-      BoundaryCompoundObjective * goal(new BoundaryCompoundObjective(*this,
-								     repulsor_,
-								     z_angle_,
-								     &(eegoal_.point_),
-								     &(basegoal_.point_)));
-      vector<NormalCompoundObjective *> wpt;
-      for (size_t ii(0); ii < 10; ++ii) {
-	wpt.push_back(new NormalCompoundObjective(*this, repulsor_, z_angle_));
-      }
-      wpt[0]->setNeighbors(start, wpt[1]);
-      for (size_t ii(1); ii < wpt.size() - 1; ++ii) {
-	wpt[ii]->setNeighbors(wpt[ii-1], wpt[ii+1]);
-      }
-      wpt[wpt.size() - 1]->setNeighbors(wpt[wpt.size() - 2], goal);
-    
-      path_.push_back(start);
-      for (size_t ii(0); ii < wpt.size(); ++ii) {
-	path_.push_back(wpt[ii]);
-      }
-      path_.push_back(goal);
-    
-      for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-	(*ii)->init(state, Vector::Zero(state.size()));
-      }
+      robot_.init(state, Vector::Zero(state.size()));
     }
       
       
     void InteractiveBlender::
     update()
     {
-      z_angle_ = atan2(eestartori_.point_[1] - eestart_.point_[1], eestartori_.point_[0] - eestart_.point_[0]);
-      Blender::update();
+      z_angle_ = atan2(ee_ori_.point_[1] - ee_.point_[1], ee_ori_.point_[0] - ee_.point_[0]);
+      ConstraintTeleportingBlender::update(&robot_);
     }
     
     
@@ -115,21 +96,16 @@ namespace kinematic_objectives {
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
-      for (path_t::const_reverse_iterator ii(path_.rbegin()); ii != path_.rend(); ++ii) {
-	CairoDrawable const * wpt(dynamic_cast<CairoDrawable const *>(*ii));
-	if (wpt) {
-	  wpt->draw(cr, weight, pixelsize);
-	}
-      }
-	
+      robot_.draw(cr, weight, pixelsize);
+      
       for (size_t ii(0); ii < handles_.size(); ++ii) {
 	handles_[ii]->draw(cr, weight, pixelsize);
       }
-	
+      
       cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 0.5);
       cairo_set_line_width(cr, weight * 1.0 / pixelsize);
-      cairo_move_to(cr, eestart_.point_[0], eestart_.point_[1]);
-      cairo_line_to(cr, eestartori_.point_[0], eestartori_.point_[1]);
+      cairo_move_to(cr, ee_.point_[0], ee_.point_[1]);
+      cairo_line_to(cr, ee_ori_.point_[0], ee_ori_.point_[1]);
       cairo_stroke(cr);
     }
     

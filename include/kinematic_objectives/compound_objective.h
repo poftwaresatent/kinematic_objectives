@@ -75,6 +75,14 @@ namespace kinematic_objectives {
        from Objective API for now)
      - current velocity in objective space (trivial to compute from J
        and qdot)
+       
+     Another description of desirables: for example, which unilateral
+     constraints were activated, the resulting constraint nullspace,
+     whether that created any conflicts with hard objectives, whether
+     there were any algorithmic singularities between constraints and
+     hard objectives. For soft objectives, it should at least be
+     possible to specify the remaining space of motion freedom they
+     had available collectively.
   */
   struct BlenderFeedback {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

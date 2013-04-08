@@ -34,43 +34,43 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_BLENDER_HPP
+#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
+#define KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
 
-#include <kinematic_objectives/types.h>
+#include <kinematic_objectives/blender.h>
 
 
 namespace kinematic_objectives {
   
-  class CompoundObjective;
-  
   /**
-     Interface for an algorithm that takes a compound objective and
-     turns it into an overall update. Provides generic inspection
-     (introspection?)  capabilities to inform users when and why some
-     aspect of the motion they expect is not getting fulfilled
-     (e.g. "the tray is tilting because it gets overridden by an
-     interference between joint limits and obstacle avoidance"). The
-     actual feedback data structure lives in CompoundObjective (at the
-     time of writing).
-     
-     \todo [low] make the attributes protected or private; [low] maybe
-     find a different name.
+     An experimental (but working) implementation of the Blender
+     interface.
   */  
-  class Blender
+  class ConstraintTeleportingBlender
+    : public Blender
   {
   public:
-    string const name_;
+    ConstraintTeleportingBlender(double timestep, ostream * dbgos, string const & dbgpre);
     
-    explicit Blender(string const & name)
-      : name_(name) { }
+    /**
+       \note This is still somewhat experimental. See
+       comments in the implementation. Inspired by a combination of
+       Chiaverini:1997 and Baerlocher:2001 with the aim of achieving
+       proper decoupling between priority levels while also switching
+       unilateral constraints (e.g. joint limits and obstacle
+       avoidance) on and off based on the current joint positions and
+       velocities. The latter is an important feature, but the
+       implementation is rather more convoluted than hoped.
+    */
+    virtual void update(CompoundObjective * wpt);
     
-    virtual ~Blender()
-    { /* nop */ }
+    ostream * dbgos_;
+    string dbgpre_;
+    string dbgpre2_;
     
-    virtual void update(CompoundObjective * wpt) = 0;
+    double timestep_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_BLENDER_HPP
+#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP

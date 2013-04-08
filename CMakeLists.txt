@@ -84,7 +84,7 @@ list (APPEND SRCS
   src/util.cpp
   src/objective.cpp
   src/compound_objective.cpp
-  src/blender.cpp
+  src/constraint_teleporting_blender.cpp
   src/joint_limit_objective.cpp
   src/obstacle_objective.cpp
   src/point_attraction_objective.cpp

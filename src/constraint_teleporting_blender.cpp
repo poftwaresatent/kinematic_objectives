@@ -34,7 +34,7 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/blender.h>
+#include <kinematic_objectives/constraint_teleporting_blender.h>
 #include <kinematic_objectives/compound_objective.h>
 #include <kinematic_objectives/kinematic_model.h>
 #include <kinematic_objectives/pseudo_inverse.h>
@@ -152,9 +152,10 @@ namespace kinematic_objectives {
   }
   
   
-  Blender::
-  Blender(double timestep, ostream * dbgos, string const & dbgpre)
-    : dbgos_(dbgos),
+  ConstraintTeleportingBlender::
+  ConstraintTeleportingBlender(double timestep, ostream * dbgos, string const & dbgpre)
+    : Blender("ConstraintTeleportingBlender"),
+      dbgos_(dbgos),
       dbgpre_(dbgpre),
       dbgpre2_(dbgpre + "  "),
       timestep_(timestep)
@@ -162,44 +163,14 @@ namespace kinematic_objectives {
   }
   
   
-  Blender::
-  ~Blender()
-  {
-    clear();
-  }
-  
-  
-  void Blender::
-  clear()
-  {
-    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      delete *ii;
-    }
-    path_.clear();
-  }
-  
-  
-  void Blender::
-  update()
-  {
-    if (dbgos_) {
-      *dbgos_ << dbgpre_ << "\n"
-	      << dbgpre_ << "**************************************************\n";
-    }
-    for (path_t::iterator ii(path_.begin()); ii != path_.end(); ++ii) {
-      updateCompoundObjective(*ii);
-    }
-  }
-  
-  
-  void Blender::
-  updateCompoundObjective(CompoundObjective * wpt)
+  void ConstraintTeleportingBlender::
+  update(CompoundObjective * wpt)
   {
     wpt->preUpdateHook();
     
     if (dbgos_) {
       *dbgos_ << dbgpre_ << "==================================================\n"
-	      << dbgpre_ << "Blender::updateCompoundObjective()\n";
+	      << dbgpre_ << "ConstraintTeleportingBlender::updateCompoundObjective()\n";
       print(wpt->model_.getJointPosition(), *dbgos_, "current position", dbgpre2_);
       print(wpt->model_.getJointVelocity(), *dbgos_, "current velocity", dbgpre2_);
     }

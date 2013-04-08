@@ -37,7 +37,7 @@
 #ifndef KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP
 #define KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP
 
-#include <kinematic_objectives/blender.h>
+#include <kinematic_objectives/constraint_teleporting_blender.h> // see to-do note below
 #include "demo_compound_objectives.h"
 
 
@@ -46,10 +46,12 @@ namespace kinematic_objectives {
   namespace demo {
     
     /**
-       \todo [low] attributes should be protected or private
+       \todo [medium+easy] decouple from Blender hierarchy via
+       composition or decoration; [low] attributes should be protected
+       or private
     */
     class InteractiveBlender
-      : public Blender,
+      : public ConstraintTeleportingBlender,
 	public CairoDrawable
     {
     public:
@@ -64,16 +66,16 @@ namespace kinematic_objectives {
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
       
-      InteractionHandle eestart_;
-      InteractionHandle eestartori_;
+      InteractionHandle ee_;
+      InteractionHandle ee_ori_;
       double z_angle_;
-      InteractionHandle basestart_;
-      InteractionHandle eegoal_;
-      InteractionHandle basegoal_;
+      InteractionHandle base_;
       InteractionHandle repulsor_;
       InteractionHandle obstacle_;
       
       vector<InteractionHandle*> handles_;
+      
+      BoundaryCompoundObjective robot_;
     };
     
   }

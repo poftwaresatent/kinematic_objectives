@@ -91,15 +91,15 @@ static void update()
   blender->update();
   gtk_widget_queue_draw(gw);
   
-  CompoundObjective const * co(*blender->path_.begin());
-  for (size_t ii(0); ii < co->constraints_.size(); ++ii) {
-    dump_achievability("constraint", ii, co->constraints_[ii]);
+  CompoundObjective const & co(blender->robot_);
+  for (size_t ii(0); ii < co.constraints_.size(); ++ii) {
+    dump_achievability("constraint", ii, co.constraints_[ii]);
   }
-  for (size_t ii(0); ii < co->hard_objectives_.size(); ++ii) {
-    dump_achievability("hard_objective", ii, co->hard_objectives_[ii]);
+  for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
+    dump_achievability("hard_objective", ii, co.hard_objectives_[ii]);
   }
-  for (size_t ii(0); ii < co->soft_objectives_.size(); ++ii) {
-    dump_achievability("soft_objective", ii, co->soft_objectives_[ii]);
+  for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
+    dump_achievability("soft_objective", ii, co.soft_objectives_[ii]);
   }
 }
 
@@ -117,20 +117,20 @@ static void cb_play(GtkWidget * ww, gpointer data)
 
 static void cb_normalize(GtkWidget * ww, gpointer data)
 {
-  for (Blender::path_t::iterator ii(blender->path_.begin()); ii != blender->path_.end(); ++ii) {
-    BaseCompoundObjective * wpt(dynamic_cast<BaseCompoundObjective*>(*ii));
-    if ( ! wpt) {
-      continue;
+  //  for (Blender::path_t::iterator ii(blender->path_.begin()); ii != blender->path_.end(); ++ii) {
+  BaseCompoundObjective * wpt(&blender->robot_);//dynamic_cast<BaseCompoundObjective*>(*ii));
+  // if ( ! wpt) {
+  //   continue;
+  // }
+  if (verbose) {
+    if (fabs(wpt->robot_.position_[2]) > M_PI) {
+      cout << "normalize " << wpt->robot_.position_[2]
+	   << " to " << normangle(wpt->robot_.position_[2]) << "\n";
     }
-    if (verbose) {
-      if (fabs(wpt->robot_.position_[2]) > M_PI) {
-	cout << "normalize " << wpt->robot_.position_[2]
-	     << " to " << normangle(wpt->robot_.position_[2]) << "\n";
-      }
-    }
-    wpt->robot_.position_[2] = normangle(wpt->robot_.position_[2]);
-    wpt->robot_.update(wpt->robot_.position_, wpt->robot_.velocity_);
   }
+  wpt->robot_.position_[2] = normangle(wpt->robot_.position_[2]);
+  wpt->robot_.update(wpt->robot_.position_, wpt->robot_.velocity_);
+  //  }
 }
 
 
@@ -322,13 +322,13 @@ int main(int argc, char ** argv)
     blender = new InteractiveBlender(1.0e-2, 0, "");
   }
   
-  blender->eestart_.point_    <<         1.0, dimy / 2.0      ,     0.0;
-  blender->eestartori_.point_ <<         2.0, dimy / 2.0 + 1.0,     0.0;
-  blender->basestart_.point_  <<         1.0,              1.0,     0.0;
-  blender->eegoal_.point_     <<  dimx - 1.0, dimy / 2.0      ,     0.0;
-  blender->basegoal_.point_   <<  dimx - 1.0,              1.0,     0.0;
+  blender->ee_.point_         <<         1.0, dimy / 2.0      ,     0.0;
+  blender->ee_ori_.point_     <<         2.0, dimy / 2.0 + 1.0,     0.0;
+  blender->base_.point_       <<         1.0,              1.0,     0.0;
   blender->repulsor_.point_   <<  dimx / 2.0,              1.0,     0.0;
   blender->obstacle_.point_   <<  dimx / 2.0,       dimy - 1.0,     0.0;
+  //  blender->eegoal_.point_     <<  dimx - 1.0, dimy / 2.0      ,     0.0;
+  //  blender->basegoal_.point_   <<  dimx - 1.0,              1.0,     0.0;
   
   Vector posture(5);
   posture <<
