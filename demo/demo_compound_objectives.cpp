@@ -99,11 +99,11 @@ namespace kinematic_objectives {
       joint_limits_.limits_(4, 2) =  119.999 * deg;
       joint_limits_.limits_(4, 3) =  120.0 * deg;
     
-      constraints_.push_back(&joint_limits_);
-      constraints_.push_back(&avoid_ee_);
-      constraints_.push_back(&avoid_wrist_);
-      constraints_.push_back(&avoid_ellbow_);
-      constraints_.push_back(&avoid_base_);
+      switchable_constraints_.push_back(&joint_limits_);
+      switchable_constraints_.push_back(&avoid_ee_);
+      switchable_constraints_.push_back(&avoid_wrist_);
+      switchable_constraints_.push_back(&avoid_ellbow_);
+      switchable_constraints_.push_back(&avoid_base_);
     
       hard_objectives_.push_back(&orient_ee_);
       

@@ -96,8 +96,8 @@ static void analyze()
   CompoundObjective const & co(blender->robot_);
   
   if (verbose) {
-    for (size_t ii(0); ii < co.constraints_.size(); ++ii) {
-      dump_achievability("constraint", ii, co.constraints_[ii]);
+    for (size_t ii(0); ii < co.switchable_constraints_.size(); ++ii) {
+      dump_achievability("constraint", ii, co.switchable_constraints_[ii]);
     }
     print(co.fb_.constraint_bias_, cout, "blended constraint bias", "  ");
     print(co.fb_.constraint_nullspace_projector_, cout, "blended constraint nullspace", "  ");

@@ -60,8 +60,8 @@ namespace kinematic_objectives {
   {
     model_.update(position, velocity);
     
-    for (size_t ii(0); ii < constraints_.size(); ++ii) {
-      constraints_[ii]->init(model_);
+    for (size_t ii(0); ii < switchable_constraints_.size(); ++ii) {
+      switchable_constraints_[ii]->init(model_);
     }
     for (size_t ii(0); ii < hard_objectives_.size(); ++ii) {
       hard_objectives_[ii]->init(model_);

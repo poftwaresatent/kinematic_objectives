@@ -125,7 +125,7 @@ namespace kinematic_objectives {
     
     KinematicModel & model_;
     
-    vector<Objective *> constraints_;
+    vector<Objective *> switchable_constraints_;
     vector<Objective *> hard_objectives_;
     vector<Objective *> soft_objectives_;
     
