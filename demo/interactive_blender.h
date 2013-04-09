@@ -62,9 +62,9 @@ namespace kinematic_objectives {
 			 ostream * dbgos,
 			 string const & dbgpre);
       
-      void init(Vector const & state);
+      void init(double gui_dimx, double gui_dimy);
       
-      /*virtual*/ void update();
+      /*virtual*/ void update(CompoundObjective * compound);
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
@@ -76,8 +76,6 @@ namespace kinematic_objectives {
       InteractionHandle obstacle_;
       
       vector<InteractionHandle*> handles_;
-      
-      EEGoalCompoundObjective robot_;
       
     private:
       Blender * blender_;

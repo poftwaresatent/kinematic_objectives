@@ -82,6 +82,8 @@ namespace kinematic_objectives {
 				   InteractionHandle const & repulsor,
 				   double const & z_angle);
     
+      virtual void init(double gui_dimx, double gui_dimy);
+      
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
       /**

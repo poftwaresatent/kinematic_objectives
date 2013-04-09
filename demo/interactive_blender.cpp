@@ -35,6 +35,7 @@
 /* Author: Roland Philippsen */
 
 #include "interactive_blender.h"
+#include <kinematic_objectives/util.h>
 
 
 namespace kinematic_objectives {
@@ -52,11 +53,6 @@ namespace kinematic_objectives {
 	base_    (0.2, 0.0, 1.0, 0.5, 0.5),
 	repulsor_(1.5, 1.0, 0.5, 0.0, 0.2),
 	obstacle_(1.5, 0.7, 0.0, 0.2, 0.5),
-	robot_(*this,
-	       repulsor_,
-	       z_angle_,
-	       &(ee_.point_),
-	       &(base_.point_)),
 	blender_(blender)
     {
       handles_.push_back(&ee_);
@@ -68,7 +64,7 @@ namespace kinematic_objectives {
     
     
     void InteractiveBlender::
-    init(Vector const & state)
+    init(double gui_dimx, double gui_dimy)
     {
       // vector<NormalCompoundObjective *> wpt;
       // for (size_t ii(0); ii < 10; ++ii) {
@@ -80,15 +76,21 @@ namespace kinematic_objectives {
       // }
       // wpt[wpt.size() - 1]->setNeighbors(wpt[wpt.size() - 2], goal);
       
-      robot_.init(state, Vector::Zero(state.size()));
+      ee_.point_         <<             1.0, gui_dimy / 2.0      ,     0.0;
+      ee_ori_.point_     <<             2.0, gui_dimy / 2.0 + 1.0,     0.0;
+      base_.point_       <<             1.0,                  1.0,     0.0;
+      repulsor_.point_   <<  gui_dimx / 2.0,                  1.0,     0.0;
+      obstacle_.point_   <<  gui_dimx / 2.0,       gui_dimy - 1.0,     0.0;
+      //  eegoal_.point_     <<  gui_dimx - 1.0, gui_dimy / 2.0      ,     0.0;
+      //  basegoal_.point_   <<  gui_dimx - 1.0,              1.0,     0.0;
     }
-      
-      
+    
+    
     void InteractiveBlender::
-    update()
+    update(CompoundObjective * compound)
     {
       z_angle_ = atan2(ee_ori_.point_[1] - ee_.point_[1], ee_ori_.point_[0] - ee_.point_[0]);
-      blender_->update(&robot_);
+      blender_->update(compound);
     }
     
     
@@ -96,8 +98,6 @@ namespace kinematic_objectives {
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
-      robot_.draw(cr, weight, pixelsize);
-      
       for (size_t ii(0); ii < handles_.size(); ++ii) {
 	handles_[ii]->draw(cr, weight, pixelsize);
       }

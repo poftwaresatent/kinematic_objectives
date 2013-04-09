@@ -36,6 +36,7 @@
 
 #include <kinematic_objectives/util.h>
 #include <kinematic_objectives/print.h>
+#include <kinematic_objectives/unconstrained_blender.h>
 #include <kinematic_objectives/constraint_teleporting_blender.h>
 #include <kinematic_objectives/achievability.h>
 #include "interactive_blender.h"
@@ -60,7 +61,9 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 
-static InteractiveBlender * blender;
+static InteractiveCompoundObjective * compound(0);
+static Blender * blender_imp(0);
+static InteractiveBlender * blender(0);
 static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
 
@@ -94,7 +97,7 @@ static void dump_achievability(string const & type, size_t index, Objective cons
 
 static void analyze()
 {
-  CompoundObjective const & co(blender->robot_);
+  CompoundObjective const & co(*compound);
   
   if (verbose) {
     for (size_t ii(0); ii < co.switchable_constraints_.size(); ++ii) {
@@ -157,7 +160,7 @@ static void analyze()
 
 static void update()
 {
-  blender->update();
+  blender->update(compound);
   gtk_widget_queue_draw(gw);
   analyze();
 }
@@ -176,20 +179,16 @@ static void cb_play(GtkWidget * ww, gpointer data)
 
 static void cb_normalize(GtkWidget * ww, gpointer data)
 {
-  //  for (Blender::path_t::iterator ii(blender->path_.begin()); ii != blender->path_.end(); ++ii) {
-  InteractiveCompoundObjective * wpt(&blender->robot_);//dynamic_cast<InteractiveCompoundObjective*>(*ii));
-  // if ( ! wpt) {
-  //   continue;
-  // }
-  if (verbose) {
-    if (fabs(wpt->robot_.position_[2]) > M_PI) {
-      cout << "normalize " << wpt->robot_.position_[2]
-	   << " to " << normangle(wpt->robot_.position_[2]) << "\n";
+  for (size_t ii(2); ii < 5; ++ii) {
+    if (verbose) {
+      if (fabs(compound->robot_.position_[ii]) > M_PI) {
+	cout << "normalize " << compound->robot_.position_[ii]
+	     << " to " << normangle(compound->robot_.position_[ii]) << "\n";
+      }
     }
+    compound->robot_.position_[ii] = normangle(compound->robot_.position_[ii]);
+    compound->robot_.update(compound->robot_.position_, compound->robot_.velocity_);
   }
-  wpt->robot_.position_[2] = normangle(wpt->robot_.position_[2]);
-  wpt->robot_.update(wpt->robot_.position_, wpt->robot_.velocity_);
-  //  }
 }
 
 
@@ -224,6 +223,7 @@ static gint cb_expose(GtkWidget * ww,
   cairo_translate(cr, gw_x0, gw_y0);
   cairo_scale(cr, gw_sx, gw_sy);
   
+  compound->draw(cr, lwscale, gw_sx);
   blender->draw(cr, lwscale, gw_sx);
   
   cairo_destroy(cr);
@@ -369,42 +369,114 @@ static void init_gui(int * argc, char *** argv)
 }
 
 
-int main(int argc, char ** argv)
+void parse_options(int argc, char ** argv)
 {
-  init_gui(&argc, &argv);
+  string opt_blender("teleporting");
+  string opt_compound("eegoal");
+  double opt_timestep(10.0);	// milliseconds
   
-  Blender * blender_imp; // XXXX make this runtime configurable (timestep is another good candidate for that)
-  if ((argc > 1) && (0 == strcmp("-v", argv[1]))) {
-    verbose = true;
-    blender_imp = new ConstraintTeleportingBlender(1.0e-2, &cout, "ctb  ");
-    blender = new InteractiveBlender(blender_imp, &cout, "");
+  for (int iopt(1); iopt < argc; ++iopt) {
+    
+    if (0 == strcmp("-h", argv[iopt])) {
+      printf("Demo for kinematic constrained optimization.\n"
+	     "\n"
+	     "  Copyright (c) 2013, Willow Garage, Inc. All rights reserved.\n"
+	     "                      Released under the 3-clause BSD licence.\n"
+	     "                      Written by Roland Philippsen.\n"
+	     "\n"
+	     "usage [-vh] [-b blender] [-c compound] [-t milliseconds]\n"
+	     "\n"
+	     "  -h             print this message\n"
+	     "  -v             enable verbose messages\n"
+	     "  -b  blender    name of the blender class to use (default '%s')\n"
+	     "                 specify an invalid name to obtain a list\n"
+	     "  -c  compound   name of the objectives compound to run (default '%s')\n"
+	     "                 specify an invalid name to obtain a list\n"
+	     "  -t  ms         blender integration timestep in milliseconds (default %3g)\n"
+	     // "  -x  dimx              x-dimension of the world, in meters (default 10)\n"
+	     // "  -y  dimy              y-dimension of the world, in meters (default 8)\n"
+	     , opt_blender.c_str(), opt_compound.c_str(), opt_timestep);
+      exit(EXIT_SUCCESS);
+    }
+    
+    else if (0 == strcmp("-v", argv[iopt])) {
+      verbose = true;
+    }
+    
+    else if (0 == strcmp("-b", argv[iopt])) {
+      if (++iopt >= argc) {
+	errx(EXIT_FAILURE, "%s requires an argument (use -h for help)", argv[iopt-1]);
+      }
+      opt_blender = argv[iopt];
+    }
+    
+    else if (0 == strcmp("-c", argv[iopt])) {
+      if (++iopt >= argc) {
+	errx(EXIT_FAILURE, "%s requires an argument (use -h for help)", argv[iopt-1]);
+      }
+      opt_compound = argv[iopt];
+    }
+    
+    else if (0 == strcmp("-t", argv[iopt])) {
+      if (++iopt >= argc) {
+	errx(EXIT_FAILURE, "%s requires an argument (use -h for help)", argv[iopt-1]);
+      }
+      if (1 != sscanf(argv[iopt], "%lf", &opt_timestep)) {
+	err(EXIT_FAILURE, "sscanf('%s'...)", argv[iopt]);
+      }
+    }
+    
+    else {
+      errx(EXIT_FAILURE, "invalid option %s (use -h for help)", argv[iopt]);
+    }
+    
+  }
+  
+  if ("teleporting" == opt_blender) {
+    blender_imp = new ConstraintTeleportingBlender(opt_timestep * 1e-3, verbose ? &cout : 0, "ctb  ");
+  }
+  else if ("unconstrained" == opt_blender) {
+    blender_imp = new UnconstrainedBlender(opt_timestep * 1e-3);
   }
   else {
-    blender_imp = new ConstraintTeleportingBlender(1.0e-2, 0, "");
-    blender = new InteractiveBlender(blender_imp, 0, "");
+    errx(EXIT_FAILURE, "invalid blender '%s' (use 'teleporting' or 'unconstrained')", opt_blender.c_str());
   }
+  blender = new InteractiveBlender(blender_imp, verbose ? &cout : 0, "");
+  blender->init(dimx, dimy);
   
-  blender->ee_.point_         <<         1.0, dimy / 2.0      ,     0.0;
-  blender->ee_ori_.point_     <<         2.0, dimy / 2.0 + 1.0,     0.0;
-  blender->base_.point_       <<         1.0,              1.0,     0.0;
-  blender->repulsor_.point_   <<  dimx / 2.0,              1.0,     0.0;
-  blender->obstacle_.point_   <<  dimx / 2.0,       dimy - 1.0,     0.0;
-  //  blender->eegoal_.point_     <<  dimx - 1.0, dimy / 2.0      ,     0.0;
-  //  blender->basegoal_.point_   <<  dimx - 1.0,              1.0,     0.0;
-  
-  Vector posture(5);
-  posture <<
-    dimx / 2.0,
-    dimy / 2.0,
-    80.0 * deg,
-    - 40.0 * deg,
-    25.0 * deg;
-  blender->init(posture);
-  
-  gtk_main();
-  
+  if ("eegoal" == opt_compound) {
+    compound = new EEGoalCompoundObjective(*blender,
+					   blender->repulsor_,
+					   blender->z_angle_,
+					   &(blender->ee_.point_),
+					   &(blender->base_.point_));
+  }
+  else if ("elastic" == opt_compound) {
+    compound = new ElasticLinksCompoundObjective(*blender,
+						 blender->repulsor_,
+						 blender->z_angle_);
+  }
+  else {
+    errx(EXIT_FAILURE, "invalid compound '%s' (use 'eegoal' or 'elastic')", opt_compound.c_str());
+  }
+  compound->init(dimx, dimy);
+}
+
+
+void cleanup()
+{
+  delete compound;
   delete blender;
   delete blender_imp;
-  
-  return 0;
+}
+
+
+int main(int argc, char ** argv)
+{
+  if (0 != atexit(cleanup)) {
+    err(EXIT_FAILURE, "atexit");
+  }
+  parse_options(argc, argv);
+  init_gui(&argc, &argv);
+  gtk_main();
 }

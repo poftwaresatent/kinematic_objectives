@@ -116,6 +116,20 @@ namespace kinematic_objectives {
   
   
     void InteractiveCompoundObjective::
+    init(double gui_dimx, double gui_dimy)
+    {
+      Vector posture(5);
+      posture <<
+	gui_dimx / 2.0,
+	gui_dimy / 2.0,
+	80.0 * deg,
+	- 40.0 * deg,
+	25.0 * deg;
+      CompoundObjective::init(posture, Vector::Zero(posture.size()));
+    }
+    
+    
+    void InteractiveCompoundObjective::
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
@@ -261,7 +275,7 @@ namespace kinematic_objectives {
       if (attract_prev_.empty()) {
 	errx(EXIT_FAILURE, "please call ElasticLinksCompoundObjective::setNeighbors exactly once on every compound");
       }
-      InteractiveCompoundObjective::init(position, velocity);
+      CompoundObjective::init(position, velocity);
     }
     
     
