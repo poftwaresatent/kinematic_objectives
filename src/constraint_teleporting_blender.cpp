@@ -117,9 +117,9 @@ namespace kinematic_objectives {
     wpt->model_.update(q_res, qd_res);
     
     bool need_constraints(false);
-    for (size_t ii(0); ii < wpt->switchable_constraints_.size(); ++ii) {
-      wpt->switchable_constraints_[ii]->update(wpt->model_);
-      if (wpt->switchable_constraints_[ii]->isActive()) {
+    for (size_t ii(0); ii < wpt->unilateral_constraints_.size(); ++ii) {
+      wpt->unilateral_constraints_[ii]->update(wpt->model_);
+      if (wpt->unilateral_constraints_[ii]->isActive()) {
 	if (dbgos_) {
 	  *dbgos_ << dbgpre_ << "constraint [" << ii << "] is active\n";
 	}
@@ -144,7 +144,7 @@ namespace kinematic_objectives {
     Vector & dq_c(wpt->fb_.constraint_bias_);
     Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
     prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
-				 wpt->switchable_constraints_,
+				 wpt->unilateral_constraints_,
 				 dq_c,
 				 N_c,
 				 dbgos_,

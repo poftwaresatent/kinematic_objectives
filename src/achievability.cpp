@@ -52,12 +52,12 @@ namespace kinematic_objectives {
     information.clear();
     Achievability info;
     
-    for (size_t ii(0); ii < co.switchable_constraints_.size(); ++ii) {
-      if ( ! co.switchable_constraints_[ii]->isActive()) {
+    for (size_t ii(0); ii < co.unilateral_constraints_.size(); ++ii) {
+      if ( ! co.unilateral_constraints_[ii]->isActive()) {
 	continue;
       }
-      info.tag_                 = SWITCHABLE_CONSTRAINT;
-      info.objective_           = co.switchable_constraints_[ii];
+      info.tag_                 = UNILATERAL_CONSTRAINT;
+      info.objective_           = co.unilateral_constraints_[ii];
       info.available_dimension_ = info.objective_->jbar_svd_.truncated_range;
       info.required_dimension_  = info.objective_->jbar_svd_.original_range;
       info.residual_error_      = info.objective_->getBias()
@@ -117,7 +117,7 @@ namespace kinematic_objectives {
     char buf[buflen];
     for (size_t ii(0); ii < information.size(); ++ii) {
       snprintf(buf, buflen, "%s %-*s   %3zu / %3zu   ",
-	       information[ii].tag_ == SWITCHABLE_CONSTRAINT ? "CONS"
+	       information[ii].tag_ == UNILATERAL_CONSTRAINT ? "CONS"
 	       : (information[ii].tag_ == HARD_OBJECTIVE ? "HARD" : "SOFT"),
 	       namlen, information[ii].objective_->name_.c_str(),
 	       information[ii].available_dimension_,

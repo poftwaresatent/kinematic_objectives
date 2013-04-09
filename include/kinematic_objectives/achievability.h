@@ -51,7 +51,7 @@ namespace kinematic_objectives {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
     typedef enum {
-      SWITCHABLE_CONSTRAINT,
+      UNILATERAL_CONSTRAINT,
       HARD_OBJECTIVE,
       SOFT_OBJECTIVE
     } objective_tag_t;
