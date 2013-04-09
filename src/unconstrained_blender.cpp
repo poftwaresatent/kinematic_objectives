@@ -91,6 +91,8 @@ namespace kinematic_objectives {
     Vector qd_res(wpt->model_.getJointVelocity() + timestep_ * qdd_res);
     Vector q_res(wpt->model_.getJointPosition() + timestep_ * qd_res);
     
+    wpt->model_.update(q_res, qd_res);
+    
     wpt->fb_.constraint_bias_.resize(0);
     wpt->fb_.constraint_nullspace_projector_.resize(0, 0);
   }

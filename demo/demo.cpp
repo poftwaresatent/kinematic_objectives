@@ -371,6 +371,14 @@ static void init_gui(int * argc, char *** argv)
 
 void parse_options(int argc, char ** argv)
 {
+  printf("\n"
+	 "  Demo for kinematic constrained optimization.\n"
+	 "\n"
+	 "  Copyright (c) 2013, Willow Garage, Inc. All rights reserved.\n"
+	 "                      Released under the 3-clause BSD licence.\n"
+	 "                      Written by Roland Philippsen.\n"
+	 "\n");
+  
   string opt_blender("teleporting");
   string opt_compound("eegoal");
   double opt_timestep(10.0);	// milliseconds
@@ -378,13 +386,7 @@ void parse_options(int argc, char ** argv)
   for (int iopt(1); iopt < argc; ++iopt) {
     
     if (0 == strcmp("-h", argv[iopt])) {
-      printf("Demo for kinematic constrained optimization.\n"
-	     "\n"
-	     "  Copyright (c) 2013, Willow Garage, Inc. All rights reserved.\n"
-	     "                      Released under the 3-clause BSD licence.\n"
-	     "                      Written by Roland Philippsen.\n"
-	     "\n"
-	     "usage [-vh] [-b blender] [-c compound] [-t milliseconds]\n"
+      printf("usage [-vh] [-b blender] [-c compound] [-t milliseconds]\n"
 	     "\n"
 	     "  -h             print this message\n"
 	     "  -v             enable verbose messages\n"
