@@ -44,7 +44,7 @@ namespace kinematic_objectives {
   namespace demo {
     
     class PlanarRobot;
-    class InteractiveBlender;
+    class InteractionHandle;
     
     
     class PlanarDistance
@@ -52,7 +52,7 @@ namespace kinematic_objectives {
     {
     public:
       PlanarDistance(PlanarRobot const & robot,
-		     InteractiveBlender const & blender);
+		     InteractionHandle const * obstacle);
       
       /**
 	 Implements DistanceModel::computeMinimumSeparation().
@@ -66,9 +66,9 @@ namespace kinematic_objectives {
       
     protected:
       PlanarRobot const & robot_;
-      InteractiveBlender const & blender_;
+      InteractionHandle const * obstacle_; // XXXX would be easy to support a std::vector of obstacles
     };
-
+    
   }
 
 }

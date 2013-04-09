@@ -4,6 +4,7 @@ if (GTK2_FOUND)
   include_directories (${GTK2_INCLUDE_DIRS})
   add_executable (demo
     demo.cpp
+    interaction_handle.cpp
     interactive_compound_objectives.cpp
     interactive_blender.cpp
     planar_distance.cpp

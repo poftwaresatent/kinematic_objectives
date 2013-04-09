@@ -36,7 +36,7 @@
 
 #include "planar_distance.h"
 #include "planar_robot.h"
-#include "interactive_blender.h"
+#include "interaction_handle.h"
 #include <err.h>
 
 
@@ -46,9 +46,9 @@ namespace kinematic_objectives {
     
     PlanarDistance::
     PlanarDistance(PlanarRobot const & robot,
-		   InteractiveBlender const & blender)
+		   InteractionHandle const * obstacle)
       : robot_(robot),
-	blender_(blender)
+	obstacle_(obstacle)
     {
     }
      
@@ -60,7 +60,7 @@ namespace kinematic_objectives {
       const
     {
       link_point.resize(3);
-      obstacle_point = blender_.obstacle_.point_;
+      obstacle_point = obstacle_->point_;
       Vector unit(3);
       double len;
       switch (link) {
@@ -70,8 +70,8 @@ namespace kinematic_objectives {
 	len = unit.norm();
 	unit /= len;
 	link_point += robot_.radius_ * unit;
-	obstacle_point -= blender_.obstacle_.radius_ * unit;
-	return len - robot_.radius_ - blender_.obstacle_.radius_;
+	obstacle_point -= obstacle_->radius_ * unit;
+	return len - robot_.radius_ - obstacle_->radius_;
       case 1:
 	link_point << robot_.position_[0], robot_.position_[1], 0.0;
 	unit << robot_.c2_, robot_.s2_, 0.0;
@@ -105,8 +105,8 @@ namespace kinematic_objectives {
       
       len = delta.norm();
       unit = delta / len;
-      obstacle_point -= blender_.obstacle_.radius_ * unit;
-      return len - blender_.obstacle_.radius_;
+      obstacle_point -= obstacle_->radius_ * unit;
+      return len - obstacle_->radius_;
     }
     
   }
