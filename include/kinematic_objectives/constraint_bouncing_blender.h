@@ -44,19 +44,32 @@ namespace kinematic_objectives {
   
   /**
      A blender based on the "classical" approach [Siciliano:1991]
-     which handles unilateral constraints just like hard objectives
-     and does not attempt to be smart about how they switch on and
-     off. Transforms the unilateral constraint error into an
-     acceleration by relying on a hardcoded PD control scheme. Useful
-     mostly for development and testing.
-  */  
+     which handles unilateral constraints in a straightforward manner:
+     it computes their desired displacement, then updates the
+     kinematic model by weighting that displacement and projecting the
+     current velocities into the constraint nullspace. The effect is
+     that unlateral constraints do get switched on, by they typically
+     stay that way because the constraint nullspace keeps the
+     objectives from pulling the state away from the violation. Also,
+     it has a tendency to bounce off of constraints, due to (as far as
+     I can tell at this moment) a combination of linearization and
+     discretization errors inherent in the approach.  Thus it should
+     be clear that this blender is useful mostly for development and
+     testing.
+  */
   class ConstraintBouncingBlender
     : public Blender
   {
   public:
     double const timestep_;
+    double const constraint_displacement_weight_;
     
-    explicit ConstraintBouncingBlender(double timestep);
+    explicit ConstraintBouncingBlender(double timestep,
+				       /** A value of 1e-2 seems to
+					   work reasonably, at least
+					   when timestep is also
+					   1e-2. */
+				       double constraint_displacement_weight);
     
     virtual void update(CompoundObjective * wpt);
   };

@@ -38,6 +38,7 @@
 #include <kinematic_objectives/print.h>
 #include <kinematic_objectives/unconstrained_blender.h>
 #include <kinematic_objectives/constraint_teleporting_blender.h>
+#include <kinematic_objectives/constraint_bouncing_blender.h>
 #include <kinematic_objectives/achievability.h>
 #include "interactive_blender.h"
 #include <gtk/gtk.h>
@@ -440,8 +441,11 @@ void parse_options(int argc, char ** argv)
   else if ("unconstrained" == opt_blender) {
     blender_imp = new UnconstrainedBlender(opt_timestep * 1e-3);
   }
+  else if ("bouncing" == opt_blender) {
+    blender_imp = new ConstraintBouncingBlender(opt_timestep * 1e-3, 1e-2);
+  }
   else {
-    errx(EXIT_FAILURE, "invalid blender '%s' (use 'teleporting' or 'unconstrained')", opt_blender.c_str());
+    errx(EXIT_FAILURE, "invalid blender '%s' (have: teleporting, unconstrained, bouncing)", opt_blender.c_str());
   }
   blender = new InteractiveBlender(blender_imp, verbose ? &cout : 0, "");
   blender->init(dimx, dimy);

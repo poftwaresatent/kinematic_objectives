@@ -47,9 +47,11 @@ namespace kinematic_objectives {
   
   
   ConstraintBouncingBlender::
-  ConstraintBouncingBlender(double timestep)
+  ConstraintBouncingBlender(double timestep,
+			    double constraint_displacement_weight)
     : Blender("ConstraintBouncingBlender"),
-      timestep_(timestep)
+      timestep_(timestep),
+      constraint_displacement_weight_(constraint_displacement_weight)
   {
   }
   
@@ -62,25 +64,26 @@ namespace kinematic_objectives {
     for (size_t ii(0); ii < wpt->unilateral_constraints_.size(); ++ii) {
       wpt->unilateral_constraints_[ii]->update(wpt->model_);
     }
+    
+    ssize_t const ndof(wpt->model_.getJointPosition().size());
+    Vector & dq_c(wpt->fb_.constraint_bias_);
+    Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
+    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
+				 wpt->unilateral_constraints_,
+				 dq_c,
+				 N_c,
+				 0,
+				 "");
+    
+    wpt->model_.update(constraint_displacement_weight_ * dq_c + wpt->model_.getJointPosition(),
+		       N_c * wpt->model_.getJointVelocity());
+    
     for (size_t ii(0); ii < wpt->hard_objectives_.size(); ++ii) {
       wpt->hard_objectives_[ii]->update(wpt->model_);
     }
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       wpt->soft_objectives_[ii]->update(wpt->model_);
     }
-    
-    ssize_t const ndof(wpt->model_.getJointPosition().size());
-    Vector & qdd_c(wpt->fb_.constraint_bias_);
-    Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
-    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
-				 wpt->unilateral_constraints_,
-				 qdd_c,
-				 N_c,
-				 0,
-				 "");
-    static double const kp_c(100.0);
-    static double const kd_c(20.0);
-    qdd_c = kp_c * qdd_c + kd_c * wpt->model_.getJointVelocity();
     
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
@@ -102,7 +105,7 @@ namespace kinematic_objectives {
     }
     qdd_o = N_t * qdd_o;
     
-    Vector qdd_res(qdd_c + qdd_t + qdd_o);
+    Vector qdd_res(qdd_t + qdd_o);
     Vector qd_res(wpt->model_.getJointVelocity() + timestep_ * qdd_res);
     Vector q_res(wpt->model_.getJointPosition() + timestep_ * qd_res);
     
