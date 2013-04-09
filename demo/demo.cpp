@@ -177,7 +177,7 @@ static void cb_play(GtkWidget * ww, gpointer data)
 static void cb_normalize(GtkWidget * ww, gpointer data)
 {
   //  for (Blender::path_t::iterator ii(blender->path_.begin()); ii != blender->path_.end(); ++ii) {
-  BaseCompoundObjective * wpt(&blender->robot_);//dynamic_cast<BaseCompoundObjective*>(*ii));
+  InteractiveCompoundObjective * wpt(&blender->robot_);//dynamic_cast<InteractiveCompoundObjective*>(*ii));
   // if ( ! wpt) {
   //   continue;
   // }

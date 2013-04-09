@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_DEMO_DEMO_COMPOUND_OBJECTIVES_HPP
-#define KINEMATIC_OBJECTIVES_DEMO_DEMO_COMPOUND_OBJECTIVES_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUND_OBJECTIVES_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUND_OBJECTIVES_HPP
 
 #include <kinematic_objectives/compound_objective.h>
 #include <kinematic_objectives/joint_limit_objective.h>
@@ -73,14 +73,14 @@ namespace kinematic_objectives {
     /**
        \todo [low] attributes should be protected or private
     */
-    class BaseCompoundObjective
+    class InteractiveCompoundObjective
       : public CompoundObjective,
 	public CairoDrawable
     {
     public:
-      BaseCompoundObjective(InteractiveBlender const & blender,
-			    InteractionHandle const & repulsor,
-			    double const & z_angle);
+      InteractiveCompoundObjective(InteractiveBlender const & blender,
+				   InteractionHandle const & repulsor,
+				   double const & z_angle);
     
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
@@ -121,15 +121,15 @@ namespace kinematic_objectives {
     /**
        \todo [low] attributes should be protected or private
     */
-    class NormalCompoundObjective
-      : public BaseCompoundObjective
+    class ElasticLinksCompoundObjective
+      : public InteractiveCompoundObjective
     {
     public:
-      NormalCompoundObjective(InteractiveBlender const & blender,
-			      InteractionHandle const & repulsor,
-			      double const & z_angle);
+      ElasticLinksCompoundObjective(InteractiveBlender const & blender,
+				    InteractionHandle const & repulsor,
+				    double const & z_angle);
       
-      virtual ~NormalCompoundObjective();
+      virtual ~ElasticLinksCompoundObjective();
       
       /**
 	 \note Do not use in production code: calls exit() on error.
@@ -143,11 +143,11 @@ namespace kinematic_objectives {
       /**
 	 \note Do not use in production code: calls exit() on error.
       */
-      void setNeighbors(BaseCompoundObjective const * prev,
-			BaseCompoundObjective const * next);
+      void setNeighbors(InteractiveCompoundObjective const * prev,
+			InteractiveCompoundObjective const * next);
       
-      BaseCompoundObjective const * prev_;
-      BaseCompoundObjective const * next_;
+      InteractiveCompoundObjective const * prev_;
+      InteractiveCompoundObjective const * next_;
       
       vector<PointAttractionObjective*> attract_prev_;
       vector<PointAttractionObjective*> attract_next_;
@@ -157,15 +157,15 @@ namespace kinematic_objectives {
     /**
        \todo [low] attributes should be protected or private
     */
-    class BoundaryCompoundObjective
-      : public BaseCompoundObjective
+    class EEGoalCompoundObjective
+      : public InteractiveCompoundObjective
     {
     public:
-      BoundaryCompoundObjective(InteractiveBlender const & blender,
-				InteractionHandle const & repulsor,
-				double const & z_angle,
-				Vector const * eegoal,
-				Vector const * baseattractor);
+      EEGoalCompoundObjective(InteractiveBlender const & blender,
+			      InteractionHandle const & repulsor,
+			      double const & z_angle,
+			      Vector const * eegoal,
+			      Vector const * baseattractor);
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
@@ -181,4 +181,4 @@ namespace kinematic_objectives {
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_DEMO_DEMO_COMPOUND_OBJECTIVES_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUND_OBJECTIVES_HPP

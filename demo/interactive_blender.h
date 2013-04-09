@@ -38,7 +38,7 @@
 #define KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_BLENDER_HPP
 
 #include <kinematic_objectives/blender.h>
-#include "demo_compound_objectives.h"
+#include "interactive_compound_objectives.h"
 
 
 namespace kinematic_objectives {
@@ -77,7 +77,7 @@ namespace kinematic_objectives {
       
       vector<InteractionHandle*> handles_;
       
-      BoundaryCompoundObjective robot_;
+      EEGoalCompoundObjective robot_;
       
     private:
       Blender * blender_;

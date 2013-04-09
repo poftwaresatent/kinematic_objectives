@@ -36,7 +36,7 @@
 
 #include <kinematic_objectives/print.h>
 #include <kinematic_objectives/util.h>
-#include "demo_compound_objectives.h"
+#include "interactive_compound_objectives.h"
 
 #include <err.h>
 
@@ -69,10 +69,10 @@ namespace kinematic_objectives {
     }
     
     
-    BaseCompoundObjective::
-    BaseCompoundObjective(InteractiveBlender const & blender,
-			  InteractionHandle const & repulsor,
-			  double const & z_angle)
+    InteractiveCompoundObjective::
+    InteractiveCompoundObjective(InteractiveBlender const & blender,
+				 InteractionHandle const & repulsor,
+				 double const & z_angle)
       : CompoundObjective(robot_),
 	distance_api_(robot_, blender),
 	repulsor_(repulsor),
@@ -115,7 +115,7 @@ namespace kinematic_objectives {
     }
   
   
-    void BaseCompoundObjective::
+    void InteractiveCompoundObjective::
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
@@ -222,7 +222,7 @@ namespace kinematic_objectives {
     }
   
   
-    void BaseCompoundObjective::
+    void InteractiveCompoundObjective::
     preUpdateHook()
     {
       orient_ee_.goal_ = z_angle_;
@@ -234,17 +234,17 @@ namespace kinematic_objectives {
     }
     
     
-    NormalCompoundObjective::
-    NormalCompoundObjective(InteractiveBlender const & blender,
-			    InteractionHandle const & repulsor,
-			    double const & z_angle)
-      : BaseCompoundObjective(blender, repulsor, z_angle)
+    ElasticLinksCompoundObjective::
+    ElasticLinksCompoundObjective(InteractiveBlender const & blender,
+				  InteractionHandle const & repulsor,
+				  double const & z_angle)
+      : InteractiveCompoundObjective(blender, repulsor, z_angle)
     {
     }
     
     
-    NormalCompoundObjective::
-    ~NormalCompoundObjective()
+    ElasticLinksCompoundObjective::
+    ~ElasticLinksCompoundObjective()
     {
       for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
 	delete attract_prev_[ii];
@@ -255,17 +255,17 @@ namespace kinematic_objectives {
     }
     
     
-    void NormalCompoundObjective::
+    void ElasticLinksCompoundObjective::
     init(Vector const & position, Vector const & velocity)
     {
       if (attract_prev_.empty()) {
-	errx(EXIT_FAILURE, "please call NormalCompoundObjective::setNeighbors exactly once on every compound");
+	errx(EXIT_FAILURE, "please call ElasticLinksCompoundObjective::setNeighbors exactly once on every compound");
       }
-      BaseCompoundObjective::init(position, velocity);
+      InteractiveCompoundObjective::init(position, velocity);
     }
     
     
-    void NormalCompoundObjective::
+    void ElasticLinksCompoundObjective::
     preUpdateHook()
     {
       for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
@@ -280,16 +280,16 @@ namespace kinematic_objectives {
 	  * attract_next_[ii]->point_.homogeneous();
       }
       
-      BaseCompoundObjective::preUpdateHook();
+      InteractiveCompoundObjective::preUpdateHook();
     }
     
     
-    void NormalCompoundObjective::
-    setNeighbors(BaseCompoundObjective const * prev,
-		 BaseCompoundObjective const * next)
+    void ElasticLinksCompoundObjective::
+    setNeighbors(InteractiveCompoundObjective const * prev,
+		 InteractiveCompoundObjective const * next)
     {
       if ( ! attract_prev_.empty()) {
-	errx(EXIT_FAILURE, "please do not call NormalCompoundObjective::setNeighbors multiple times");
+	errx(EXIT_FAILURE, "please do not call ElasticLinksCompoundObjective::setNeighbors multiple times");
       }
       
       prev_ = prev;
@@ -325,13 +325,13 @@ namespace kinematic_objectives {
     }
     
     
-    BoundaryCompoundObjective::
-    BoundaryCompoundObjective(InteractiveBlender const & blender,
-			      InteractionHandle const & repulsor,
-			      double const & z_angle,
-			      Vector const * eegoal,
-			      Vector const * baseattractor)
-      : BaseCompoundObjective(blender, repulsor, z_angle),
+    EEGoalCompoundObjective::
+    EEGoalCompoundObjective(InteractiveBlender const & blender,
+			    InteractionHandle const & repulsor,
+			    double const & z_angle,
+			    Vector const * eegoal,
+			    Vector const * baseattractor)
+      : InteractiveCompoundObjective(blender, repulsor, z_angle),
 	eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
 	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 100.0,  2.0),
 	eegoal_(eegoal),
@@ -342,11 +342,11 @@ namespace kinematic_objectives {
     }
     
     
-    void BoundaryCompoundObjective::
+    void EEGoalCompoundObjective::
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
-      BaseCompoundObjective::draw(cr, weight, pixelsize);
+      InteractiveCompoundObjective::draw(cr, weight, pixelsize);
       
       // thin line for end effector objective
       cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
@@ -368,12 +368,12 @@ namespace kinematic_objectives {
     }
     
     
-    void BoundaryCompoundObjective::
+    void EEGoalCompoundObjective::
     preUpdateHook()
     {
       eeobjective_.goal_ = *eegoal_;
       attract_base_.attractor_ = *baseattractor_;
-      BaseCompoundObjective::preUpdateHook();
+      InteractiveCompoundObjective::preUpdateHook();
     }
     
   }
