@@ -128,12 +128,6 @@ namespace kinematic_objectives {
     
   public:
     PseudoInverseFeedback jbar_svd_;
-    
-    // XXXX Vector residual_error_;
-    // Matrix jbar_inverse_;
-    // size_t jbar_range_;
-    // requires SVD of J: Matrix nullspace_residuals_;
-    // requires SVD of J: Matrix removed_directions_;
   };
   
 }

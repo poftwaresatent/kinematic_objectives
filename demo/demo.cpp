@@ -37,6 +37,7 @@
 #include <kinematic_objectives/util.h>
 #include <kinematic_objectives/print.h>
 #include <kinematic_objectives/constraint_teleporting_blender.h>
+#include <kinematic_objectives/achievability.h>
 #include "interactive_blender.h"
 #include <gtk/gtk.h>
 #include <cmath>
@@ -124,7 +125,7 @@ static void analyze()
 	  "blended total objective bias", "  ");
   }
   
-  cout << "--------------------------------------------------\n";
+  cout << "==================================================\n";
   
   for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
     Objective const * obj(co.hard_objectives_[ii]);
@@ -146,6 +147,11 @@ static void analyze()
     }
   }
   
+  cout << "--------------------------------------------------\n";
+  
+  vector<Achievability> info;
+  Achievability::compute(co, info);
+  Achievability::print(info, cout, "  ");
 }
 
 

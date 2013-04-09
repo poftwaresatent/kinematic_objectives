@@ -96,6 +96,7 @@ list (APPEND SRCS
   src/joint_damping_objective.cpp
   src/pseudo_inverse.cpp
   src/print.cpp
+  src/achievability.cpp
   )
 
 add_library (kinematic_objectives SHARED ${SRCS})
