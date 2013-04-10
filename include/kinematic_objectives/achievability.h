@@ -63,11 +63,27 @@ namespace kinematic_objectives {
     Vector residual_error_;
     double residual_error_magnitude_;
     
+    Vector nullspace_residuals_;
+    
     // Matrix jbar_inverse_;
     // size_t jbar_range_;
     // requires SVD of J: Matrix nullspace_residuals_;
     // requires SVD of J: Matrix removed_directions_;
     
+    /**
+       Needs an extra SVD for each active objective. So don't call
+       this too often... or if you don't care about the nullspace
+       residuals, make a lightweight copy of this function which skips
+       that step.
+       
+       \note Soft objectives are a bit special because they do not
+       individually get projected. So here we compute a few spurious
+       SVDs just in order to find out how many dimensions each soft
+       objective wants and gets. Assuming that this info is not
+       computed too often, that should not result in an appreciable
+       slowdown.
+    */
+
     static void compute(CompoundObjective const & co,
 			vector<Achievability> & information);
     

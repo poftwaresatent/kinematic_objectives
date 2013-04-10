@@ -52,6 +52,9 @@ namespace kinematic_objectives {
     information.clear();
     Achievability info;
     
+    Matrix Jinv;
+    PseudoInverseFeedback extra;
+    
     for (size_t ii(0); ii < co.unilateral_constraints_.size(); ++ii) {
       if ( ! co.unilateral_constraints_[ii]->isActive()) {
 	continue;
@@ -63,6 +66,18 @@ namespace kinematic_objectives {
       info.residual_error_      = info.objective_->getBias()
 	- info.objective_->getJacobian() * co.model_.getJointVelocity();
       info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
+      
+      pseudo_inverse_moore_penrose(co.unilateral_constraints_[ii]->getJacobian(), Jinv, 0, &extra);
+      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
+      for (Vector::Index jj(extra.truncated_range); jj < extra.input_space.rows(); ++jj) {
+        info.nullspace_residuals_[jj - extra.truncated_range]
+	  = info.objective_->computeResidualErrorMagnitude(info.objective_->getJacobian()
+							   * extra.input_space.block(jj,
+										     0,
+										     1,
+										     extra.input_space.rows()));
+      }
+      
       information.push_back(info);
     }
     
@@ -77,16 +92,21 @@ namespace kinematic_objectives {
       info.residual_error_      = info.objective_->getBias()
 	- info.objective_->getJacobian() * co.model_.getJointVelocity();
       info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
+      
+      pseudo_inverse_moore_penrose(co.unilateral_constraints_[ii]->getJacobian(), Jinv, 0, &extra);
+      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
+      for (Vector::Index jj(extra.truncated_range); jj < extra.input_space.rows(); ++jj) {
+        info.nullspace_residuals_[jj - extra.truncated_range]
+	  = info.objective_->computeResidualErrorMagnitude(info.objective_->getJacobian()
+							   * extra.input_space.block(jj,
+										     0,
+										     1,
+										     extra.input_space.rows()));
+      }
+
       information.push_back(info);
     }
     
-    /**< \note Soft objectives are a bit special because they do not
-       individually get projected. So here we compute a few spurious
-       SVDs just in order to find out how many dimensions each soft
-       objective wants and gets. Assuming that this info is not
-       computed too often, that should not result in an appreciable
-       slowdown.
-    */
     Matrix Nct;
     if (co.hard_objectives_.empty()) {
       Nct = Matrix::Identity(co.model_.getJointPosition().size(), co.model_.getJointPosition().size());
@@ -108,6 +128,18 @@ namespace kinematic_objectives {
       info.residual_error_      = info.objective_->getBias()
 	- info.objective_->getJacobian() * co.model_.getJointVelocity();
       info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
+      
+      pseudo_inverse_moore_penrose(co.unilateral_constraints_[ii]->getJacobian(), Jinv, 0, &extra);
+      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
+      for (Vector::Index jj(extra.truncated_range); jj < extra.input_space.rows(); ++jj) {
+        info.nullspace_residuals_[jj - extra.truncated_range]
+	  = info.objective_->computeResidualErrorMagnitude(info.objective_->getJacobian()
+							   * extra.input_space.block(jj,
+										     0,
+										     1,
+										     extra.input_space.rows()));
+      }
+
       information.push_back(info);
     }
     
@@ -140,7 +172,8 @@ namespace kinematic_objectives {
 	       information[ii].available_dimension_,
 	       information[ii].required_dimension_);
       os << pfx << buf << pstring(information[ii].residual_error_magnitude_)
-	 << "   (" << pstring(information[ii].residual_error_) << ")\n";
+	 << "   (" << pstring(information[ii].residual_error_)
+	 << ")   (" << pstring(information[ii].nullspace_residuals_) << ")\n";
     }
   }
   
