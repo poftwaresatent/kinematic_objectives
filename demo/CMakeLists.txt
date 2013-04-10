@@ -6,7 +6,6 @@ if (GTK2_FOUND)
     demo.cpp
     interaction_handle.cpp
     interactive_compound_objectives.cpp
-    interactive_blender.cpp
     planar_distance.cpp
     planar_orientation_objective.cpp
     planar_robot.cpp

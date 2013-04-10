@@ -46,49 +46,33 @@ namespace kinematic_objectives {
   namespace demo {
     
     
-    InteractionHandle::
-    InteractionHandle(double radius, double red, double green, double blue, double alpha)
-      : point_(3),
-	radius_(radius),
-	red_(red),
-	green_(green),
-	blue_(blue),
-	alpha_(alpha)
-    {
-    }
-    
-    
-    void InteractionHandle::
-    draw(cairo_t * cr, double weight, double pixelsize)
-      const
-    {
-      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
-      cairo_set_source_rgba(cr, red_, green_, blue_, alpha_);
-      cairo_arc(cr, point_[0], point_[1], radius_, 0.0, 2.0 * M_PI);
-      cairo_fill(cr);
-    }
-    
-    
     InteractiveCompoundObjective::
-    InteractiveCompoundObjective(InteractiveBlender const & blender,
-				 InteractionHandle const & repulsor,
-				 double const & z_angle)
+    InteractiveCompoundObjective()
       : CompoundObjective(robot_),
-	distance_api_(robot_, blender),
-	repulsor_(repulsor),
-	z_angle_(z_angle),
+	h_ee_      (0.2, 0.0, 1.0, 0.0, 0.5),
+	h_ee_ori_  (0.1, 0.0, 1.0, 0.0, 0.3),
+	h_base_    (0.2, 0.0, 1.0, 0.5, 0.5),
+	h_repulsor_(1.5, 1.0, 0.5, 0.0, 0.2),
+	h_obstacle_(1.5, 0.7, 0.0, 0.2, 0.5),
+	distance_api_(robot_, &h_obstacle_),
 	joint_limits_  ("joint_limits"),
 	avoid_base_    ("avoid_base",   distance_api_, 0, 0.0),
 	avoid_ellbow_  ("avoid_ellbow", distance_api_, 1, 0.0),
 	avoid_wrist_   ("avoid_wrist",  distance_api_, 2, 0.0),
 	avoid_ee_      ("avoid_ee",     distance_api_, 3, 0.0),
 	orient_ee_     ("orient_ee", 3, 100.0, 20.0),
-	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, 100.0, repulsor.radius_),
-	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, 100.0, repulsor.radius_),
-	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, 100.0, repulsor.radius_),
-	repulse_ee_    ("repulse_ee",     3,   robot_.len_c_, 0.0, 0.0, 100.0, repulsor.radius_),
+	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, 100.0, h_repulsor_.radius_),
+	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, 100.0, h_repulsor_.radius_),
+	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, 100.0, h_repulsor_.radius_),
+	repulse_ee_    ("repulse_ee",     3,   robot_.len_c_, 0.0, 0.0, 100.0, h_repulsor_.radius_),
 	joint_damping_ ("joint_damping", 10.0)
     {
+      handles_.push_back(&h_ee_);
+      handles_.push_back(&h_ee_ori_);
+      handles_.push_back(&h_base_);
+      handles_.push_back(&h_repulsor_);
+      handles_.push_back(&h_obstacle_);
+      
       joint_limits_.init(5);
       joint_limits_.limits_(3, 0) = -120.0 * deg;
       joint_limits_.limits_(3, 1) = -119.999 * deg;
@@ -118,6 +102,12 @@ namespace kinematic_objectives {
     void InteractiveCompoundObjective::
     init(double gui_dimx, double gui_dimy)
     {
+      h_ee_.point_         <<             1.0, gui_dimy / 2.0      ,     0.0;
+      h_ee_ori_.point_     <<             2.0, gui_dimy / 2.0 + 1.0,     0.0;
+      h_base_.point_       <<             1.0,                  1.0,     0.0;
+      h_repulsor_.point_   <<  gui_dimx / 2.0,                  1.0,     0.0;
+      h_obstacle_.point_   <<  gui_dimx / 2.0,       gui_dimy - 1.0,     0.0;
+      
       Vector posture(5);
       posture <<
 	gui_dimx / 2.0,
@@ -136,7 +126,19 @@ namespace kinematic_objectives {
       robot_.draw(cr, weight, pixelsize);
       
       cairo_save(cr);
-    
+      
+      // handles
+      
+      for (size_t ii(0); ii < handles_.size(); ++ii) {
+	handles_[ii]->draw(cr, weight, pixelsize);
+      }
+      
+      cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 0.5);
+      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
+      cairo_move_to(cr, h_ee_.point_[0], h_ee_.point_[1]);
+      cairo_line_to(cr, h_ee_ori_.point_[0], h_ee_ori_.point_[1]);
+      cairo_stroke(cr);
+      
       // orientation objective
     
       cairo_set_source_rgba(cr, 0.0, 1.0, 0.5, 0.3);
@@ -239,117 +241,119 @@ namespace kinematic_objectives {
     void InteractiveCompoundObjective::
     preUpdateHook()
     {
-      orient_ee_.goal_ = z_angle_;
-    
-      repulse_base_.repulsor_ = repulsor_.point_;
-      repulse_ellbow_.repulsor_ = repulsor_.point_;
-      repulse_wrist_.repulsor_ = repulsor_.point_;
-      repulse_ee_.repulsor_ = repulsor_.point_;
+      orient_ee_.goal_ = atan2(h_ee_ori_.point_[1] - h_ee_.point_[1], h_ee_ori_.point_[0] - h_ee_.point_[0]);
+      
+      repulse_base_.repulsor_ = h_repulsor_.point_;
+      repulse_ellbow_.repulsor_ = h_repulsor_.point_;
+      repulse_wrist_.repulsor_ = h_repulsor_.point_;
+      repulse_ee_.repulsor_ = h_repulsor_.point_;
     }
     
     
     ElasticLinksCompoundObjective::
-    ElasticLinksCompoundObjective(InteractiveBlender const & blender,
-				  InteractionHandle const & repulsor,
-				  double const & z_angle)
-      : InteractiveCompoundObjective(blender, repulsor, z_angle)
+    ElasticLinksCompoundObjective()
+      : h2_ee_    (0.2, 0.0, 0.6, 0.0, 0.5),
+	h1_wrist_ (0.2, 0.0, 0.5, 0.5, 0.5),
+	h2_wrist_ (0.2, 0.0, 0.3, 0.3, 0.5),
+	h1_ellbow_(0.2, 0.0, 0.8, 0.8, 0.5),
+	h2_ellbow_(0.2, 0.0, 0.4, 0.4, 0.5),
+	h2_base_  (0.2, 0.0, 0.6, 0.3, 0.5),
+	ee_left_     ("ee_left",      3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0),
+	ee_right_    ("ee_right",     3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0),
+	wrist_left_  ("wrist_left",   2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0),
+	wrist_right_ ("wrist_right",  2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0),
+	ellbow_left_ ("ellbow_left",  1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0),
+	ellbow_right_("ellbow_right", 1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0),
+	base_left_   ("base_left",    0,           0.0, 0.0, 0.0, 500.0, -10.0),
+	base_right_  ("base_right",   0,           0.0, 0.0, 0.0, 500.0, -10.0)
     {
+      handles_.push_back(&h2_ee_);
+      handles_.push_back(&h1_wrist_);
+      handles_.push_back(&h2_wrist_);
+      handles_.push_back(&h1_ellbow_);
+      handles_.push_back(&h2_ellbow_);
+      handles_.push_back(&h2_base_);
+
+      soft_objectives_.push_back(&ee_left_);
+      soft_objectives_.push_back(&ee_right_);
+      soft_objectives_.push_back(&wrist_left_);
+      soft_objectives_.push_back(&wrist_right_);
+      soft_objectives_.push_back(&ellbow_left_);
+      soft_objectives_.push_back(&ellbow_right_);
+      soft_objectives_.push_back(&base_left_);
+      soft_objectives_.push_back(&base_right_);
     }
     
     
-    ElasticLinksCompoundObjective::
-    ~ElasticLinksCompoundObjective()
+    void ElasticLinksCompoundObjective::
+    init(double gui_dimx, double gui_dimy)
     {
-      for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
-	delete attract_prev_[ii];
-      }
-      for (size_t ii(0); ii < attract_next_.size(); ++ii) {
-	delete attract_next_[ii];
+      h2_ee_.point_     <<             3.0, gui_dimy / 2.0      ,     0.0;
+      h1_wrist_.point_  <<             1.0, gui_dimy / 2.0 - 0.2,     0.0;
+      h2_wrist_.point_  <<             3.0, gui_dimy / 2.0 - 0.2,     0.0;
+      h1_ellbow_.point_ <<             1.0, gui_dimy / 2.0 - 0.4,     0.0;
+      h2_ellbow_.point_ <<             3.0, gui_dimy / 2.0 - 0.4,     0.0;
+      h2_base_.point_   <<             3.0,                  1.0,     0.0;
+      
+      InteractiveCompoundObjective::init(gui_dimx, gui_dimy);
+    }
+    
+    
+    static void draw_elastic(cairo_t * cr, double weight, double pixelsize,
+			     InteractionHandle const & handle,
+			     PointAttractionObjective const & objective)
+    {
+      if (objective.isActive()) {
+	cairo_set_source_rgba(cr, handle.red_, handle.green_, handle.blue_, 0.5);
+	cairo_set_line_width(cr, weight * 1.0 / pixelsize);
+	cairo_move_to(cr,
+		      objective.gpoint_[0],
+		      objective.gpoint_[1]);
+	cairo_line_to(cr,
+		      objective.gpoint_[0] + objective.getBias()[0] / objective.gain_,
+		      objective.gpoint_[1] + objective.getBias()[1] / objective.gain_);
+	cairo_stroke(cr);
       }
     }
     
     
     void ElasticLinksCompoundObjective::
-    init(Vector const & position, Vector const & velocity)
+    draw(cairo_t * cr, double weight, double pixelsize)
+      const
     {
-      if (attract_prev_.empty()) {
-	errx(EXIT_FAILURE, "please call ElasticLinksCompoundObjective::setNeighbors exactly once on every compound");
-      }
-      CompoundObjective::init(position, velocity);
+      InteractiveCompoundObjective::draw(cr, weight, pixelsize);
+      
+      draw_elastic(cr, weight, pixelsize,  h_ee_,     ee_left_);
+      draw_elastic(cr, weight, pixelsize, h2_ee_,     ee_right_);
+      draw_elastic(cr, weight, pixelsize, h1_wrist_,  wrist_left_);
+      draw_elastic(cr, weight, pixelsize, h2_wrist_,  wrist_right_);
+      draw_elastic(cr, weight, pixelsize, h1_ellbow_, ellbow_left_);
+      draw_elastic(cr, weight, pixelsize, h2_ellbow_, ellbow_right_);
+      draw_elastic(cr, weight, pixelsize,  h_base_,   base_left_);
+      draw_elastic(cr, weight, pixelsize, h2_base_,   base_right_);
     }
     
     
     void ElasticLinksCompoundObjective::
     preUpdateHook()
     {
-      for (size_t ii(0); ii < attract_prev_.size(); ++ii) {
-	attract_prev_[ii]->attractor_
-	  = prev_->robot_.getLinkFrame(attract_prev_[ii]->node_)
-	  * attract_prev_[ii]->point_.homogeneous();
-      }
-      
-      for (size_t ii(0); ii < attract_next_.size(); ++ii) {
-	attract_next_[ii]->attractor_
-	  = next_->robot_.getLinkFrame(attract_next_[ii]->node_)
-	  * attract_next_[ii]->point_.homogeneous();
-      }
+      ee_left_.attractor_ =       h_ee_.point_;
+      ee_right_.attractor_ =     h2_ee_.point_;
+      wrist_left_.attractor_ =   h1_wrist_.point_;
+      wrist_right_.attractor_ =  h2_wrist_.point_;
+      ellbow_left_.attractor_ =  h1_ellbow_.point_;
+      ellbow_right_.attractor_ = h2_ellbow_.point_;
+      base_left_.attractor_ =     h_base_.point_;
+      base_right_.attractor_ =   h2_base_.point_;
       
       InteractiveCompoundObjective::preUpdateHook();
     }
     
     
-    void ElasticLinksCompoundObjective::
-    setNeighbors(InteractiveCompoundObjective const * prev,
-		 InteractiveCompoundObjective const * next)
-    {
-      if ( ! attract_prev_.empty()) {
-	errx(EXIT_FAILURE, "please do not call ElasticLinksCompoundObjective::setNeighbors multiple times");
-      }
-      
-      prev_ = prev;
-      next_ = next;
-      
-      PointAttractionObjective * pa;
-      
-      pa = new PointAttractionObjective("attract_prev_0", 0,           0.0, 0.0, 0.0, 500.0, -10.0);
-      attract_prev_.push_back(pa);
-      soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective("attract_prev_1", 1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
-      attract_prev_.push_back(pa);
-      soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective("attract_prev_2", 2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
-      attract_prev_.push_back(pa);
-      soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective("attract_prev_3", 3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
-      attract_prev_.push_back(pa);
-      soft_objectives_.push_back(pa);
-      
-      pa = new PointAttractionObjective("attract_next_0", 0,           0.0, 0.0, 0.0, 500.0, -10.0);
-      attract_next_.push_back(pa);
-      soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective("attract_next_1", 1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0);
-      attract_next_.push_back(pa);
-      soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective("attract_next_2", 2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0);
-      attract_next_.push_back(pa);
-      soft_objectives_.push_back(pa);
-      pa = new PointAttractionObjective("attract_next_3", 3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0);
-      attract_next_.push_back(pa);
-      soft_objectives_.push_back(pa);
-    }
-    
-    
     EEGoalCompoundObjective::
-    EEGoalCompoundObjective(InteractiveBlender const & blender,
-			    InteractionHandle const & repulsor,
-			    double const & z_angle,
-			    Vector const * eegoal,
-			    Vector const * baseattractor)
-      : InteractiveCompoundObjective(blender, repulsor, z_angle),
-	eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
-	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 100.0,  2.0),
-	eegoal_(eegoal),
-	baseattractor_(baseattractor)
+    EEGoalCompoundObjective()
+      : eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
+	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 100.0,  2.0)
     {
       hard_objectives_.push_back(&eeobjective_);
       soft_objectives_.push_back(&attract_base_);
@@ -385,8 +389,8 @@ namespace kinematic_objectives {
     void EEGoalCompoundObjective::
     preUpdateHook()
     {
-      eeobjective_.goal_ = *eegoal_;
-      attract_base_.attractor_ = *baseattractor_;
+      eeobjective_.goal_ = h_ee_.point_;
+      attract_base_.attractor_ = h_base_.point_;
       InteractiveCompoundObjective::preUpdateHook();
     }
     

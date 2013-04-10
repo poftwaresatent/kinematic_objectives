@@ -47,27 +47,12 @@
 #include "planar_orientation_objective.h"
 #include "planar_robot.h"
 #include "planar_distance.h"
-#include "cairo_drawable.h"
+#include "interaction_handle.h"
 
 
 namespace kinematic_objectives {
   
   namespace demo {
-    
-    class InteractiveBlender;
-    
-    
-    class InteractionHandle
-      : public CairoDrawable
-    {
-    public:
-      InteractionHandle(double radius, double red, double green, double blue, double alpha);
-      
-      virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
-      
-      Vector point_;
-      double radius_, red_, green_, blue_, alpha_;
-    };
     
     
     /**
@@ -78,18 +63,21 @@ namespace kinematic_objectives {
 	public CairoDrawable
     {
     public:
-      InteractiveCompoundObjective(InteractiveBlender const & blender,
-				   InteractionHandle const & repulsor,
-				   double const & z_angle);
+      InteractiveCompoundObjective();
     
       virtual void init(double gui_dimx, double gui_dimy);
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      /**
-	 \todo [low] find a less ugly way of customizing behavior
-      */
       virtual void preUpdateHook();
+      
+      InteractionHandle h_ee_;
+      InteractionHandle h_ee_ori_;
+      InteractionHandle h_base_;
+      InteractionHandle h_repulsor_;
+      InteractionHandle h_obstacle_;
+      
+      vector<InteractionHandle*> handles_;
       
       /**
 	 \note Keep this declaration before any objectives that are
@@ -98,9 +86,6 @@ namespace kinematic_objectives {
       */
       PlanarRobot robot_;
       PlanarDistance distance_api_;
-      
-      InteractionHandle const & repulsor_;
-      double const & z_angle_;
       
       JointLimitObjective joint_limits_;
     
@@ -127,32 +112,29 @@ namespace kinematic_objectives {
       : public InteractiveCompoundObjective
     {
     public:
-      ElasticLinksCompoundObjective(InteractiveBlender const & blender,
-				    InteractionHandle const & repulsor,
-				    double const & z_angle);
+      ElasticLinksCompoundObjective();
       
-      virtual ~ElasticLinksCompoundObjective();
+      virtual void init(double gui_dimx, double gui_dimy);
       
-      /**
-	 \note Do not use in production code: calls exit() on error.
-      */
-      virtual void init(Vector const & position, Vector const & velocity);
+      virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      // virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
+      virtual void preUpdateHook();
       
-      virtual void preUpdateHook(); // rfct
+      InteractionHandle h2_ee_;
+      InteractionHandle h1_wrist_;
+      InteractionHandle h2_wrist_;
+      InteractionHandle h1_ellbow_;
+      InteractionHandle h2_ellbow_;
+      InteractionHandle h2_base_;
       
-      /**
-	 \note Do not use in production code: calls exit() on error.
-      */
-      void setNeighbors(InteractiveCompoundObjective const * prev,
-			InteractiveCompoundObjective const * next);
-      
-      InteractiveCompoundObjective const * prev_;
-      InteractiveCompoundObjective const * next_;
-      
-      vector<PointAttractionObjective*> attract_prev_;
-      vector<PointAttractionObjective*> attract_next_;
+      PointAttractionObjective ee_left_;
+      PointAttractionObjective ee_right_;
+      PointAttractionObjective wrist_left_;
+      PointAttractionObjective wrist_right_;
+      PointAttractionObjective ellbow_left_;
+      PointAttractionObjective ellbow_right_;
+      PointAttractionObjective base_left_;
+      PointAttractionObjective base_right_;
     };
     
     
@@ -163,20 +145,14 @@ namespace kinematic_objectives {
       : public InteractiveCompoundObjective
     {
     public:
-      EEGoalCompoundObjective(InteractiveBlender const & blender,
-			      InteractionHandle const & repulsor,
-			      double const & z_angle,
-			      Vector const * eegoal,
-			      Vector const * baseattractor);
+      EEGoalCompoundObjective();
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      virtual void preUpdateHook(); // rfct
+      virtual void preUpdateHook();
 
       LinkPositionObjective eeobjective_;
       PointAttractionObjective attract_base_;
-      Vector const * eegoal_;
-      Vector const * baseattractor_;
     };
     
   }

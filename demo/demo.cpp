@@ -34,13 +34,13 @@
 
 /* Author: Roland Philippsen */
 
+#include "interactive_compound_objectives.h"
 #include <kinematic_objectives/util.h>
 #include <kinematic_objectives/print.h>
 #include <kinematic_objectives/unconstrained_blender.h>
 #include <kinematic_objectives/constraint_teleporting_blender.h>
 #include <kinematic_objectives/constraint_bouncing_blender.h>
 #include <kinematic_objectives/achievability.h>
-#include "interactive_blender.h"
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -64,7 +64,6 @@ static int play(0);
 
 static InteractiveCompoundObjective * compound(0);
 static Blender * blender_imp(0);
-static InteractiveBlender * blender(0);
 static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
 
@@ -161,7 +160,7 @@ static void analyze()
 
 static void update()
 {
-  blender->update(compound);
+  blender_imp->update(compound);
   gtk_widget_queue_draw(gw);
   analyze();
 }
@@ -225,7 +224,6 @@ static gint cb_expose(GtkWidget * ww,
   cairo_scale(cr, gw_sx, gw_sy);
   
   compound->draw(cr, lwscale, gw_sx);
-  blender->draw(cr, lwscale, gw_sx);
   
   cairo_destroy(cr);
   
@@ -268,11 +266,11 @@ static gint cb_click(GtkWidget * ww,
   if (bb->type == GDK_BUTTON_PRESS) {
     Vector point(3);
     point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy, 0.0;
-    for (size_t ii(0); ii < blender->handles_.size(); ++ii) {
-      Vector offset = blender->handles_[ii]->point_ - point;
-      if (offset.norm() <= blender->handles_[ii]->radius_) {
+    for (size_t ii(0); ii < compound->handles_.size(); ++ii) {
+      Vector offset = compound->handles_[ii]->point_ - point;
+      if (offset.norm() <= compound->handles_[ii]->radius_) {
     	grab_offset = offset;
-    	grabbed = blender->handles_[ii];
+    	grabbed = compound->handles_[ii];
     	break;
       }
     }
@@ -447,20 +445,12 @@ void parse_options(int argc, char ** argv)
   else {
     errx(EXIT_FAILURE, "invalid blender '%s' (have: teleporting, unconstrained, bouncing)", opt_blender.c_str());
   }
-  blender = new InteractiveBlender(blender_imp, verbose ? &cout : 0, "");
-  blender->init(dimx, dimy);
   
   if ("eegoal" == opt_compound) {
-    compound = new EEGoalCompoundObjective(*blender,
-					   blender->repulsor_,
-					   blender->z_angle_,
-					   &(blender->ee_.point_),
-					   &(blender->base_.point_));
+    compound = new EEGoalCompoundObjective();
   }
   else if ("elastic" == opt_compound) {
-    compound = new ElasticLinksCompoundObjective(*blender,
-						 blender->repulsor_,
-						 blender->z_angle_);
+    compound = new ElasticLinksCompoundObjective();
   }
   else {
     errx(EXIT_FAILURE, "invalid compound '%s' (use 'eegoal' or 'elastic')", opt_compound.c_str());
@@ -472,7 +462,6 @@ void parse_options(int argc, char ** argv)
 void cleanup()
 {
   delete compound;
-  delete blender;
   delete blender_imp;
 }
 
