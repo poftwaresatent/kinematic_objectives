@@ -54,8 +54,9 @@ namespace kinematic_objectives {
      actual feedback data structure lives in CompoundObjective (at the
      time of writing).
      
-     \todo [low] make the attributes protected or private; [low] maybe
-     find a different name.
+     \todo [high] create a blender subclass based on Chiaverini:1997;
+     [low] make the attributes protected or private; [low] maybe find
+     a different name.
   */  
   class Blender
   {

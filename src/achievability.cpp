@@ -80,12 +80,29 @@ namespace kinematic_objectives {
       information.push_back(info);
     }
     
+    /**< \note Soft objectives are a bit special because they do not
+       individually get projected. So here we compute a few spurious
+       SVDs just in order to find out how many dimensions each soft
+       objective wants and gets. Assuming that this info is not
+       computed too often, that should not result in an appreciable
+       slowdown.
+    */
+    Matrix Nct;
+    if (co.hard_objectives_.empty()) {
+      Nct = Matrix::Identity(co.model_.getJointPosition().size(), co.model_.getJointPosition().size());
+    }
+    else {
+      Nct = co.fb_.hard_objective_nullspace_projector_;
+    }
+    Matrix Jbinv;
     for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
       if ( ! co.soft_objectives_[ii]->isActive()) {
 	continue;
       }
       info.tag_                 = SOFT_OBJECTIVE;
       info.objective_           = co.soft_objectives_[ii];
+      pseudo_inverse_moore_penrose(co.soft_objectives_[ii]->getJacobian() * Nct, Jbinv, 0,
+				   &co.soft_objectives_[ii]->jbar_svd_);
       info.available_dimension_ = info.objective_->jbar_svd_.truncated_range;
       info.required_dimension_  = info.objective_->jbar_svd_.original_range;
       info.residual_error_      = info.objective_->getBias()
