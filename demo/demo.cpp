@@ -63,7 +63,7 @@ static bool verbose(false);
 static int play(0);
 
 static InteractiveCompoundObjective * compound(0);
-static Blender * blender_imp(0);
+static Blender * blender(0);
 static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
 
@@ -160,7 +160,7 @@ static void analyze()
 
 static void update()
 {
-  blender_imp->update(compound);
+  blender->update(compound);
   gtk_widget_queue_draw(gw);
   analyze();
 }
@@ -434,13 +434,13 @@ void parse_options(int argc, char ** argv)
   }
   
   if ("teleporting" == opt_blender) {
-    blender_imp = new ConstraintTeleportingBlender(opt_timestep * 1e-3, verbose ? &cout : 0, "ctb  ");
+    blender = new ConstraintTeleportingBlender(opt_timestep * 1e-3, verbose ? &cout : 0, "ctb  ");
   }
   else if ("unconstrained" == opt_blender) {
-    blender_imp = new UnconstrainedBlender(opt_timestep * 1e-3);
+    blender = new UnconstrainedBlender(opt_timestep * 1e-3);
   }
   else if ("bouncing" == opt_blender) {
-    blender_imp = new ConstraintBouncingBlender(opt_timestep * 1e-3, 1e-2);
+    blender = new ConstraintBouncingBlender(opt_timestep * 1e-3, 1e-2);
   }
   else {
     errx(EXIT_FAILURE, "invalid blender '%s' (have: teleporting, unconstrained, bouncing)", opt_blender.c_str());
@@ -462,7 +462,7 @@ void parse_options(int argc, char ** argv)
 void cleanup()
 {
   delete compound;
-  delete blender_imp;
+  delete blender;
 }
 
 
