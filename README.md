@@ -1,5 +1,11 @@
 # Constrained Optimization for Robot Kinematics
 
+Constrained optimization library specialized for (mobile)
+manipulation, geared toward objectives and constraints that can
+naturally be modeled using a robot's kinematic model. The focus is on
+reusability, flexibility, and expressive user-level feedback when
+objectives cannot be achieved.
+
 You need CMake, Eigen3, and GTK2 (for the demos)
 
     mkdir build

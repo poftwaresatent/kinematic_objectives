@@ -128,33 +128,9 @@ static void analyze()
 	  "blended total objective bias", "  ");
   }
   
-  cout << "==================================================\n";
-  
-  for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
-    Objective const * obj(co.hard_objectives_[ii]);
-    if (obj->isActive()) {
-      ostringstream os;
-      os << "hard objective #" << ii << " \"" << obj->name_ << "\"";
-      Vector re(obj->getBias() - obj->getJacobian() * co.model_.getJointVelocity());
-      print(re, cout, os.str() + " reprojection error", "  ");
-    }
-  }
-  
-  for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
-    Objective const * obj(co.soft_objectives_[ii]);
-    if (obj->isActive()) {
-      ostringstream os;
-      os << "soft objective #" << ii << " \"" << obj->name_ << "\"";
-      Vector re(obj->getBias() - obj->getJacobian() * co.model_.getJointVelocity());
-      print(re, cout, os.str() + " reprojection error", "  ");
-    }
-  }
-  
-  cout << "--------------------------------------------------\n";
-  
   vector<Achievability> info;
   Achievability::compute(co, info);
-  Achievability::print(info, cout, "  ");
+  Achievability::print(info, cout, "");
 }
 
 
