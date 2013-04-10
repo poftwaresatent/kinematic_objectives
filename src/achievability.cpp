@@ -45,10 +45,10 @@
 namespace kinematic_objectives {
   
   
-  static void compute(Achievability::objective_tag_t tag,
-		      vector<Objective*> const & objectives,
-		      Vector const & joint_velocity,
-		      vector<Achievability> & information)
+  static void helper(Achievability::objective_tag_t tag,
+		     vector<Objective*> const & objectives,
+		     Vector const & joint_velocity,
+		     vector<Achievability> & information)
   {
     Achievability info;
     Matrix Jinv;
@@ -112,9 +112,9 @@ namespace kinematic_objectives {
     
     information.clear();
     
-    compute(UNILATERAL_CONSTRAINT, co.unilateral_constraints_, co.model_.getJointVelocity(), information);
-    compute(HARD_OBJECTIVE,        co.hard_objectives_,        co.model_.getJointVelocity(), information);
-    compute(SOFT_OBJECTIVE,        co.soft_objectives_,        co.model_.getJointVelocity(), information);
+    helper(UNILATERAL_CONSTRAINT, co.unilateral_constraints_, co.model_.getJointVelocity(), information);
+    helper(HARD_OBJECTIVE,        co.hard_objectives_,        co.model_.getJointVelocity(), information);
+    helper(SOFT_OBJECTIVE,        co.soft_objectives_,        co.model_.getJointVelocity(), information);
   }
   
   
@@ -126,8 +126,8 @@ namespace kinematic_objectives {
       return;
     }
     
-    int namlen(information[0].objective_->name_.size());
-    for (size_t ii(1); ii < information.size(); ++ii) {
+    int namlen(strlen("objective"));
+    for (size_t ii(0); ii < information.size(); ++ii) {
       int nl(information[ii].objective_->name_.size());
       if (nl > namlen) {
 	namlen = nl;
@@ -136,17 +136,59 @@ namespace kinematic_objectives {
     
     size_t const buflen(128+namlen);
     char buf[buflen];
-    for (size_t ii(0); ii < information.size(); ++ii) {
-      snprintf(buf, buflen, "%s %-*s   %3zu / %3zu   ",
-	       information[ii].tag_ == UNILATERAL_CONSTRAINT ? "CONS"
-	       : (information[ii].tag_ == HARD_OBJECTIVE ? "HARD" : "SOFT"),
-	       namlen, information[ii].objective_->name_.c_str(),
+    
+    snprintf(buf, buflen, "  [pos/idx] %-*s   have / need (miss)   magnitude\n", namlen, "objective");
+    os << pfx << "==========================================================\n"
+       << pfx << "SUMMARY: dimensions and magnitude of residual error\n"
+       << pfx << buf
+       << pfx << "----------------------------------------------------------\n";
+    
+    for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
+      if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
+	jj = 0;
+	if (UNILATERAL_CONSTRAINT == information[ii].tag_) {
+	  os << pfx << "UNILATERAL_CONSTRAINT\n";
+	}
+	else if (HARD_OBJECTIVE == information[ii].tag_) {
+	  os << pfx << "HARD_OBJECTIVE\n";
+	}
+	else {
+	  os << pfx << "SOFT_OBJECTIVE\n";
+	}
+      }
+      snprintf(buf, buflen, "  [%3zu/%3zu] %-*s   %4zu / %4zu (%4zu)   ", ii, jj, namlen,
+	       information[ii].objective_->name_.c_str(),
 	       information[ii].available_dimension_,
-	       information[ii].required_dimension_);
-      os << pfx << buf << pstring(information[ii].residual_error_magnitude_)
-	 << "   (" << pstring(information[ii].residual_error_)
-	 << ")   (" << pstring(information[ii].nullspace_residuals_) << ")\n";
+	       information[ii].required_dimension_,
+	       information[ii].required_dimension_ - information[ii].available_dimension_);
+      os << pfx << buf << pstring(information[ii].residual_error_magnitude_) << "\n";
     }
+    
+    os << pfx << "----------------------------------------------------------\n"
+       << pfx << "joint-space residual error\n"
+       << pfx << "----------------------------------------------------------\n";
+    
+    for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
+      if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
+	jj = 0;
+      }
+      snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
+      os << pfx << buf << pstring(information[ii].residual_error_) << "\n";
+    }
+    
+    os << pfx << "----------------------------------------------------------\n"
+       << pfx << "error magnitudes of nullspace basis vectors\n"
+       << pfx << "----------------------------------------------------------\n";
+    
+    for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
+      if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
+	jj = 0;
+      }
+      snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
+      os << pfx << buf << pstring(information[ii].nullspace_residuals_) << "\n";
+    }
+    
+    os << pfx << "==========================================================\n";
   }
   
 }
