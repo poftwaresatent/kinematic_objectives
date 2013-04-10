@@ -45,67 +45,52 @@
 namespace kinematic_objectives {
   
   
+  static void compute(Achievability::objective_tag_t tag,
+		      vector<Objective*> const & objectives,
+		      Vector const & joint_velocity,
+		      vector<Achievability> & information)
+  {
+    Achievability info;
+    Matrix Jinv;
+    PseudoInverseFeedback extra;
+    Vector null_residual;
+    
+    for (size_t ii(0); ii < objectives.size(); ++ii) {
+      
+      if ( ! objectives[ii]->isActive()) {
+	continue;
+      }
+      
+      info.tag_                 = tag;
+      info.objective_           = objectives[ii];
+      info.available_dimension_ = info.objective_->jbar_svd_.truncated_range;
+      info.required_dimension_  = info.objective_->jbar_svd_.original_range;
+      info.residual_error_
+	= info.objective_->getBias()
+	- info.objective_->getJacobian() * joint_velocity;
+      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
+      
+      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian(), Jinv, 0, &extra);
+      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
+      for (ssize_t jj(extra.truncated_range); jj < joint_velocity.size(); ++jj) {
+	null_residual
+	  = info.objective_->getJacobian()
+	  * extra.input_space.block(0, jj, joint_velocity.size(), 1);
+        info.nullspace_residuals_[jj - extra.truncated_range]
+	  = info.objective_->computeResidualErrorMagnitude(null_residual);
+      }
+      
+      information.push_back(info);
+    }
+  }
+  
+  
   void Achievability::
   compute(CompoundObjective const & co,
 	  vector<Achievability> & information)
   {
-    information.clear();
-    Achievability info;
-    
-    Matrix Jinv;
-    PseudoInverseFeedback extra;
-    
-    for (size_t ii(0); ii < co.unilateral_constraints_.size(); ++ii) {
-      if ( ! co.unilateral_constraints_[ii]->isActive()) {
-	continue;
-      }
-      info.tag_                 = UNILATERAL_CONSTRAINT;
-      info.objective_           = co.unilateral_constraints_[ii];
-      info.available_dimension_ = info.objective_->jbar_svd_.truncated_range;
-      info.required_dimension_  = info.objective_->jbar_svd_.original_range;
-      info.residual_error_      = info.objective_->getBias()
-	- info.objective_->getJacobian() * co.model_.getJointVelocity();
-      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
-      
-      pseudo_inverse_moore_penrose(co.unilateral_constraints_[ii]->getJacobian(), Jinv, 0, &extra);
-      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
-      for (Vector::Index jj(extra.truncated_range); jj < extra.input_space.rows(); ++jj) {
-        info.nullspace_residuals_[jj - extra.truncated_range]
-	  = info.objective_->computeResidualErrorMagnitude(info.objective_->getJacobian()
-							   * extra.input_space.block(jj,
-										     0,
-										     1,
-										     extra.input_space.rows()));
-      }
-      
-      information.push_back(info);
-    }
-    
-    for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
-      if ( ! co.hard_objectives_[ii]->isActive()) {
-	continue;
-      }
-      info.tag_                 = HARD_OBJECTIVE;
-      info.objective_           = co.hard_objectives_[ii];
-      info.available_dimension_ = info.objective_->jbar_svd_.truncated_range;
-      info.required_dimension_  = info.objective_->jbar_svd_.original_range;
-      info.residual_error_      = info.objective_->getBias()
-	- info.objective_->getJacobian() * co.model_.getJointVelocity();
-      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
-      
-      pseudo_inverse_moore_penrose(co.unilateral_constraints_[ii]->getJacobian(), Jinv, 0, &extra);
-      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
-      for (Vector::Index jj(extra.truncated_range); jj < extra.input_space.rows(); ++jj) {
-        info.nullspace_residuals_[jj - extra.truncated_range]
-	  = info.objective_->computeResidualErrorMagnitude(info.objective_->getJacobian()
-							   * extra.input_space.block(jj,
-										     0,
-										     1,
-										     extra.input_space.rows()));
-      }
-
-      information.push_back(info);
-    }
+    // Compute some soft-objective data that does not get computed by
+    // blender (because it is not required).
     
     Matrix Nct;
     if (co.hard_objectives_.empty()) {
@@ -119,30 +104,17 @@ namespace kinematic_objectives {
       if ( ! co.soft_objectives_[ii]->isActive()) {
 	continue;
       }
-      info.tag_                 = SOFT_OBJECTIVE;
-      info.objective_           = co.soft_objectives_[ii];
       pseudo_inverse_moore_penrose(co.soft_objectives_[ii]->getJacobian() * Nct, Jbinv, 0,
 				   &co.soft_objectives_[ii]->jbar_svd_);
-      info.available_dimension_ = info.objective_->jbar_svd_.truncated_range;
-      info.required_dimension_  = info.objective_->jbar_svd_.original_range;
-      info.residual_error_      = info.objective_->getBias()
-	- info.objective_->getJacobian() * co.model_.getJointVelocity();
-      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
-      
-      pseudo_inverse_moore_penrose(co.unilateral_constraints_[ii]->getJacobian(), Jinv, 0, &extra);
-      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
-      for (Vector::Index jj(extra.truncated_range); jj < extra.input_space.rows(); ++jj) {
-        info.nullspace_residuals_[jj - extra.truncated_range]
-	  = info.objective_->computeResidualErrorMagnitude(info.objective_->getJacobian()
-							   * extra.input_space.block(jj,
-										     0,
-										     1,
-										     extra.input_space.rows()));
-      }
-
-      information.push_back(info);
     }
     
+    // OK now we can compute all the achievability information...
+    
+    information.clear();
+    
+    compute(UNILATERAL_CONSTRAINT, co.unilateral_constraints_, co.model_.getJointVelocity(), information);
+    compute(HARD_OBJECTIVE,        co.hard_objectives_,        co.model_.getJointVelocity(), information);
+    compute(SOFT_OBJECTIVE,        co.soft_objectives_,        co.model_.getJointVelocity(), information);
   }
   
   
