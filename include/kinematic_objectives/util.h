@@ -79,6 +79,18 @@ namespace kinematic_objectives {
   }
   
   
+  static inline double max_fabs(Vector const & ee)
+  {
+    double mm(0);
+    for (Vector::Index ii(0); ii < ee.size(); ++ii) {
+      if (fabs(ee[ii]) > mm) {
+	mm = fabs(ee[ii]);
+      }
+    }
+    return mm;
+  }
+  
+  
   static double const deg(M_PI / 180.);
   
 }

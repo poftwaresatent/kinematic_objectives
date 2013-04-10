@@ -126,5 +126,12 @@ namespace kinematic_objectives {
   {
     return jacobian_.rows() > 0;
   }
+  
+  
+  double PointAttractionObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return ee.norm();
+  }
 
 }

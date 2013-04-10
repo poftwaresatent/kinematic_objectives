@@ -35,6 +35,7 @@
 /* Author: Roland Philippsen */
 
 #include <kinematic_objectives/kinematic_model.h>
+#include <kinematic_objectives/util.h>
 #include "planar_orientation_objective.h"
 
 
@@ -76,7 +77,14 @@ namespace kinematic_objectives {
       bias_[0] = kp_ * (goal_ - angle_);
       bias_ -= kd_ * jacobian_ * model.getJointVelocity();
     }
-
+    
+    
+    double PlanarOrientationObjective::
+    computeResidualErrorMagnitude(Vector const & ee) const
+    {
+      return max_fabs(ee);
+    }
+    
   }
 
 }

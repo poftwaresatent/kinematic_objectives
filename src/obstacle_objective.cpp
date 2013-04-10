@@ -85,5 +85,12 @@ namespace kinematic_objectives {
   {
     return jacobian_.rows() > 0;
   }
-
+  
+  
+  double ObstacleObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return ee.norm();
+  }
+  
 }

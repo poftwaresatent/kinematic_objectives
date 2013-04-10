@@ -62,7 +62,7 @@ namespace kinematic_objectives {
       info.required_dimension_  = info.objective_->jbar_svd_.original_range;
       info.residual_error_      = info.objective_->getBias()
 	- info.objective_->getJacobian() * co.model_.getJointVelocity();
-      ////      info.score_;
+      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
       information.push_back(info);
     }
     
@@ -76,7 +76,7 @@ namespace kinematic_objectives {
       info.required_dimension_  = info.objective_->jbar_svd_.original_range;
       info.residual_error_      = info.objective_->getBias()
 	- info.objective_->getJacobian() * co.model_.getJointVelocity();
-      ////      info.score_;
+      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
       information.push_back(info);
     }
     
@@ -107,7 +107,7 @@ namespace kinematic_objectives {
       info.required_dimension_  = info.objective_->jbar_svd_.original_range;
       info.residual_error_      = info.objective_->getBias()
 	- info.objective_->getJacobian() * co.model_.getJointVelocity();
-      ////      info.score_;
+      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
       information.push_back(info);
     }
     
@@ -139,7 +139,8 @@ namespace kinematic_objectives {
 	       namlen, information[ii].objective_->name_.c_str(),
 	       information[ii].available_dimension_,
 	       information[ii].required_dimension_);
-      os << pfx << buf << pstring(information[ii].residual_error_) << "\n";
+      os << pfx << buf << pstring(information[ii].residual_error_magnitude_)
+	 << "   (" << pstring(information[ii].residual_error_) << ")\n";
     }
   }
   

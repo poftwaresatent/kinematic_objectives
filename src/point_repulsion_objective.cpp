@@ -114,5 +114,13 @@ namespace kinematic_objectives {
   {
     return jacobian_.rows() > 0;
   }
+  
+  
+  double PointRepulsionObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return ee.norm();
+  }
+
 
 }

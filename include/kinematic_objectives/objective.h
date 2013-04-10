@@ -79,6 +79,22 @@ namespace kinematic_objectives {
     virtual void update(KinematicModel const & model) = 0;
     
     /**
+       Subclasses have to implement this method so that
+       Achievability::residual_error_magnitude_ can be set to a
+       relevant number. The problem is that each objective lives in a
+       different space, so there is no unifying metric. Even worse,
+       some objectives may live in spaces that do not have a sensible
+       metric, for instance when they mix rotational and translational
+       degrees of freedom. So it is left to the implementer to decide
+       how best to characterize a residual error.
+       
+       \note The definition of residual error comes from
+       [Chiaverini:1997] and is \f$ e = \dot{x} - J\dot{q} \f$.
+       
+     */
+    virtual double computeResidualErrorMagnitude(Vector const & ee) const = 0;
+    
+    /**
        Turn this objective into a stack of the two given
        objectives. This simply stacks the Jacobians and the bias
        vectors of t1 onto those of t2.

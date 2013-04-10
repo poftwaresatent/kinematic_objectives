@@ -72,6 +72,8 @@ namespace kinematic_objectives {
     
     virtual bool isActive() const;
     
+    virtual double computeResidualErrorMagnitude(Vector const & ee) const;
+    
     double gain_;
     double distance_;
     size_t node_;

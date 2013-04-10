@@ -59,6 +59,8 @@ namespace kinematic_objectives {
     virtual void update(KinematicModel const & model);
     
     virtual bool isActive() const;
+
+    virtual double computeResidualErrorMagnitude(Vector const & ee) const;
     
     DistanceModel const & distance_model_;
     size_t node_;

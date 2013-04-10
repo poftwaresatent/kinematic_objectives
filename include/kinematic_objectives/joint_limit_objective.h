@@ -71,6 +71,8 @@ namespace kinematic_objectives {
     
     virtual bool isActive() const;
     
+    virtual double computeResidualErrorMagnitude(Vector const & ee) const;
+    
     /**
        Nx4 matrix, one row per joint, where
        - col[0] is the lower hard limit

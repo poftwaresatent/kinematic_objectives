@@ -36,6 +36,7 @@
 
 #include <kinematic_objectives/joint_limit_objective.h>
 #include <kinematic_objectives/kinematic_model.h>
+#include <kinematic_objectives/util.h>
 #include <limits>
 
 
@@ -99,4 +100,15 @@ namespace kinematic_objectives {
     return ! locked_joints_.empty();
   }
   
+  
+  /**
+     \todo [medium] implement at least some kind of DOF-weighting to
+     allow mixing of translational with rotational joints.
+  */
+  double JointLimitObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return max_fabs(ee);
+  }
+
 }

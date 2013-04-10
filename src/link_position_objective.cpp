@@ -75,5 +75,12 @@ namespace kinematic_objectives {
     jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
     bias_ = kp_ * (goal_ - gpoint_) - kd_ * jacobian_ * model.getJointVelocity();
   }
-
+  
+  
+  double LinkPositionObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return ee.norm();
+  }
+  
 }

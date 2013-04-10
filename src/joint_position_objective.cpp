@@ -36,6 +36,7 @@
 
 #include <kinematic_objectives/joint_position_objective.h>
 #include <kinematic_objectives/kinematic_model.h>
+#include <kinematic_objectives/util.h>
 
 
 namespace kinematic_objectives {
@@ -63,6 +64,17 @@ namespace kinematic_objectives {
   update(KinematicModel const & model)
   {
     bias_ = kp_ * (goal_ - model.getJointPosition()) - kd_ * model.getJointVelocity();
+  }
+  
+  
+  /**
+     \todo [medium] implement at least some kind of DOF-weighting to
+     allow mixing of translational with rotational joints.
+  */
+  double JointPositionObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return max_fabs(ee);
   }
   
 }

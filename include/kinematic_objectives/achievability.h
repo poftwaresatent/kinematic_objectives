@@ -61,7 +61,7 @@ namespace kinematic_objectives {
     size_t available_dimension_;
     size_t required_dimension_;
     Vector residual_error_;
-    ////    double score_;
+    double residual_error_magnitude_;
     
     // Matrix jbar_inverse_;
     // size_t jbar_range_;

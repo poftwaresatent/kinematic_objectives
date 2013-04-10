@@ -36,6 +36,7 @@
 
 #include <kinematic_objectives/joint_damping_objective.h>
 #include <kinematic_objectives/kinematic_model.h>
+#include <kinematic_objectives/util.h>
 
 
 namespace kinematic_objectives {
@@ -60,5 +61,15 @@ namespace kinematic_objectives {
   {
     bias_ = - gain_ * model.getJointVelocity();
   }
-
+  
+  /**
+     \todo [medium] implement at least some kind of DOF-weighting to
+     allow mixing of translational with rotational joints.
+  */
+  double JointDampingObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return max_fabs(ee);
+  }
+  
 }
