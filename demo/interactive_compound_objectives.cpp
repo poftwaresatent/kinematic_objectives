@@ -289,10 +289,10 @@ namespace kinematic_objectives {
     init(double gui_dimx, double gui_dimy)
     {
       h2_ee_.point_     <<             3.0, gui_dimy / 2.0      ,     0.0;
-      h1_wrist_.point_  <<             1.0, gui_dimy / 2.0 - 0.2,     0.0;
-      h2_wrist_.point_  <<             3.0, gui_dimy / 2.0 - 0.2,     0.0;
-      h1_ellbow_.point_ <<             1.0, gui_dimy / 2.0 - 0.4,     0.0;
-      h2_ellbow_.point_ <<             3.0, gui_dimy / 2.0 - 0.4,     0.0;
+      h1_wrist_.point_  <<             1.0, gui_dimy / 2.0 - 0.5,     0.0;
+      h2_wrist_.point_  <<             3.0, gui_dimy / 2.0 - 0.5,     0.0;
+      h1_ellbow_.point_ <<             1.0, gui_dimy / 2.0 - 1.0,     0.0;
+      h2_ellbow_.point_ <<             3.0, gui_dimy / 2.0 - 1.0,     0.0;
       h2_base_.point_   <<             3.0,                  1.0,     0.0;
       
       InteractiveCompoundObjective::init(gui_dimx, gui_dimy);
@@ -303,9 +303,19 @@ namespace kinematic_objectives {
 			     InteractionHandle const & handle,
 			     PointAttractionObjective const & objective)
     {
+      cairo_set_source_rgba(cr, handle.red_, handle.green_, handle.blue_, 0.5);
+      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
+      cairo_move_to(cr,
+		    objective.gpoint_[0],
+		    objective.gpoint_[1]);
+      cairo_line_to(cr,
+		    handle.point_[0],
+		    handle.point_[1]);
+      cairo_stroke(cr);
+      
       if (objective.isActive()) {
-	cairo_set_source_rgba(cr, handle.red_, handle.green_, handle.blue_, 0.5);
-	cairo_set_line_width(cr, weight * 1.0 / pixelsize);
+	cairo_set_source_rgba(cr, handle.red_, handle.green_, handle.blue_, 0.8);
+	cairo_set_line_width(cr, weight * 3.0 / pixelsize);
 	cairo_move_to(cr,
 		      objective.gpoint_[0],
 		      objective.gpoint_[1]);
