@@ -61,24 +61,26 @@ namespace kinematic_objectives {
 	continue;
       }
       
-      info.tag_                 = tag;
-      info.objective_           = objectives[ii];
-      info.available_dimension_ = info.objective_->jbar_svd_.truncated_range;
-      info.required_dimension_  = info.objective_->jbar_svd_.original_range;
+      info.tag_                    = tag;
+      info.objective_              = objectives[ii];
+      info.original_sigma_jbar_    = info.objective_->jbar_svd_.original_sigma;
+      info.regularized_sigma_jbar_ = info.objective_->jbar_svd_.regularized_sigma;
       info.residual_error_
 	= info.objective_->getBias()
 	- info.objective_->getJacobian() * joint_velocity;
-      info.residual_error_magnitude_ = info.objective_->computeResidualErrorMagnitude(info.residual_error_);
+      info.residual_error_magnitude_
+	= info.objective_->computeResidualErrorMagnitude(info.residual_error_);
       
-      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian(), Jinv, 0, &extra);
-      info.nullspace_residuals_.resize(extra.input_space.rows() - extra.truncated_range);
-      for (ssize_t jj(extra.truncated_range); jj < joint_velocity.size(); ++jj) {
-	null_residual
-	  = info.objective_->getJacobian()
-	  * extra.input_space.block(0, jj, joint_velocity.size(), 1);
-        info.nullspace_residuals_[jj - extra.truncated_range]
-	  = info.objective_->computeResidualErrorMagnitude(null_residual);
-      }
+      //rfct      // pseudo_inverse_moore_penrose(objectives[ii]->getJacobian(), Jinv, 0, &extra);
+      // ssize_t const truncated_range(extra.regularized_sigma.cols());
+      // info.nullspace_residuals_.resize(extra.input_space.rows() - truncated_range);
+      // for (ssize_t jj(truncated_range); jj < joint_velocity.size(); ++jj) {
+      // 	null_residual
+      // 	  = info.objective_->getJacobian()
+      // 	  * extra.input_space.block(0, jj, joint_velocity.size(), 1);
+      //   info.nullspace_residuals_[jj - truncated_range]
+      // 	  = info.objective_->computeResidualErrorMagnitude(null_residual);
+      // }
       
       information.push_back(info);
     }
@@ -159,9 +161,9 @@ namespace kinematic_objectives {
       }
       snprintf(buf, buflen, "  [%3zu/%3zu] %-*s   %4zu / %4zu (%4zu)   ", ii, jj, namlen,
 	       information[ii].objective_->name_.c_str(),
-	       information[ii].available_dimension_,
-	       information[ii].required_dimension_,
-	       information[ii].required_dimension_ - information[ii].available_dimension_);
+	       (size_t) 42, //// information[ii].available_dimension_,
+	       (size_t) 17, //// information[ii].required_dimension_,
+	       (size_t) 22);//// information[ii].required_dimension_ - information[ii].available_dimension_);
       os << pfx << buf << pstring(information[ii].residual_error_magnitude_) << "\n";
     }
     
@@ -177,17 +179,17 @@ namespace kinematic_objectives {
       os << pfx << buf << pstring(information[ii].residual_error_) << "\n";
     }
     
-    os << pfx << "----------------------------------------------------------\n"
-       << pfx << "error magnitudes of nullspace basis vectors\n"
-       << pfx << "----------------------------------------------------------\n";
+    //rfct// os << pfx << "----------------------------------------------------------\n"
+    //    << pfx << "error magnitudes of nullspace basis vectors\n"
+    //    << pfx << "----------------------------------------------------------\n";
     
-    for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
-      if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
-	jj = 0;
-      }
-      snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
-      os << pfx << buf << pstring(information[ii].nullspace_residuals_) << "\n";
-    }
+    // for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
+    //   if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
+    // 	jj = 0;
+    //   }
+    //   snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
+    //   os << pfx << buf << pstring(information[ii].nullspace_residuals_) << "\n";
+    // }
     
     os << pfx << "==========================================================\n";
   }

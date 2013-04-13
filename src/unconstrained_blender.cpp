@@ -67,12 +67,10 @@ namespace kinematic_objectives {
     ssize_t const ndof(model.getJointPosition().size());
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
-    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
-				 wpt->hard_objectives_,
-				 qdd_t,
-				 N_t,
-				 0,
-				 "");
+    prioritization_.processCompound(Matrix::Identity(ndof, ndof),
+				    wpt->hard_objectives_,
+				    qdd_t,
+				    N_t);
     
     Vector & qdd_o(wpt->fb_.soft_objective_bias_);
     qdd_o = Vector::Zero(model.getJointPosition().size());

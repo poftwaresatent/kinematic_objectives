@@ -45,25 +45,41 @@ namespace kinematic_objectives {
   
   class Objective;
   
+  
   /**
-     Nullspace projection scheme based on [Siciliano:1991]. Generally
-     recognized as having good convergence properties. But
-     Chiaverini:1997 clearly shows that it suffers from undesirable
-     algoritmic singularities, as discussed in a practical context by
-     Mistry:2007.
+     This will become an abstract base class at some point. Hopefully,
+     anyway. But for now it just implements the scheme from
+     [Siciliano:1991]. Generally recognized as having good convergence
+     properties. But Chiaverini:1997 clearly shows that it suffers
+     from undesirable algoritmic singularities, as discussed in a
+     practical context by Mistry:2007.
   */
-  void prioritization_siciliano1991(/** initial nullspace projector */
-				    Matrix const & N_init,
-				    /** hierarchy of objectives to fuse/blend */
-				    vector<Objective*> const & objectives,
-				    /** resulting (fused/blended) bias */
-				    Vector & bias_res,
-				    /** accumulated nullspace projector at the end of the fusion */
-				    Matrix & N_res,
-				    /** stream for debug output (use 0 for silent operation) */
-				    ostream * dbgos,
-				    /** prefix for debug output (prepended to each line) */
-				    string const & dbgpre);
+  class Prioritization
+  {
+  public:
+    Prioritization();
+    
+    void processObjective(Matrix const & N_in,
+			  Vector const & bias_in,
+			  Objective const * objective,
+			  Matrix & N_updater,
+			  Vector & bias_out);
+    
+    void processCompound(/** initial nullspace projector */
+			 Matrix const & N_init,
+			 /** hierarchy of objectives to fuse/blend */
+			 vector<Objective*> const & objectives,
+			 /** resulting (fused/blended) bias */
+			 Vector & bias_res,
+			 /** accumulated nullspace projector at the end of the fusion */
+			 Matrix & N_res);
+    
+    /** stream for debug output (use 0 for silent operation) */
+    ostream * dbgos_;
+    
+    /** prefix for debug output (prepended to each line) */
+    string dbgpre_;
+  };
   
 }
 

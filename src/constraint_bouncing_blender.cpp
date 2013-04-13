@@ -66,12 +66,10 @@ namespace kinematic_objectives {
     ssize_t const ndof(model.getJointPosition().size());
     Vector & dq_c(wpt->fb_.constraint_bias_);
     Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
-    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
-				 wpt->unilateral_constraints_,
-				 dq_c,
-				 N_c,
-				 0,
-				 "");
+    prioritization_.processCompound(Matrix::Identity(ndof, ndof),
+				    wpt->unilateral_constraints_,
+				    dq_c,
+				    N_c);
     
     model.update(constraint_displacement_weight_ * dq_c + model.getJointPosition(),
 		       N_c * model.getJointVelocity());
@@ -85,12 +83,10 @@ namespace kinematic_objectives {
     
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
-    prioritization_siciliano1991(N_c,
-				 wpt->hard_objectives_,
-				 qdd_t,
-				 N_t,
-				 0,
-				 "");
+    prioritization_.processCompound(N_c,
+				    wpt->hard_objectives_,
+				    qdd_t,
+				    N_t);
     
     Vector & qdd_o(wpt->fb_.soft_objective_bias_);
     qdd_o = Vector::Zero(model.getJointPosition().size());

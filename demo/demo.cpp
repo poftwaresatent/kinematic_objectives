@@ -70,75 +70,15 @@ static Vector grab_offset(3);
 
 
 
-static void dump_achievability(string const & type, size_t index, Objective const * obj)
-{
-  cout << "  " << type << " #" << index << " \"" << obj->name_ << "\"";
-  if (obj->isActive()) {
-    PseudoInverseFeedback const & fb(obj->jbar_svd_);
-    if (0 == fb.truncated_range) {
-      cout << " zero range (original " << fb.original_range << ")\n";
-    }
-    else {
-      cout << "\n    range " << fb.truncated_range << " (original " << fb.original_range << ")\n";
-      // print(obj->getBias(), cout, "bias", "    ");
-      // print(obj->getJacobian(), cout, "Jacobian", "    ");
-      // // ? print(obj->projected_jacobian_, cout, "projected Jacobian", "    ");
-      // // ? projected bias
-      print(fb.singular_values, cout, "singular values", "    ");
-      print(fb.input_space, cout, "input_space", "    ");
-      print(fb.output_space, cout, "output_space", "    ");
-    }
-  }
-  else {
-    cout << " inactive\n";
-  }
-  fflush(stdout);
-}
-
-
-static void analyze()
-{
-  if (verbose) {
-    for (size_t ii(0); ii < interactive_compound->compound_objective_.unilateral_constraints_.size(); ++ii) {
-      dump_achievability("constraint", ii, interactive_compound->compound_objective_.unilateral_constraints_[ii]);
-    }
-    print(interactive_compound->compound_objective_.fb_.constraint_bias_, cout, "blended constraint bias", "  ");
-    print(interactive_compound->compound_objective_.fb_.constraint_nullspace_projector_, cout, "blended constraint nullspace", "  ");
-    
-    for (size_t ii(0); ii < interactive_compound->compound_objective_.hard_objectives_.size(); ++ii) {
-      dump_achievability("hard_objective", ii, interactive_compound->compound_objective_.hard_objectives_[ii]);
-    }
-    print(interactive_compound->compound_objective_.fb_.hard_objective_bias_, cout, "blended hard objective bias", "  ");
-    print(interactive_compound->compound_objective_.fb_.hard_objective_nullspace_projector_, cout, "blended hard objective nullspace", "  ");
-    
-    for (size_t ii(0); ii < interactive_compound->compound_objective_.soft_objectives_.size(); ++ii) {
-      Objective const * obj(interactive_compound->compound_objective_.soft_objectives_[ii]);
-      if (obj->isActive()) {
-	cout << "  soft_objective #" << ii << " \"" << obj->name_ << "\"\n";
-	print(obj->getBias(), cout, "bias", "    ");
-	print(obj->getJacobian(), cout, "Jacobian", "    ");
-      }
-      else {
-	cout << "  soft_objective #" << ii << " \"" << obj->name_ << "\" inactive\n";
-      }
-    }
-    print(interactive_compound->compound_objective_.fb_.soft_objective_bias_, cout, "blended soft objective bias", "  ");
-    print(Vector(interactive_compound->compound_objective_.fb_.hard_objective_bias_ + interactive_compound->compound_objective_.fb_.soft_objective_bias_), cout,
-	  "blended total objective bias", "  ");
-  }
-  
-  vector<Achievability> info;
-  Achievability::compute(planar_robot, interactive_compound->compound_objective_, info);
-  Achievability::print(info, cout, "");
-}
-
-
 static void update()
 {
   interactive_compound->update();
   blender->update(planar_robot, &interactive_compound->compound_objective_);
   gtk_widget_queue_draw(gw);
-  analyze();
+
+  vector<Achievability> info;
+  Achievability::compute(planar_robot, interactive_compound->compound_objective_, info);
+  Achievability::print(info, cout, "");
 }
 
 

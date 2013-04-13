@@ -54,9 +54,8 @@ namespace kinematic_objectives {
   struct PseudoInverseFeedback {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    size_t original_range;
-    size_t truncated_range;
-    Vector singular_values;
+    Vector original_sigma;
+    Vector regularized_sigma;
     Matrix output_space;	/**< a.k.a. "matrix U" */
     Matrix input_space;		/**< a.k.a. "matrix V" */
   };

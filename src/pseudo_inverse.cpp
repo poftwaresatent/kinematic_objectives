@@ -75,10 +75,17 @@ namespace kinematic_objectives {
     }
     
     Eigen::JacobiSVD<Matrix> svd(mx, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    
+    if (fb) {
+      fb->original_sigma = svd.singularValues();
+      fb->output_space = svd.matrixU();
+      fb->input_space = svd.matrixV();
+    }
+    
     static double const prec(1e-3);  // numeric_limits<double>::epsilon() is way too small...
     double const thresh(mx.cols() * prec * svd.singularValues()[0]);
     inv = Matrix::Zero(mx.cols(), mx.rows());
-    ssize_t ii;			// reused for fb if needed
+    ssize_t ii;			// reused for fb and dproj, if needed
     for (ii = 0; ii < svd.nonzeroSingularValues(); ++ii) {
       if (svd.singularValues()[ii] <= thresh) {
 	break;
@@ -88,26 +95,27 @@ namespace kinematic_objectives {
 	*  svd.matrixV().col(ii)
 	*  svd.matrixU().col(ii).transpose();
     }
-    
-    if (dproj) {
-      // dproj is symmetric, so above we don't need to worry if we
-      // used the mx.transpose() trick
-      *dproj
-	= svd.matrixV().col(0)
-	* svd.matrixV().col(0).transpose();
-      for (ssize_t jj(1); jj < svd.nonzeroSingularValues(); ++jj) {
-	*dproj
-	  += svd.matrixV().col(jj)
-	  * svd.matrixV().col(jj).transpose();
-      }
+
+    if (fb) {
+      fb->regularized_sigma = svd.singularValues().block(0, 0, ii, 1);
     }
     
-    if (fb) {
-      fb->original_range = svd.nonzeroSingularValues();
-      fb->truncated_range = ii;
-      fb->singular_values = svd.singularValues();
-      fb->output_space = svd.matrixU();
-      fb->input_space = svd.matrixV();
+    if (dproj) {
+      if (0 == ii) {
+	*dproj = Matrix::Zero(svd.matrixV().rows(), svd.matrixV().rows());
+      }
+      else {
+	// dproj is symmetric, so above we don't need to worry if we
+	// used the mx.transpose() trick
+	*dproj
+	  = svd.matrixV().col(0)
+	  * svd.matrixV().col(0).transpose();
+	for (ssize_t jj(1); jj < svd.nonzeroSingularValues(); ++jj) {
+	  *dproj
+	    += svd.matrixV().col(jj)
+	    * svd.matrixV().col(jj).transpose();
+	}
+      }
     }
   }
   

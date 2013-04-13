@@ -38,6 +38,7 @@
 #define KINEMATIC_OBJECTIVES_BLENDER_HPP
 
 #include <kinematic_objectives/types.h>
+#include <kinematic_objectives/prioritization.h>
 
 
 namespace kinematic_objectives {
@@ -71,6 +72,9 @@ namespace kinematic_objectives {
     { /* nop */ }
     
     virtual void update(KinematicModel & model, CompoundObjective * wpt) = 0;
+    
+  protected:
+    Prioritization prioritization_; // XXXX rfct
   };
   
 }

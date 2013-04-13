@@ -38,7 +38,7 @@
 #define KINEMATIC_OBJECTIVES_OBJECTIVE_HPP
 
 #include <kinematic_objectives/types.h>
-#include <kinematic_objectives/pseudo_inverse.h> // just to get the typedef for PseudoInverseFeedback
+#include <kinematic_objectives/pseudo_inverse.h>
 #include <limits>
 
 
@@ -143,7 +143,24 @@ namespace kinematic_objectives {
     Matrix jacobian_;
     
   public:
-    PseudoInverseFeedback jbar_svd_;
+    // XXXX all mutable public fields should probably be collected
+    // elsewhere separately
+    
+    void clearFeedback() const	// rfct
+    {
+      jbar_svd_.original_sigma.resize(0);
+      jbar_svd_.regularized_sigma.resize(0);
+      jbar_svd_.output_space.resize(0, 0);
+      jbar_svd_.input_space.resize(0, 0);
+      bias_comp_.resize(0);
+      jbar_.resize(0, 0);
+      jbar_inv_.resize(0, 0);
+    }
+    
+    mutable PseudoInverseFeedback jbar_svd_;
+    mutable Vector bias_comp_;
+    mutable Matrix jbar_;
+    mutable Matrix jbar_inv_;
   };
   
 }

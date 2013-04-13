@@ -82,12 +82,12 @@ namespace kinematic_objectives {
     ssize_t const ndof(model.getJointPosition().size());
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
-    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
-				 wpt->hard_objectives_,
-				 qdd_t,
-				 N_t,
-				 dbgos_,
-				 dbgpre_ + "  ");
+    prioritization_.dbgos_ = dbgos_;
+    prioritization_.dbgpre_ = dbgpre_ + "  ";
+    prioritization_.processCompound(Matrix::Identity(ndof, ndof),
+				    wpt->hard_objectives_,
+				    qdd_t,
+				    N_t);
     
     Vector & qdd_o(wpt->fb_.soft_objective_bias_);
     qdd_o = Vector::Zero(model.getJointPosition().size());
@@ -141,12 +141,10 @@ namespace kinematic_objectives {
     
     Vector & dq_c(wpt->fb_.constraint_bias_);
     Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
-    prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
-				 wpt->unilateral_constraints_,
-				 dq_c,
-				 N_c,
-				 dbgos_,
-				 dbgpre_ + "  ");
+    prioritization_.processCompound(Matrix::Identity(ndof, ndof),
+				    wpt->unilateral_constraints_,
+				    dq_c,
+				    N_c);
     
     // The constraints cheat with the robot state: they directly work
     // on the positions that would have been achieved without
@@ -188,12 +186,10 @@ namespace kinematic_objectives {
     
     // Re-run objective priority scheme, but seed it with the constraint nullspace this time.
     
-    prioritization_siciliano1991(N_c,
-				 wpt->hard_objectives_,
-				 qdd_t,
-				 N_t,
-				 dbgos_,
-				 dbgpre_ + "  ");
+    prioritization_.processCompound(N_c,
+				    wpt->hard_objectives_,
+				    qdd_t,
+				    N_t);
     
     qdd_o = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {

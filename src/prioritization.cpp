@@ -45,104 +45,109 @@
 namespace kinematic_objectives {
   
   
-  void prioritization_siciliano1991(Matrix const & N_init,
-				    vector<Objective*> const & objectives,
-				    Vector & bias_res,
-				    Matrix & N_res,
-				    ostream * dbgos,
-				    string const & dbgpre)
+  Prioritization::
+  Prioritization()
+    : dbgos_(0),
+      dbgpre_("  ")
+  {
+  }
+  
+  
+  void Prioritization::
+  processObjective(Matrix const & N_in,
+		   Vector const & bias_in,
+		   Objective const * objective,
+		   Matrix & N_updater,
+		   Vector & bias_out)
+  {
+    objective->bias_comp_ = objective->getBias() - objective->getJacobian() * bias_in;
+    objective->jbar_ = objective->getJacobian() * N_in;
+    
+    pseudo_inverse_moore_penrose(objective->jbar_,
+				 objective->jbar_inv_,
+				 &N_updater,
+				 &objective->jbar_svd_);
+    
+    bias_out = objective->jbar_inv_ * objective->bias_comp_;
+    
+    if (dbgos_) {
+      *dbgos_ << dbgpre_ << "objective " << objective->name_ << ":\n";
+      string pre(dbgpre_);
+      pre += "  ";
+      print(objective->getBias(), *dbgos_, "bias", pre);
+      print(objective->getJacobian(), *dbgos_, "Jacobian", pre);
+      Eigen::JacobiSVD<Matrix> svd;
+      svd.compute(objective->getJacobian(), Eigen::ComputeThinU | Eigen::ComputeThinV);
+      print(svd.singularValues(), *dbgos_, "singular value of Jacobian", pre);
+      print(objective->bias_comp_, *dbgos_, "bias_comp", pre);
+      print(objective->jbar_, *dbgos_, "J_bar", pre);
+      print(objective->jbar_svd_.original_sigma, *dbgos_, "original J_bar sigma", pre);
+      print(objective->jbar_svd_.regularized_sigma, *dbgos_, "regularized J_bar sigma", pre);
+      print(objective->jbar_inv_, *dbgos_, "J_bar pseudo inverse", pre);
+      print(N_updater, *dbgos_, "nullspace projector update", pre);
+      print(bias_out, *dbgos_, "bias update", pre);
+    }
+  }
+  
+  
+  void Prioritization::
+  processCompound(Matrix const & N_init,
+		  vector<Objective*> const & objectives,
+		  Vector & bias_res,
+		  Matrix & N_res)
   {
     bias_res = Vector::Zero(N_init.rows());
     N_res = N_init;
     
-    Matrix Jbinv;		// pseudo-inverse of J_bar (which is J * N)
+    Vector bup;
     Matrix Nup;			// nullspace updater: N -= N_up at each hierarchy level
     
-    if (dbgos) {
-      string pre (dbgpre);
-      pre += "  ";
-      print(N_res, *dbgos, "initial nullspace", pre);
-      Eigen::JacobiSVD<Matrix> svd;
-      svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-      print(svd.singularValues(), *dbgos, "eigenvalues of nullspace", pre);
-    }
+    // if (dbgos_) {
+    //   string pre (dbgpre_);
+    //   pre += "  ";
+    //   print(N_res, *dbgos_, "initial nullspace", pre);
+    //   Eigen::JacobiSVD<Matrix> svd;
+    //   svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    //   print(svd.singularValues(), *dbgos_, "singular values of nullspace", pre);
+    // }
     
     for (size_t ii(0); ii < objectives.size(); ++ii) {
+      Objective const * obj(objectives[ii]);
       
-      if ( ! objectives[ii]->isActive()) {
-	if (dbgos) {
-	  *dbgos << dbgpre << "objective " << ii << " is INACTIVE\n";
-	}	
+      if ( ! obj->isActive()) {
+	if (dbgos_) {
+	  *dbgos_ << dbgpre_ << "objective " << ii << " \"" << obj->name_ << "\": INACTIVE\n";
+	}
+	obj->clearFeedback();
 	continue;
       }
       
-      if (dbgos) {
-	*dbgos << dbgpre << "objective " << ii << " \"" << objectives[ii]->name_ << "\":\n";
-	string pre (dbgpre);
-	pre += "  ";
-	print(objectives[ii]->getBias(), *dbgos, "objective bias", pre);
-	print(objectives[ii]->getJacobian(), *dbgos, "objective Jacobian", pre);
-	Eigen::JacobiSVD<Matrix> svd;
-	svd.compute(objectives[ii]->getJacobian(), Eigen::ComputeThinU | Eigen::ComputeThinV);
-	print(svd.singularValues(), *dbgos, "eigenvalues of objective Jacobian", pre);
-	Vector vtmp;
-	vtmp = objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res;
-	print(vtmp, *dbgos, "bias_comp", pre);
-	Matrix mtmp;
-	mtmp = objectives[ii]->getJacobian() * N_res;
-	print(mtmp, *dbgos, "J_bar", pre);
-      }
+      processObjective(N_res, bias_res, obj, Nup, bup);
       
-      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian() * N_res, Jbinv, &Nup,
-				   &objectives[ii]->jbar_svd_);
-      
-      if (dbgos) {
-        string pre (dbgpre);
-        pre += "  ";
-	print(objectives[ii]->jbar_svd_.singular_values, *dbgos, "eigenvalues of J_bar", pre);
-	print(Jbinv, *dbgos, "J_bar pseudo inverse", pre);
-	print(Nup, *dbgos, "nullspace projector update", pre);
-	Vector vtmp;
-        vtmp = Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
-	print(vtmp, *dbgos, "bias update", pre);
-        vtmp = objectives[ii]->getJacobian() * vtmp;
-	print(vtmp, *dbgos, "biased objective update", pre);
-        vtmp = objectives[ii]->getJacobian() * Jbinv * objectives[ii]->getBias();
-	print(vtmp, *dbgos, "unbiased objective update", pre);
-      }
-      
-      bias_res += Jbinv * (objectives[ii]->getBias() - objectives[ii]->getJacobian() * bias_res);
+      bias_res += bup;
       
       if (Nup.cols() == 0) {
-	if (dbgos) {
-	  *dbgos << dbgpre << "NO DEGREES OF FREEDOM LEFT\n";
+	if (dbgos_) {
+	  *dbgos_ << dbgpre_ << "NO DEGREES OF FREEDOM LEFT\n";
+	}
+	for (++ii; ii < objectives.size(); ++ii) {
+	  objectives[ii]->clearFeedback();
 	}
 	break;
       }
       
       N_res -= Nup;
       
-      if (dbgos) {
-        string pre (dbgpre);
+      if (dbgos_) {
+        string pre (dbgpre_);
         pre += "  ";
-	print(bias_res, *dbgos, "accumulated bias", pre);
-	print(N_res, *dbgos, "accumulated nullspace projector", pre);
+	print(bias_res, *dbgos_, "accumulated bias", pre);
+	print(N_res, *dbgos_, "accumulated nullspace projector", pre);
 	Eigen::JacobiSVD<Matrix> svd;
 	svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-	print(svd.singularValues(), *dbgos, "eigenvalues of nullspace projector", pre);
+	print(svd.singularValues(), *dbgos_, "singular values of nullspace projector", pre);
       }
-      
     }
-    
-    if (dbgos) {
-      string pre (dbgpre);
-      pre += "  ";
-      print(N_res, *dbgos, "final nullspace projectir", pre);
-      Eigen::JacobiSVD<Matrix> svd;
-      svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-      print(svd.singularValues(), *dbgos, "eigenvalues of final nullspace projector", pre);
-    }
-
   }
   
 }
