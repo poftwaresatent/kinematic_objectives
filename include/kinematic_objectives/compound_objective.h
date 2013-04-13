@@ -115,15 +115,11 @@ namespace kinematic_objectives {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
-    explicit CompoundObjective(KinematicModel & model);
-    
     virtual ~CompoundObjective();
     
-    virtual void init(Vector const & position, Vector const & velocity);
+    virtual void init(KinematicModel const & model);
     
     virtual void preUpdateHook() = 0; // rfct
-    
-    KinematicModel & model_;
     
     vector<Objective *> unilateral_constraints_;
     vector<Objective *> hard_objectives_;

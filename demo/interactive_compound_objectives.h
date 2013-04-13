@@ -63,7 +63,7 @@ namespace kinematic_objectives {
 	public CairoDrawable
     {
     public:
-      InteractiveCompoundObjective();
+      explicit InteractiveCompoundObjective(PlanarRobot & robot);
     
       virtual void init(double gui_dimx, double gui_dimy);
       
@@ -79,12 +79,7 @@ namespace kinematic_objectives {
       
       vector<InteractionHandle*> handles_;
       
-      /**
-	 \note Keep this declaration before any objectives that are
-	 used as constraints. That way, the robot can be used to
-	 initialize constraints.
-      */
-      PlanarRobot robot_;
+      PlanarRobot & robot_;
       PlanarDistance distance_api_;
       
       JointLimitObjective joint_limits_;
@@ -112,7 +107,7 @@ namespace kinematic_objectives {
       : public InteractiveCompoundObjective
     {
     public:
-      ElasticLinksCompoundObjective();
+      explicit ElasticLinksCompoundObjective(PlanarRobot & robot);
       
       virtual void init(double gui_dimx, double gui_dimy);
       
@@ -145,7 +140,7 @@ namespace kinematic_objectives {
       : public InteractiveCompoundObjective
     {
     public:
-      EEGoalCompoundObjective();
+      explicit EEGoalCompoundObjective(PlanarRobot & robot);
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       

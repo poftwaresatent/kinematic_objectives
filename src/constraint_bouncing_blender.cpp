@@ -57,15 +57,15 @@ namespace kinematic_objectives {
   
   
   void ConstraintBouncingBlender::
-  update(CompoundObjective * wpt)
+  update(KinematicModel & model, CompoundObjective * wpt)
   {
     wpt->preUpdateHook();
     
     for (size_t ii(0); ii < wpt->unilateral_constraints_.size(); ++ii) {
-      wpt->unilateral_constraints_[ii]->update(wpt->model_);
+      wpt->unilateral_constraints_[ii]->update(model);
     }
     
-    ssize_t const ndof(wpt->model_.getJointPosition().size());
+    ssize_t const ndof(model.getJointPosition().size());
     Vector & dq_c(wpt->fb_.constraint_bias_);
     Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
     prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
@@ -75,14 +75,14 @@ namespace kinematic_objectives {
 				 0,
 				 "");
     
-    wpt->model_.update(constraint_displacement_weight_ * dq_c + wpt->model_.getJointPosition(),
-		       N_c * wpt->model_.getJointVelocity());
+    model.update(constraint_displacement_weight_ * dq_c + model.getJointPosition(),
+		       N_c * model.getJointVelocity());
     
     for (size_t ii(0); ii < wpt->hard_objectives_.size(); ++ii) {
-      wpt->hard_objectives_[ii]->update(wpt->model_);
+      wpt->hard_objectives_[ii]->update(model);
     }
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
-      wpt->soft_objectives_[ii]->update(wpt->model_);
+      wpt->soft_objectives_[ii]->update(model);
     }
     
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
@@ -95,7 +95,7 @@ namespace kinematic_objectives {
 				 "");
     
     Vector & qdd_o(wpt->fb_.soft_objective_bias_);
-    qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
+    qdd_o = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
@@ -106,10 +106,10 @@ namespace kinematic_objectives {
     qdd_o = N_t * qdd_o;
     
     Vector qdd_res(qdd_t + qdd_o);
-    Vector qd_res(wpt->model_.getJointVelocity() + timestep_ * qdd_res);
-    Vector q_res(wpt->model_.getJointPosition() + timestep_ * qd_res);
+    Vector qd_res(model.getJointVelocity() + timestep_ * qdd_res);
+    Vector q_res(model.getJointPosition() + timestep_ * qd_res);
     
-    wpt->model_.update(q_res, qd_res);
+    model.update(q_res, qd_res);
   }
   
 }

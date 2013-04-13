@@ -43,31 +43,22 @@ namespace kinematic_objectives {
   
   
   CompoundObjective::
-  CompoundObjective(KinematicModel & model)
-    : model_(model)
-  {
-  }
-  
-  
-  CompoundObjective::
   ~CompoundObjective()
   {
   }
   
   
   void CompoundObjective::
-  init(Vector const & position, Vector const & velocity)
+  init(KinematicModel const & model)
   {
-    model_.update(position, velocity);
-    
     for (size_t ii(0); ii < unilateral_constraints_.size(); ++ii) {
-      unilateral_constraints_[ii]->init(model_);
+      unilateral_constraints_[ii]->init(model);
     }
     for (size_t ii(0); ii < hard_objectives_.size(); ++ii) {
-      hard_objectives_[ii]->init(model_);
+      hard_objectives_[ii]->init(model);
     }
     for (size_t ii(0); ii < soft_objectives_.size(); ++ii) {
-      soft_objectives_[ii]->init(model_);
+      soft_objectives_[ii]->init(model);
     }
   }
   

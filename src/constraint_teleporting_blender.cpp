@@ -58,22 +58,22 @@ namespace kinematic_objectives {
   
   
   void ConstraintTeleportingBlender::
-  update(CompoundObjective * wpt)
+  update(KinematicModel & model, CompoundObjective * wpt)
   {
     wpt->preUpdateHook();
     
     if (dbgos_) {
       *dbgos_ << dbgpre_ << "==================================================\n"
 	      << dbgpre_ << "ConstraintTeleportingBlender::updateCompoundObjective()\n";
-      print(wpt->model_.getJointPosition(), *dbgos_, "current position", dbgpre2_);
-      print(wpt->model_.getJointVelocity(), *dbgos_, "current velocity", dbgpre2_);
+      print(model.getJointPosition(), *dbgos_, "current position", dbgpre2_);
+      print(model.getJointVelocity(), *dbgos_, "current velocity", dbgpre2_);
     }
     
     for (size_t ii(0); ii < wpt->hard_objectives_.size(); ++ii) {
-      wpt->hard_objectives_[ii]->update(wpt->model_);
+      wpt->hard_objectives_[ii]->update(model);
     }
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
-      wpt->soft_objectives_[ii]->update(wpt->model_);
+      wpt->soft_objectives_[ii]->update(model);
     }
     
     if (dbgos_) {
@@ -81,7 +81,7 @@ namespace kinematic_objectives {
 	      << dbgpre_ << "trying without constraints first\n";
     }
     
-    ssize_t const ndof(wpt->model_.getJointPosition().size());
+    ssize_t const ndof(model.getJointPosition().size());
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
     prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
@@ -92,7 +92,7 @@ namespace kinematic_objectives {
 				 dbgpre_ + "  ");
     
     Vector & qdd_o(wpt->fb_.soft_objective_bias_);
-    qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
+    qdd_o = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
@@ -103,8 +103,8 @@ namespace kinematic_objectives {
     qdd_o = N_t * qdd_o;
     
     Vector qdd_res(qdd_t + qdd_o);
-    Vector qd_res(wpt->model_.getJointVelocity() + timestep_ * qdd_res);
-    Vector q_res(wpt->model_.getJointPosition() + timestep_ * qd_res);
+    Vector qd_res(model.getJointVelocity() + timestep_ * qdd_res);
+    Vector q_res(model.getJointPosition() + timestep_ * qd_res);
     
     if (dbgos_) {
       print(qdd_res, *dbgos_, "unconstrained acceleration", dbgpre2_);
@@ -112,13 +112,13 @@ namespace kinematic_objectives {
       print(q_res, *dbgos_, "resulting unconstrained position", dbgpre2_);
     }
     
-    Vector const oldpos(wpt->model_.getJointPosition()); // will need this in case of constraints
-    Vector const oldvel(wpt->model_.getJointVelocity()); // will need this in case of constraints
-    wpt->model_.update(q_res, qd_res);
+    Vector const oldpos(model.getJointPosition()); // will need this in case of constraints
+    Vector const oldvel(model.getJointVelocity()); // will need this in case of constraints
+    model.update(q_res, qd_res);
     
     bool need_constraints(false);
     for (size_t ii(0); ii < wpt->unilateral_constraints_.size(); ++ii) {
-      wpt->unilateral_constraints_[ii]->update(wpt->model_);
+      wpt->unilateral_constraints_[ii]->update(model);
       if (wpt->unilateral_constraints_[ii]->isActive()) {
 	if (dbgos_) {
 	  *dbgos_ << dbgpre_ << "constraint [" << ii << "] is active\n";
@@ -172,20 +172,20 @@ namespace kinematic_objectives {
     // oldpos) / timestep_ but we're pre-multiplying with N_c and dq_c
     // is perpendicular to that so we don't need to add it.
     //
-    wpt->model_.update(q_res + dq_c, N_c * (q_res - oldpos) / timestep_);
+    model.update(q_res + dq_c, N_c * (q_res - oldpos) / timestep_);
     
     if (dbgos_) {
       print(dq_c, *dbgos_, "position correction to satisfy constraints", dbgpre2_);
       print(N_c, *dbgos_, "nullspace of constrains", dbgpre2_);
-      print(wpt->model_.getJointVelocity(), *dbgos_, "resulting constrained velocity", dbgpre2_);
-      print(wpt->model_.getJointPosition(), *dbgos_, "resulting constrained position", dbgpre2_);
+      print(model.getJointVelocity(), *dbgos_, "resulting constrained velocity", dbgpre2_);
+      print(model.getJointPosition(), *dbgos_, "resulting constrained position", dbgpre2_);
     }
     
     for (size_t ii(0); ii < wpt->hard_objectives_.size(); ++ii) {
-      wpt->hard_objectives_[ii]->update(wpt->model_);
+      wpt->hard_objectives_[ii]->update(model);
     }
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
-      wpt->soft_objectives_[ii]->update(wpt->model_);
+      wpt->soft_objectives_[ii]->update(model);
     }
     
     // Re-run objective priority scheme, but seed it with the constraint nullspace this time.
@@ -197,7 +197,7 @@ namespace kinematic_objectives {
 				 dbgos_,
 				 dbgpre_ + "  ");
     
-    qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
+    qdd_o = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
@@ -208,8 +208,8 @@ namespace kinematic_objectives {
     qdd_o = N_t * qdd_o;
     
     qdd_res = qdd_t + qdd_o;
-    qd_res = wpt->model_.getJointVelocity() + timestep_ * qdd_res;
-    q_res = wpt->model_.getJointPosition() + timestep_ * qd_res;
+    qd_res = model.getJointVelocity() + timestep_ * qdd_res;
+    q_res = model.getJointPosition() + timestep_ * qd_res;
     
     if (dbgos_) {
       print(qdd_res, *dbgos_, "constrained acceleration", dbgpre2_);
@@ -217,7 +217,7 @@ namespace kinematic_objectives {
       print(q_res, *dbgos_, "resulting constrained position", dbgpre2_);
     }
     
-    wpt->model_.update(q_res, qd_res);
+    model.update(q_res, qd_res);
   }
   
 }

@@ -42,6 +42,7 @@
 
 namespace kinematic_objectives {
   
+  class KinematicModel;
   class Objective;
   class CompoundObjective;
   
@@ -84,7 +85,8 @@ namespace kinematic_objectives {
        slowdown.
     */
 
-    static void compute(CompoundObjective const & co,
+    static void compute(KinematicModel & model,
+			CompoundObjective const & co,
 			vector<Achievability> & information);
     
     static void print(vector<Achievability> const & information,

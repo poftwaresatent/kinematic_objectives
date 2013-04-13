@@ -86,7 +86,8 @@ namespace kinematic_objectives {
   
   
   void Achievability::
-  compute(CompoundObjective const & co,
+  compute(KinematicModel & model,
+	  CompoundObjective const & co,
 	  vector<Achievability> & information)
   {
     // Compute some soft-objective data that does not get computed by
@@ -94,7 +95,7 @@ namespace kinematic_objectives {
     
     Matrix Nct;
     if (co.hard_objectives_.empty()) {
-      Nct = Matrix::Identity(co.model_.getJointPosition().size(), co.model_.getJointPosition().size());
+      Nct = Matrix::Identity(model.getJointPosition().size(), model.getJointPosition().size());
     }
     else {
       Nct = co.fb_.hard_objective_nullspace_projector_;
@@ -112,9 +113,9 @@ namespace kinematic_objectives {
     
     information.clear();
     
-    helper(UNILATERAL_CONSTRAINT, co.unilateral_constraints_, co.model_.getJointVelocity(), information);
-    helper(HARD_OBJECTIVE,        co.hard_objectives_,        co.model_.getJointVelocity(), information);
-    helper(SOFT_OBJECTIVE,        co.soft_objectives_,        co.model_.getJointVelocity(), information);
+    helper(UNILATERAL_CONSTRAINT, co.unilateral_constraints_, model.getJointVelocity(), information);
+    helper(HARD_OBJECTIVE,        co.hard_objectives_,        model.getJointVelocity(), information);
+    helper(SOFT_OBJECTIVE,        co.soft_objectives_,        model.getJointVelocity(), information);
   }
   
   

@@ -62,6 +62,7 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 
+static PlanarRobot robot;
 static InteractiveCompoundObjective * compound(0);
 static Blender * blender(0);
 static InteractionHandle * grabbed(0);
@@ -129,14 +130,14 @@ static void analyze()
   }
   
   vector<Achievability> info;
-  Achievability::compute(co, info);
+  Achievability::compute(robot, co, info);
   Achievability::print(info, cout, "");
 }
 
 
 static void update()
 {
-  blender->update(compound);
+  blender->update(robot, compound);
   gtk_widget_queue_draw(gw);
   analyze();
 }
@@ -423,10 +424,10 @@ void parse_options(int argc, char ** argv)
   }
   
   if ("eegoal" == opt_compound) {
-    compound = new EEGoalCompoundObjective();
+    compound = new EEGoalCompoundObjective(robot);
   }
   else if ("elastic" == opt_compound) {
-    compound = new ElasticLinksCompoundObjective();
+    compound = new ElasticLinksCompoundObjective(robot);
   }
   else {
     errx(EXIT_FAILURE, "invalid compound '%s' (use 'eegoal' or 'elastic')", opt_compound.c_str());

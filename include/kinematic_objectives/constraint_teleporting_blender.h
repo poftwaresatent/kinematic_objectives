@@ -62,7 +62,7 @@ namespace kinematic_objectives {
        velocities. The latter is an important feature, but the
        implementation is rather more convoluted than hoped.
     */
-    virtual void update(CompoundObjective * wpt);
+    virtual void update(KinematicModel & model, CompoundObjective * wpt);
     
     ostream * dbgos_;
     string dbgpre_;

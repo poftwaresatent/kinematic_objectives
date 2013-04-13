@@ -56,7 +56,7 @@ namespace kinematic_objectives {
     
     explicit UnconstrainedBlender(double timestep);
     
-    virtual void update(CompoundObjective * wpt);
+    virtual void update(KinematicModel & model, CompoundObjective * wpt);
   };
   
 }

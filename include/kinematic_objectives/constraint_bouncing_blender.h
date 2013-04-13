@@ -71,7 +71,7 @@ namespace kinematic_objectives {
 					   1e-2. */
 				       double constraint_displacement_weight);
     
-    virtual void update(CompoundObjective * wpt);
+    virtual void update(KinematicModel & model, CompoundObjective * wpt);
   };
   
 }

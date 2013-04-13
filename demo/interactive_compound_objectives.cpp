@@ -47,13 +47,13 @@ namespace kinematic_objectives {
     
     
     InteractiveCompoundObjective::
-    InteractiveCompoundObjective()
-      : CompoundObjective(robot_),
-	h_ee_      (0.2, 0.0, 1.0, 0.0, 0.5),
+    InteractiveCompoundObjective(PlanarRobot & robot)
+      : h_ee_      (0.2, 0.0, 1.0, 0.0, 0.5),
 	h_ee_ori_  (0.1, 0.0, 1.0, 0.0, 0.3),
 	h_base_    (0.2, 0.0, 1.0, 0.5, 0.5),
 	h_repulsor_(1.5, 1.0, 0.5, 0.0, 0.2),
 	h_obstacle_(1.5, 0.7, 0.0, 0.2, 0.5),
+	robot_(robot),
 	distance_api_(robot_, &h_obstacle_),
 	joint_limits_  ("joint_limits"),
 	avoid_base_    ("avoid_base",   distance_api_, 0, 0.0),
@@ -115,7 +115,8 @@ namespace kinematic_objectives {
 	80.0 * deg,
 	- 40.0 * deg,
 	25.0 * deg;
-      CompoundObjective::init(posture, Vector::Zero(posture.size()));
+      robot_.update(posture, Vector::Zero(posture.size()));
+      CompoundObjective::init(robot_);
     }
     
     
@@ -251,8 +252,9 @@ namespace kinematic_objectives {
     
     
     ElasticLinksCompoundObjective::
-    ElasticLinksCompoundObjective()
-      : h2_ee_    (0.2, 0.0, 0.6, 0.0, 0.5),
+    ElasticLinksCompoundObjective(PlanarRobot & robot)
+      : InteractiveCompoundObjective(robot),
+	h2_ee_    (0.2, 0.0, 0.6, 0.0, 0.5),
 	h1_wrist_ (0.2, 0.0, 0.5, 0.5, 0.5),
 	h2_wrist_ (0.2, 0.0, 0.3, 0.3, 0.5),
 	h1_ellbow_(0.2, 0.0, 0.8, 0.8, 0.5),
@@ -361,8 +363,9 @@ namespace kinematic_objectives {
     
     
     EEGoalCompoundObjective::
-    EEGoalCompoundObjective()
-      : eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
+    EEGoalCompoundObjective(PlanarRobot & robot)
+      : InteractiveCompoundObjective(robot),
+	eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
 	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 100.0,  2.0)
     {
       hard_objectives_.push_back(&eeobjective_);

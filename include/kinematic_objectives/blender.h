@@ -42,6 +42,7 @@
 
 namespace kinematic_objectives {
   
+  class KinematicModel;
   class CompoundObjective;
   
   /**
@@ -69,7 +70,7 @@ namespace kinematic_objectives {
     virtual ~Blender()
     { /* nop */ }
     
-    virtual void update(CompoundObjective * wpt) = 0;
+    virtual void update(KinematicModel & model, CompoundObjective * wpt) = 0;
   };
   
 }

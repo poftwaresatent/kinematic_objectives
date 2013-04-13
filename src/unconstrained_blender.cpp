@@ -55,18 +55,18 @@ namespace kinematic_objectives {
   
   
   void UnconstrainedBlender::
-  update(CompoundObjective * wpt)
+  update(KinematicModel & model, CompoundObjective * wpt)
   {
     wpt->preUpdateHook();
     
     for (size_t ii(0); ii < wpt->hard_objectives_.size(); ++ii) {
-      wpt->hard_objectives_[ii]->update(wpt->model_);
+      wpt->hard_objectives_[ii]->update(model);
     }
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
-      wpt->soft_objectives_[ii]->update(wpt->model_);
+      wpt->soft_objectives_[ii]->update(model);
     }
     
-    ssize_t const ndof(wpt->model_.getJointPosition().size());
+    ssize_t const ndof(model.getJointPosition().size());
     Vector & qdd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
     prioritization_siciliano1991(Matrix::Identity(ndof, ndof),
@@ -77,7 +77,7 @@ namespace kinematic_objectives {
 				 "");
     
     Vector & qdd_o(wpt->fb_.soft_objective_bias_);
-    qdd_o = Vector::Zero(wpt->model_.getJointPosition().size());
+    qdd_o = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
@@ -88,10 +88,10 @@ namespace kinematic_objectives {
     qdd_o = N_t * qdd_o;
     
     Vector qdd_res(qdd_t + qdd_o);
-    Vector qd_res(wpt->model_.getJointVelocity() + timestep_ * qdd_res);
-    Vector q_res(wpt->model_.getJointPosition() + timestep_ * qd_res);
+    Vector qd_res(model.getJointVelocity() + timestep_ * qdd_res);
+    Vector q_res(model.getJointPosition() + timestep_ * qd_res);
     
-    wpt->model_.update(q_res, qd_res);
+    model.update(q_res, qd_res);
     
     wpt->fb_.constraint_bias_.resize(0);
     wpt->fb_.constraint_nullspace_projector_.resize(0, 0);
