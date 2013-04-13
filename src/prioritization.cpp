@@ -125,17 +125,6 @@ namespace kinematic_objectives {
       processObjective(N_res, bias_res, obj, Nup, bup);
       
       bias_res += bup;
-      
-      if (Nup.cols() == 0) {
-	if (dbgos_) {
-	  *dbgos_ << dbgpre_ << "NO DEGREES OF FREEDOM LEFT\n";
-	}
-	for (++ii; ii < objectives.size(); ++ii) {
-	  objectives[ii]->clearFeedback();
-	}
-	break;
-      }
-      
       N_res -= Nup;
       
       if (dbgos_) {
