@@ -59,8 +59,7 @@ namespace kinematic_objectives {
        \todo [low] attributes should be protected or private
     */
     class InteractiveCompoundObjective
-      : public CompoundObjective,
-	public CairoDrawable
+      : public CairoDrawable
     {
     public:
       explicit InteractiveCompoundObjective(PlanarRobot & robot);
@@ -69,7 +68,7 @@ namespace kinematic_objectives {
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      virtual void preUpdateHook();
+      virtual void update();
       
       InteractionHandle h_ee_;
       InteractionHandle h_ee_ori_;
@@ -81,6 +80,7 @@ namespace kinematic_objectives {
       
       PlanarRobot & robot_;
       PlanarDistance distance_api_;
+      CompoundObjective compound_objective_;
       
       JointLimitObjective joint_limits_;
     
@@ -113,7 +113,7 @@ namespace kinematic_objectives {
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      virtual void preUpdateHook();
+      virtual void update();
       
       InteractionHandle h2_ee_;
       InteractionHandle h1_wrist_;
@@ -144,7 +144,7 @@ namespace kinematic_objectives {
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
-      virtual void preUpdateHook();
+      virtual void update();
 
       LinkPositionObjective eeobjective_;
       PointAttractionObjective attract_base_;

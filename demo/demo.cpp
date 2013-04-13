@@ -62,8 +62,8 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 
-static PlanarRobot robot;
-static InteractiveCompoundObjective * compound(0);
+static PlanarRobot planar_robot;
+static InteractiveCompoundObjective * interactive_compound(0);
 static Blender * blender(0);
 static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
@@ -98,23 +98,21 @@ static void dump_achievability(string const & type, size_t index, Objective cons
 
 static void analyze()
 {
-  CompoundObjective const & co(*compound);
-  
   if (verbose) {
-    for (size_t ii(0); ii < co.unilateral_constraints_.size(); ++ii) {
-      dump_achievability("constraint", ii, co.unilateral_constraints_[ii]);
+    for (size_t ii(0); ii < interactive_compound->compound_objective_.unilateral_constraints_.size(); ++ii) {
+      dump_achievability("constraint", ii, interactive_compound->compound_objective_.unilateral_constraints_[ii]);
     }
-    print(co.fb_.constraint_bias_, cout, "blended constraint bias", "  ");
-    print(co.fb_.constraint_nullspace_projector_, cout, "blended constraint nullspace", "  ");
+    print(interactive_compound->compound_objective_.fb_.constraint_bias_, cout, "blended constraint bias", "  ");
+    print(interactive_compound->compound_objective_.fb_.constraint_nullspace_projector_, cout, "blended constraint nullspace", "  ");
     
-    for (size_t ii(0); ii < co.hard_objectives_.size(); ++ii) {
-      dump_achievability("hard_objective", ii, co.hard_objectives_[ii]);
+    for (size_t ii(0); ii < interactive_compound->compound_objective_.hard_objectives_.size(); ++ii) {
+      dump_achievability("hard_objective", ii, interactive_compound->compound_objective_.hard_objectives_[ii]);
     }
-    print(co.fb_.hard_objective_bias_, cout, "blended hard objective bias", "  ");
-    print(co.fb_.hard_objective_nullspace_projector_, cout, "blended hard objective nullspace", "  ");
+    print(interactive_compound->compound_objective_.fb_.hard_objective_bias_, cout, "blended hard objective bias", "  ");
+    print(interactive_compound->compound_objective_.fb_.hard_objective_nullspace_projector_, cout, "blended hard objective nullspace", "  ");
     
-    for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
-      Objective const * obj(co.soft_objectives_[ii]);
+    for (size_t ii(0); ii < interactive_compound->compound_objective_.soft_objectives_.size(); ++ii) {
+      Objective const * obj(interactive_compound->compound_objective_.soft_objectives_[ii]);
       if (obj->isActive()) {
 	cout << "  soft_objective #" << ii << " \"" << obj->name_ << "\"\n";
 	print(obj->getBias(), cout, "bias", "    ");
@@ -124,20 +122,21 @@ static void analyze()
 	cout << "  soft_objective #" << ii << " \"" << obj->name_ << "\" inactive\n";
       }
     }
-    print(co.fb_.soft_objective_bias_, cout, "blended soft objective bias", "  ");
-    print(Vector(co.fb_.hard_objective_bias_ + co.fb_.soft_objective_bias_), cout,
+    print(interactive_compound->compound_objective_.fb_.soft_objective_bias_, cout, "blended soft objective bias", "  ");
+    print(Vector(interactive_compound->compound_objective_.fb_.hard_objective_bias_ + interactive_compound->compound_objective_.fb_.soft_objective_bias_), cout,
 	  "blended total objective bias", "  ");
   }
   
   vector<Achievability> info;
-  Achievability::compute(robot, co, info);
+  Achievability::compute(planar_robot, interactive_compound->compound_objective_, info);
   Achievability::print(info, cout, "");
 }
 
 
 static void update()
 {
-  blender->update(robot, compound);
+  interactive_compound->update();
+  blender->update(planar_robot, &interactive_compound->compound_objective_);
   gtk_widget_queue_draw(gw);
   analyze();
 }
@@ -158,13 +157,13 @@ static void cb_normalize(GtkWidget * ww, gpointer data)
 {
   for (size_t ii(2); ii < 5; ++ii) {
     if (verbose) {
-      if (fabs(compound->robot_.position_[ii]) > M_PI) {
-	cout << "normalize " << compound->robot_.position_[ii]
-	     << " to " << normangle(compound->robot_.position_[ii]) << "\n";
+      if (fabs(planar_robot.position_[ii]) > M_PI) {
+	cout << "normalize " << planar_robot.position_[ii]
+	     << " to " << normangle(planar_robot.position_[ii]) << "\n";
       }
     }
-    compound->robot_.position_[ii] = normangle(compound->robot_.position_[ii]);
-    compound->robot_.update(compound->robot_.position_, compound->robot_.velocity_);
+    planar_robot.position_[ii] = normangle(planar_robot.position_[ii]);
+    planar_robot.update(planar_robot.position_, planar_robot.velocity_);
   }
 }
 
@@ -200,7 +199,8 @@ static gint cb_expose(GtkWidget * ww,
   cairo_translate(cr, gw_x0, gw_y0);
   cairo_scale(cr, gw_sx, gw_sy);
   
-  compound->draw(cr, lwscale, gw_sx);
+  planar_robot.draw(cr, lwscale, gw_sx);
+  interactive_compound->draw(cr, lwscale, gw_sx);
   
   cairo_destroy(cr);
   
@@ -243,11 +243,11 @@ static gint cb_click(GtkWidget * ww,
   if (bb->type == GDK_BUTTON_PRESS) {
     Vector point(3);
     point << (bb->x - gw_x0) / (double) gw_sx, (bb->y - gw_y0) / (double) gw_sy, 0.0;
-    for (size_t ii(0); ii < compound->handles_.size(); ++ii) {
-      Vector offset = compound->handles_[ii]->point_ - point;
-      if (offset.norm() <= compound->handles_[ii]->radius_) {
+    for (size_t ii(0); ii < interactive_compound->handles_.size(); ++ii) {
+      Vector offset = interactive_compound->handles_[ii]->point_ - point;
+      if (offset.norm() <= interactive_compound->handles_[ii]->radius_) {
     	grab_offset = offset;
-    	grabbed = compound->handles_[ii];
+    	grabbed = interactive_compound->handles_[ii];
     	break;
       }
     }
@@ -424,21 +424,21 @@ void parse_options(int argc, char ** argv)
   }
   
   if ("eegoal" == opt_compound) {
-    compound = new EEGoalCompoundObjective(robot);
+    interactive_compound = new EEGoalCompoundObjective(planar_robot);
   }
   else if ("elastic" == opt_compound) {
-    compound = new ElasticLinksCompoundObjective(robot);
+    interactive_compound = new ElasticLinksCompoundObjective(planar_robot);
   }
   else {
     errx(EXIT_FAILURE, "invalid compound '%s' (use 'eegoal' or 'elastic')", opt_compound.c_str());
   }
-  compound->init(dimx, dimy);
+  interactive_compound->init(dimx, dimy);
 }
 
 
 void cleanup()
 {
-  delete compound;
+  delete interactive_compound;
   delete blender;
 }
 

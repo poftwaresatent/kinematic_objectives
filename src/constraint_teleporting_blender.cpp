@@ -60,8 +60,6 @@ namespace kinematic_objectives {
   void ConstraintTeleportingBlender::
   update(KinematicModel & model, CompoundObjective * wpt)
   {
-    wpt->preUpdateHook();
-    
     if (dbgos_) {
       *dbgos_ << dbgpre_ << "==================================================\n"
 	      << dbgpre_ << "ConstraintTeleportingBlender::updateCompoundObjective()\n";

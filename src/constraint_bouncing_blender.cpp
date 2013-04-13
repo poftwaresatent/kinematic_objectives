@@ -59,8 +59,6 @@ namespace kinematic_objectives {
   void ConstraintBouncingBlender::
   update(KinematicModel & model, CompoundObjective * wpt)
   {
-    wpt->preUpdateHook();
-    
     for (size_t ii(0); ii < wpt->unilateral_constraints_.size(); ++ii) {
       wpt->unilateral_constraints_[ii]->update(model);
     }

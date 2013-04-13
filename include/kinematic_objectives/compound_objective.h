@@ -119,8 +119,6 @@ namespace kinematic_objectives {
     
     virtual void init(KinematicModel const & model);
     
-    virtual void preUpdateHook() = 0; // rfct
-    
     vector<Objective *> unilateral_constraints_;
     vector<Objective *> hard_objectives_;
     vector<Objective *> soft_objectives_;

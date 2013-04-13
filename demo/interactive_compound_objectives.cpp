@@ -83,19 +83,19 @@ namespace kinematic_objectives {
       joint_limits_.limits_(4, 2) =  119.999 * deg;
       joint_limits_.limits_(4, 3) =  120.0 * deg;
     
-      unilateral_constraints_.push_back(&joint_limits_);
-      unilateral_constraints_.push_back(&avoid_ee_);
-      unilateral_constraints_.push_back(&avoid_wrist_);
-      unilateral_constraints_.push_back(&avoid_ellbow_);
-      unilateral_constraints_.push_back(&avoid_base_);
+      compound_objective_.unilateral_constraints_.push_back(&joint_limits_);
+      compound_objective_.unilateral_constraints_.push_back(&avoid_ee_);
+      compound_objective_.unilateral_constraints_.push_back(&avoid_wrist_);
+      compound_objective_.unilateral_constraints_.push_back(&avoid_ellbow_);
+      compound_objective_.unilateral_constraints_.push_back(&avoid_base_);
     
-      hard_objectives_.push_back(&orient_ee_);
+      compound_objective_.hard_objectives_.push_back(&orient_ee_);
       
-      soft_objectives_.push_back(&repulse_base_);
-      soft_objectives_.push_back(&repulse_ellbow_);
-      soft_objectives_.push_back(&repulse_wrist_);
-      soft_objectives_.push_back(&repulse_ee_);
-      soft_objectives_.push_back(&joint_damping_);
+      compound_objective_.soft_objectives_.push_back(&repulse_base_);
+      compound_objective_.soft_objectives_.push_back(&repulse_ellbow_);
+      compound_objective_.soft_objectives_.push_back(&repulse_wrist_);
+      compound_objective_.soft_objectives_.push_back(&repulse_ee_);
+      compound_objective_.soft_objectives_.push_back(&joint_damping_);
     }
   
   
@@ -116,7 +116,7 @@ namespace kinematic_objectives {
 	- 40.0 * deg,
 	25.0 * deg;
       robot_.update(posture, Vector::Zero(posture.size()));
-      CompoundObjective::init(robot_);
+      compound_objective_.init(robot_);
     }
     
     
@@ -124,8 +124,6 @@ namespace kinematic_objectives {
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
-      robot_.draw(cr, weight, pixelsize);
-      
       cairo_save(cr);
       
       // handles
@@ -240,7 +238,7 @@ namespace kinematic_objectives {
   
   
     void InteractiveCompoundObjective::
-    preUpdateHook()
+    update()
     {
       orient_ee_.goal_ = atan2(h_ee_ori_.point_[1] - h_ee_.point_[1], h_ee_ori_.point_[0] - h_ee_.point_[0]);
       
@@ -276,14 +274,14 @@ namespace kinematic_objectives {
       handles_.push_back(&h2_ellbow_);
       handles_.push_back(&h2_base_);
 
-      soft_objectives_.push_back(&ee_left_);
-      soft_objectives_.push_back(&ee_right_);
-      soft_objectives_.push_back(&wrist_left_);
-      soft_objectives_.push_back(&wrist_right_);
-      soft_objectives_.push_back(&ellbow_left_);
-      soft_objectives_.push_back(&ellbow_right_);
-      soft_objectives_.push_back(&base_left_);
-      soft_objectives_.push_back(&base_right_);
+      compound_objective_.soft_objectives_.push_back(&ee_left_);
+      compound_objective_.soft_objectives_.push_back(&ee_right_);
+      compound_objective_.soft_objectives_.push_back(&wrist_left_);
+      compound_objective_.soft_objectives_.push_back(&wrist_right_);
+      compound_objective_.soft_objectives_.push_back(&ellbow_left_);
+      compound_objective_.soft_objectives_.push_back(&ellbow_right_);
+      compound_objective_.soft_objectives_.push_back(&base_left_);
+      compound_objective_.soft_objectives_.push_back(&base_right_);
     }
     
     
@@ -347,7 +345,7 @@ namespace kinematic_objectives {
     
     
     void ElasticLinksCompoundObjective::
-    preUpdateHook()
+    update()
     {
       ee_left_.attractor_ =       h_ee_.point_;
       ee_right_.attractor_ =     h2_ee_.point_;
@@ -358,7 +356,7 @@ namespace kinematic_objectives {
       base_left_.attractor_ =     h_base_.point_;
       base_right_.attractor_ =   h2_base_.point_;
       
-      InteractiveCompoundObjective::preUpdateHook();
+      InteractiveCompoundObjective::update();
     }
     
     
@@ -368,8 +366,8 @@ namespace kinematic_objectives {
 	eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
 	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 100.0,  2.0)
     {
-      hard_objectives_.push_back(&eeobjective_);
-      soft_objectives_.push_back(&attract_base_);
+      compound_objective_.hard_objectives_.push_back(&eeobjective_);
+      compound_objective_.soft_objectives_.push_back(&attract_base_);
     }
     
     
@@ -400,11 +398,11 @@ namespace kinematic_objectives {
     
     
     void EEGoalCompoundObjective::
-    preUpdateHook()
+    update()
     {
       eeobjective_.ctrl_.goal_ = h_ee_.point_;
       attract_base_.attractor_ = h_base_.point_;
-      InteractiveCompoundObjective::preUpdateHook();
+      InteractiveCompoundObjective::update();
     }
     
   }

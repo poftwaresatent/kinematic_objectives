@@ -57,8 +57,6 @@ namespace kinematic_objectives {
   void UnconstrainedBlender::
   update(KinematicModel & model, CompoundObjective * wpt)
   {
-    wpt->preUpdateHook();
-    
     for (size_t ii(0); ii < wpt->hard_objectives_.size(); ++ii) {
       wpt->hard_objectives_[ii]->update(model);
     }
