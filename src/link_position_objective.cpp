@@ -49,10 +49,9 @@ namespace kinematic_objectives {
 			double kp,
 			double kd)
     : Objective(name),
-      kp_(kp),
-      kd_(kd),
       node_(node),
-      point_(3)
+      point_(3),
+      ctrl_(kp, kd)
   {
     point_ << px, py, pz;
   }
@@ -62,7 +61,7 @@ namespace kinematic_objectives {
   init(KinematicModel const & model)
   {
     gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
-    goal_ = gpoint_;
+    ctrl_.goal_ = gpoint_;
     jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
     bias_ = Vector::Zero(point_.size());
   }
@@ -73,7 +72,7 @@ namespace kinematic_objectives {
   {
     gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
     jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
-    bias_ = kp_ * (goal_ - gpoint_) - kd_ * jacobian_ * model.getJointVelocity();
+    bias_ = ctrl_.compute(gpoint_, jacobian_ * model.getJointVelocity());
   }
   
   

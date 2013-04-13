@@ -380,7 +380,7 @@ namespace kinematic_objectives {
       cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
       cairo_set_line_width(cr, weight * 1.0 / pixelsize);
       cairo_move_to(cr, eeobjective_.gpoint_[0], eeobjective_.gpoint_[1]);
-      cairo_line_to(cr, eeobjective_.goal_[0], eeobjective_.goal_[1]);
+      cairo_line_to(cr, eeobjective_.ctrl_.goal_[0], eeobjective_.ctrl_.goal_[1]);
       cairo_stroke(cr);
       
       // base attraction
@@ -399,7 +399,7 @@ namespace kinematic_objectives {
     void EEGoalCompoundObjective::
     preUpdateHook()
     {
-      eeobjective_.goal_ = h_ee_.point_;
+      eeobjective_.ctrl_.goal_ = h_ee_.point_;
       attract_base_.attractor_ = h_base_.point_;
       InteractiveCompoundObjective::preUpdateHook();
     }

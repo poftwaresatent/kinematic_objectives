@@ -38,6 +38,7 @@
 #define KINEMATIC_OBJECTIVES_LINK_POSITION_OBJECTIVE_HPP
 
 #include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/pd_controller.h>
 
 
 namespace kinematic_objectives {
@@ -66,12 +67,10 @@ namespace kinematic_objectives {
     virtual void update(KinematicModel const & model);
     virtual double computeResidualErrorMagnitude(Vector const & ee) const;
     
-    double kp_;
-    double kd_;
     size_t node_;
     Vector point_;
     Vector gpoint_;
-    Vector goal_;
+    PDController ctrl_;
   };
 
 }

@@ -34,46 +34,30 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/joint_position_objective.h>
-#include <kinematic_objectives/kinematic_model.h>
-#include <kinematic_objectives/util.h>
+#ifndef KINEMATIC_OBJECTIVES_PD_CONTROLLER_HPP
+#define KINEMATIC_OBJECTIVES_PD_CONTROLLER_HPP
 
+#include <kinematic_objectives/types.h>
 
 namespace kinematic_objectives {
   
-  
-  JointPositionObjective::
-  JointPositionObjective(string const & name)
-    : Objective(name),
-      ctrl_(25.0, 10.0)
+  class PDController
   {
-  }
-  
-  
-  void JointPositionObjective::
-  init(KinematicModel const & model)
-  {
-    ctrl_.goal_ = model.getJointPosition();
-    bias_ = Vector::Zero(ctrl_.goal_.size());
-    jacobian_ = Matrix::Identity(ctrl_.goal_.size(), ctrl_.goal_.size());
-  }
-  
-  
-  void JointPositionObjective::
-  update(KinematicModel const & model)
-  {
-    bias_ = ctrl_.compute(model.getJointPosition(), model.getJointVelocity());
-  }
-  
-  
-  /**
-     \todo [medium] implement at least some kind of DOF-weighting to
-     allow mixing of translational with rotational joints.
-  */
-  double JointPositionObjective::
-  computeResidualErrorMagnitude(Vector const & ee) const
-  {
-    return max_fabs(ee);
-  }
+  public:
+    inline PDController(double kp, double kd)
+      : kp_(kp), kd_(kd) { }
+    
+    /** \pre goal_ must have been set previously */
+    inline Vector compute(Vector const & curpos, Vector const & curvel)
+    {
+      Vector res(kp_ * (goal_ - curpos) - kd_ * curvel);
+      return res;
+    }
+    
+    double kp_, kd_;
+    Vector goal_;
+  };
   
 }
+
+#endif // KINEMATIC_OBJECTIVES_PD_CONTROLLER_HPP
