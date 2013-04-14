@@ -79,14 +79,15 @@ namespace kinematic_objectives {
     Vector bias_h;
     Matrix np_h;
     prioritization_.projectObjectives(np_c,
-				      Vector::Zero(ndof),
+				      bias_c,
 				      wpt->hard_objectives_,
 				      bias_h,
 				      np_h);
     
     Vector bias_s;
     prioritization_.addUpObjectives(np_h,
-				    Vector::Zero(ndof),
+				    // ////Vector::Zero(ndof),
+				    // bias_h,
 				    wpt->soft_objectives_,
 				    bias_s);
     

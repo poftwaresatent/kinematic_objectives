@@ -85,14 +85,14 @@ namespace kinematic_objectives {
 				      bias_hard,
 				      N_hard);
     
-    Vector bias_hard_and_soft;
+    Vector bias_soft;
     prioritization_.addUpObjectives(N_hard,
-				    bias_hard,
+				    ////				    bias_hard,
 				    wpt->soft_objectives_,
-				    bias_hard_and_soft);
+				    bias_soft);
     
     Vector q_next, qd_next;
-    integrator_->compute(bias_hard_and_soft,
+    integrator_->compute(bias_hard + bias_soft,
 			 model.getJointPosition(),
 			 model.getJointVelocity(),
 			 q_next,
@@ -177,22 +177,17 @@ namespace kinematic_objectives {
     // Re-run objective priority scheme, but seed it with the constraint nullspace this time.
     
     prioritization_.projectObjectives(N_cstr,
-				      // XXXX this here is wrong, just
-				      // shows an old bug (hopefully)
-				      // that will now be removed
-				      // (hopefully)
-#warning "pluggin bias_cstr in here appears promising"
-				      Vector::Zero(ndof),
+				      bias_cstr,
 				      wpt->hard_objectives_,
 				      bias_hard,
 				      N_hard);
     
     prioritization_.addUpObjectives(N_hard,
-				    bias_hard,
+				    ////				    bias_hard,
 				    wpt->soft_objectives_,
-				    bias_hard_and_soft);
+				    bias_soft);
     
-    integrator_->compute(bias_hard_and_soft,
+    integrator_->compute(bias_hard + bias_soft,
 			 model.getJointPosition(),
 			 model.getJointVelocity(),
 			 q_next,

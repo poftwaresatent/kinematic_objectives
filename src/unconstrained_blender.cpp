@@ -65,13 +65,14 @@ namespace kinematic_objectives {
     }
     
     ssize_t const ndof(model.getJointPosition().size());
-    Vector bias = Vector::Zero(ndof);
+    Vector bias_h = Vector::Zero(ndof);
     Matrix np = Matrix::Identity(ndof, ndof);
-    prioritization_.projectObjectives(np, bias, wpt->hard_objectives_, bias, np);
-    prioritization_.addUpObjectives(np, bias, wpt->soft_objectives_, bias);
+    prioritization_.projectObjectives(np, bias_h, wpt->hard_objectives_, bias_h, np);
+    Vector bias_s;
+    prioritization_.addUpObjectives(np, wpt->soft_objectives_, bias_s);
     
     Vector q_next, qd_next;
-    integrator_->compute(bias,
+    integrator_->compute(bias_h + bias_s,
 			 model.getJointPosition(),
 			 model.getJointVelocity(),
 			 q_next,

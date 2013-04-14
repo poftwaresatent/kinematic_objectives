@@ -109,15 +109,18 @@ namespace kinematic_objectives {
     }
     if (distance_ < 0.0) {
       // no saturation
-      bias_ *= - gain_ / distance_;
+      ////      bias_ *= - gain_ / distance_;
+      bias_ /= - distance_;
     }
     else {
       // saturate at the given distance
       if (dist < distance_) {
-	bias_ *= gain_ / distance_;
+	////	bias_ *= gain_ / distance_;
+	bias_ /= distance_;
       }
       else {
-	bias_ *= gain_ / dist;
+	////	bias_ *= gain_ / dist;
+	bias_ /= dist;
       }
     }
   }

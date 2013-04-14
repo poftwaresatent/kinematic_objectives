@@ -140,11 +140,11 @@ namespace kinematic_objectives {
   
   void Prioritization::
   addUpObjectives(Matrix const & N_in,
-		  Vector const & bias_in,
+		  ////		  Vector const & bias_in,
 		  vector<Objective*> const & objectives,
 		  Vector & bias_out)
   {
-    Vector accu = Vector::Zero(bias_in.size());
+    Vector accu = Vector::Zero(N_in.rows());
     for (size_t ii(0); ii < objectives.size(); ++ii) {
       Objective const * obj(objectives[ii]);
       obj->clearFeedback();
@@ -170,6 +170,21 @@ namespace kinematic_objectives {
     //   accu += bias_up;
     // }
     // bias_out = accu;
+    //
+    //
+    // Vector zero = Vector::Zero(bias_in.size());
+    // Vector accu = zero;
+    // Vector bias_up;
+    // for (size_t ii(0); ii < objectives.size(); ++ii) {
+    //   Objective const * obj(objectives[ii]);
+    //   if ( ! obj->isActive()) {
+    // 	obj->clearFeedback();
+    //     continue;
+    //   }
+    //   process(N_in, zero, obj, 0, bias_up);
+    //   accu += bias_up;
+    // }
+    // bias_out = accu - bias_in;
   }
   
 }

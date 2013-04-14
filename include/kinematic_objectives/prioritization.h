@@ -78,7 +78,9 @@ namespace kinematic_objectives {
 			   Matrix & N_out);
     
     void addUpObjectives(Matrix const & N_in,
-			 Vector const & bias_in,
+			 //// this needs more work
+			 ////			 Vector const & bias_in,
+			 ////
 			 vector<Objective*> const & objectives,
 			 Vector & bias_out);
     

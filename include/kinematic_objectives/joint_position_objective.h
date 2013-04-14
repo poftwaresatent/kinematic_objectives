@@ -38,7 +38,6 @@
 #define KINEMATIC_OBJECTIVES_JOINT_POSITION_OBJECTIVE_HPP
 
 #include <kinematic_objectives/objective.h>
-#include <kinematic_objectives/pd_controller.h>
 
 
 namespace kinematic_objectives {

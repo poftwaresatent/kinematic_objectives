@@ -106,7 +106,8 @@ namespace kinematic_objectives {
       jacobian_.resize(0, 0);
       return;
     }
-    bias_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
+    ////    bias_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
+    bias_ *= pow(1.0 - dist / distance_, 2.0) / dist;
     jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }
   
