@@ -14,7 +14,8 @@ You need CMake, Eigen3, and GTK2 (for the demos)
     make
     ./demo/demo -h
 
-For the API docs (you need Doxygen for this), go to the top-level source directory and run
+For the API docs (you need Doxygen for this), go to the top-level
+source directory and run
 
     doxygen Doxyfile
 
