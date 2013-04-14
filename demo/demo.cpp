@@ -354,7 +354,7 @@ void parse_options(int argc, char ** argv)
   
   Vector qd_max(5);
   qd_max << 1.0, 1.0, 45 * deg, 45 * deg, 45 * deg;
-  integrator = new Integrator(opt_stepsize, qd_max);
+  integrator = new Integrator(opt_stepsize, 1e9 * qd_max);
   
   if ("teleporting" == opt_blender) {
     blender = new ConstraintTeleportingBlender(integrator);
