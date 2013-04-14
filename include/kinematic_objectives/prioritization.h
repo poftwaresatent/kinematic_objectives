@@ -59,20 +59,28 @@ namespace kinematic_objectives {
   public:
     Prioritization();
     
-    void processObjective(Matrix const & N_in,
-			  Vector const & bias_in,
-			  Objective const * objective,
-			  Matrix & N_updater,
-			  Vector & bias_out);
+    void process(Matrix const & N_in,
+		 Vector const & bias_in,
+		 Objective const * objective,
+		 /** nullspace updater: N -= N_up at each hierarchy level */
+		 Matrix * opt_N_up,
+		 Vector & bias_out);
     
-    void processCompound(/** initial nullspace projector */
-			 Matrix const & N_init,
-			 /** hierarchy of objectives to fuse/blend */
+    void projectObjectives(/** initial nullspace projector */
+			   Matrix const & N_in,
+			   /** initial bias */
+			   Vector const & bias_in,
+			   /** hierarchy of objectives to fuse/blend */
+			   vector<Objective*> const & objectives,
+			   /** resulting (fused/blended) bias */
+			   Vector & bias_out,
+			   /** accumulated nullspace projector at the end of the fusion */
+			   Matrix & N_out);
+    
+    void addUpObjectives(Matrix const & N_in,
+			 Vector const & bias_in,
 			 vector<Objective*> const & objectives,
-			 /** resulting (fused/blended) bias */
-			 Vector & bias_res,
-			 /** accumulated nullspace projector at the end of the fusion */
-			 Matrix & N_res);
+			 Vector & bias_out);
     
     /** stream for debug output (use 0 for silent operation) */
     ostream * dbgos_;

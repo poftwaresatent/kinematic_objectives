@@ -54,18 +54,18 @@ namespace kinematic_objectives {
   
   
   void Prioritization::
-  processObjective(Matrix const & N_in,
-		   Vector const & bias_in,
-		   Objective const * objective,
-		   Matrix & N_updater,
-		   Vector & bias_out)
+  process(Matrix const & N_in,
+	  Vector const & bias_in,
+	  Objective const * objective,
+	  Matrix * opt_N_up,
+	  Vector & bias_out)
   {
     objective->bias_comp_ = objective->getBias() - objective->getJacobian() * bias_in;
     objective->jbar_ = objective->getJacobian() * N_in;
     
     pseudo_inverse_moore_penrose(objective->jbar_,
 				 objective->jbar_inv_,
-				 &N_updater,
+				 opt_N_up,
 				 &objective->jbar_svd_);
     
     bias_out = objective->jbar_inv_ * objective->bias_comp_;
@@ -84,32 +84,26 @@ namespace kinematic_objectives {
       print(objective->jbar_svd_.original_sigma, *dbgos_, "original J_bar sigma", pre);
       print(objective->jbar_svd_.regularized_sigma, *dbgos_, "regularized J_bar sigma", pre);
       print(objective->jbar_inv_, *dbgos_, "J_bar pseudo inverse", pre);
-      print(N_updater, *dbgos_, "nullspace projector update", pre);
+      if (opt_N_up) {
+	print(*opt_N_up, *dbgos_, "nullspace projector update", pre);
+      }
       print(bias_out, *dbgos_, "bias update", pre);
     }
   }
   
   
   void Prioritization::
-  processCompound(Matrix const & N_init,
-		  vector<Objective*> const & objectives,
-		  Vector & bias_res,
-		  Matrix & N_res)
+  projectObjectives(Matrix const & N_in,
+		    Vector const & bias_in,
+		    vector<Objective*> const & objectives,
+		    Vector & bias_out,
+		    Matrix & N_out)
   {
-    bias_res = Vector::Zero(N_init.rows());
-    N_res = N_init;
+    bias_out = bias_in;
+    N_out = N_in;
     
-    Vector bup;
-    Matrix Nup;			// nullspace updater: N -= N_up at each hierarchy level
-    
-    // if (dbgos_) {
-    //   string pre (dbgpre_);
-    //   pre += "  ";
-    //   print(N_res, *dbgos_, "initial nullspace", pre);
-    //   Eigen::JacobiSVD<Matrix> svd;
-    //   svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    //   print(svd.singularValues(), *dbgos_, "singular values of nullspace", pre);
-    // }
+    Vector bias_up;
+    Matrix N_up;
     
     for (size_t ii(0); ii < objectives.size(); ++ii) {
       Objective const * obj(objectives[ii]);
@@ -122,20 +116,40 @@ namespace kinematic_objectives {
 	continue;
       }
       
-      processObjective(N_res, bias_res, obj, Nup, bup);
+      process(N_out, bias_out, obj, &N_up, bias_up);
       
-      bias_res += bup;
-      N_res -= Nup;
+      bias_out += bias_up;
+      N_out -= N_up;
       
       if (dbgos_) {
         string pre (dbgpre_);
         pre += "  ";
-	print(bias_res, *dbgos_, "accumulated bias", pre);
-	print(N_res, *dbgos_, "accumulated nullspace projector", pre);
+	print(bias_out, *dbgos_, "accumulated bias", pre);
+	print(N_out, *dbgos_, "accumulated nullspace projector", pre);
 	Eigen::JacobiSVD<Matrix> svd;
-	svd.compute(N_res, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	svd.compute(N_out, Eigen::ComputeThinU | Eigen::ComputeThinV);
 	print(svd.singularValues(), *dbgos_, "singular values of nullspace projector", pre);
       }
+    }
+  }
+  
+  
+  void Prioritization::
+  addUpObjectives(Matrix const & N_in,
+		  Vector const & bias_in,
+		  vector<Objective*> const & objectives,
+		  Vector & bias_out)
+  {
+    bias_out = bias_in;////Vector::Zero(Noverall.rows());
+    Vector bias_up;
+    for (size_t ii(0); ii < objectives.size(); ++ii) {
+      Objective const * obj(objectives[ii]);
+      if ( ! obj->isActive()) {
+	obj->clearFeedback();
+        continue;
+      }
+      process(N_in, bias_in, obj, 0, bias_up);
+      bias_out += bias_up;
     }
   }
   
