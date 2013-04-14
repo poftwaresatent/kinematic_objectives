@@ -101,9 +101,10 @@ namespace kinematic_objectives {
     }
     gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
     bias_ = attractor_ - gpoint_;
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
     double const dist(bias_.norm());
     if (dist < 1e-9) {
-      jacobian_.resize(0, 0);
+      bias_ = Vector::Zero(bias_.size());
       return;
     }
     if (distance_ < 0.0) {
@@ -119,7 +120,6 @@ namespace kinematic_objectives {
 	bias_ *= gain_ / dist;
       }
     }
-    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }
   
   
