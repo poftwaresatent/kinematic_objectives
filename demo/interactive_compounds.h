@@ -47,6 +47,7 @@
 #include "planar_robot.h"
 #include "planar_distance.h"
 #include "interaction_handle.h"
+#include "joint_damping_objective.h"
 
 
 namespace kinematic_objectives {
@@ -96,6 +97,8 @@ namespace kinematic_objectives {
       PDObjective pd_orient_ee_;
       PDObjective pd_attract_ee_;
       PDObjective pd_attract_base_;
+      
+      JointDampingObjective damping_;
     };
     
     

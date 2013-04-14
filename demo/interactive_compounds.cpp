@@ -64,7 +64,8 @@ namespace kinematic_objectives {
 	attract_base_   ("attract_base", 0,           0.0, 0.0, 0.0, -1.0),
 	pd_orient_ee_   ("pd_orient_ee",    &orient_ee_,    false, 100.0, 20.0),
 	pd_attract_ee_  ("pd_attract_ee",   &attract_ee_,   false, 100.0, 20.0),
-	pd_attract_base_("pd_attract_base", &attract_base_, false, 100.0, 20.0)
+	pd_attract_base_("pd_attract_base", &attract_base_, false, 100.0, 20.0),
+	damping_        ("damping", 20.0)
     {
       handles_.push_back(&h_ee_);
       handles_.push_back(&h_ee_ori_);
@@ -73,6 +74,7 @@ namespace kinematic_objectives {
       compound_objective_.hard_objectives_.push_back(&pd_orient_ee_);
       compound_objective_.hard_objectives_.push_back(&pd_attract_ee_);
       compound_objective_.hard_objectives_.push_back(&pd_attract_base_);
+      compound_objective_.hard_objectives_.push_back(&damping_);
     }
     
     

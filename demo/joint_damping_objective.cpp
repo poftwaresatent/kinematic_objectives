@@ -34,7 +34,7 @@
 
 /* Author: Roland Philippsen */
 
-#include <kinematic_objectives/joint_damping_objective.h>
+#include "joint_damping_objective.h"
 #include <kinematic_objectives/kinematic_model.h>
 #include <kinematic_objectives/util.h>
 

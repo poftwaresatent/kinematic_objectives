@@ -9,6 +9,7 @@ if (GTK2_FOUND)
     planar_distance.cpp
     planar_orientation_objective.cpp
     planar_robot.cpp
+    joint_damping_objective.cpp
     )
   target_link_libraries (demo kinematic_objectives ${GTK2_LIBRARIES})
 else (GTK2_FOUND)
