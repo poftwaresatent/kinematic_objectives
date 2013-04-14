@@ -158,6 +158,23 @@ namespace kinematic_objectives {
     bias_out = N_in * accu;
     //
     //
+    // Vector accu = Vector::Zero(N_in.rows());
+    // for (size_t ii(0); ii < objectives.size(); ++ii) {
+    //   Objective const * obj(objectives[ii]);
+    //   obj->clearFeedback();
+    //   if ( ! obj->isActive()) {
+    //     continue;
+    //   }
+    //   obj->jbar_ = obj->getJacobian() * N_in;
+    //   pseudo_inverse_moore_penrose(obj->jbar_,
+    // 				   obj->jbar_inv_,
+    // 				   0,
+    // 				   &obj->jbar_svd_);
+    //   accu += obj->jbar_inv_ * obj->getBias();
+    // }
+    // bias_out = N_in * accu;
+    //
+    //
     // Vector accu(bias_in);	// needed in case &bias_in == &bias_out
     // Vector bias_up;
     // for (size_t ii(0); ii < objectives.size(); ++ii) {
