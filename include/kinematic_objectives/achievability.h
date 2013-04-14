@@ -38,6 +38,7 @@
 #define KINEMATIC_OBJECTIVES_ACHIEVABILITY_HPP
 
 #include <kinematic_objectives/types.h>
+#include <kinematic_objectives/pseudo_inverse.h>
 
 
 namespace kinematic_objectives {
@@ -59,12 +60,21 @@ namespace kinematic_objectives {
     
     objective_tag_t tag_;
     Objective const * objective_;
-    Vector regularized_sigma_jbar_;
-    Vector original_sigma_jbar_;
+    
+    PseudoInverseFeedback j_svd_;
+    PseudoInverseFeedback jbar_svd_;
+    
+    size_t original_j_dimension_;
+    size_t original_jbar_dimension_;
+    size_t regularized_j_dimension_;
+    size_t regularized_jbar_dimension_;
+    
     Vector residual_error_;
     double residual_error_magnitude_;
     
-    ////rfct    Vector nullspace_residuals_;
+    Vector j_nullspace_residuals_;
+    Vector jbar_nullspace_residuals_;
+    Vector cross_nullspace_residuals_;
     
     static void compute(KinematicModel & model,
 			CompoundObjective const & co,

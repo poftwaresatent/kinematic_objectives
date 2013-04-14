@@ -45,15 +45,24 @@
 namespace kinematic_objectives {
   
   
+  static size_t compute_dimension(Vector const & sigma)
+  {
+    ssize_t dim;
+    for (dim = 0; dim < sigma.size(); ++dim) {
+      if (sigma[dim] == 0.0) {
+	break;
+      }
+    }
+    return dim;
+  }
+  
+  
   static void helper(Achievability::objective_tag_t tag,
 		     vector<Objective*> const & objectives,
 		     Vector const & joint_velocity,
 		     vector<Achievability> & information)
   {
     Achievability info;
-    Matrix Jinv;
-    PseudoInverseFeedback extra;
-    Vector null_residual;
     
     for (size_t ii(0); ii < objectives.size(); ++ii) {
       
@@ -63,24 +72,58 @@ namespace kinematic_objectives {
       
       info.tag_                    = tag;
       info.objective_              = objectives[ii];
-      info.original_sigma_jbar_    = info.objective_->jbar_svd_.original_sigma;
-      info.regularized_sigma_jbar_ = info.objective_->jbar_svd_.regularized_sigma;
+      
+      Matrix Jinv;
+      pseudo_inverse_moore_penrose(objectives[ii]->getJacobian(), Jinv, 0, &info.j_svd_);
+      
+      info.jbar_svd_                   = info.objective_->jbar_svd_;
+      info.original_j_dimension_       = compute_dimension(info.j_svd_.original_sigma);
+      info.original_jbar_dimension_    = compute_dimension(info.jbar_svd_.original_sigma);
+      info.regularized_j_dimension_    = compute_dimension(info.j_svd_.regularized_sigma);
+      info.regularized_jbar_dimension_ = compute_dimension(info.jbar_svd_.regularized_sigma);
+      
       info.residual_error_
 	= info.objective_->getBias()
 	- info.objective_->getJacobian() * joint_velocity;
       info.residual_error_magnitude_
 	= info.objective_->computeResidualErrorMagnitude(info.residual_error_);
       
-      //rfct      // pseudo_inverse_moore_penrose(objectives[ii]->getJacobian(), Jinv, 0, &extra);
-      // ssize_t const truncated_range(extra.regularized_sigma.cols());
-      // info.nullspace_residuals_.resize(extra.input_space.rows() - truncated_range);
-      // for (ssize_t jj(truncated_range); jj < joint_velocity.size(); ++jj) {
-      // 	null_residual
-      // 	  = info.objective_->getJacobian()
-      // 	  * extra.input_space.block(0, jj, joint_velocity.size(), 1);
-      //   info.nullspace_residuals_[jj - truncated_range]
-      // 	  = info.objective_->computeResidualErrorMagnitude(null_residual);
-      // }
+      if (0 == info.j_svd_.input_space.rows()) {
+	info.jbar_nullspace_residuals_.resize(0);
+      }
+      else {
+	info.j_nullspace_residuals_.resize(info.j_svd_.input_space.rows() - info.regularized_j_dimension_);
+	for (ssize_t jj(info.regularized_j_dimension_); jj < joint_velocity.size(); ++jj) {
+	  Vector null_residual
+	    = info.objective_->getJacobian()
+	    * info.j_svd_.input_space.block(0, jj, joint_velocity.size(), 1);
+	  info.j_nullspace_residuals_[jj - info.regularized_j_dimension_]
+	    = info.objective_->computeResidualErrorMagnitude(null_residual);
+	}
+      }
+      
+      if (0 == info.jbar_svd_.input_space.rows()) {
+	info.jbar_nullspace_residuals_.resize(0);
+	info.cross_nullspace_residuals_.resize(0);
+      }
+      else {
+	info.jbar_nullspace_residuals_.resize(info.jbar_svd_.input_space.rows() - info.regularized_jbar_dimension_);
+	for (ssize_t jj(info.regularized_jbar_dimension_); jj < joint_velocity.size(); ++jj) {
+	  Vector null_residual
+	    = info.objective_->jbar_
+	    * info.jbar_svd_.input_space.block(0, jj, joint_velocity.size(), 1);
+	  info.jbar_nullspace_residuals_[jj - info.regularized_jbar_dimension_]
+	    = info.objective_->computeResidualErrorMagnitude(null_residual);
+	}
+	info.cross_nullspace_residuals_.resize(info.jbar_svd_.input_space.rows() - info.regularized_jbar_dimension_);
+	for (ssize_t jj(info.regularized_jbar_dimension_); jj < joint_velocity.size(); ++jj) {
+	  Vector null_residual
+	    = info.objective_->getJacobian()
+	    * info.jbar_svd_.input_space.block(0, jj, joint_velocity.size(), 1);
+	  info.cross_nullspace_residuals_[jj - info.regularized_jbar_dimension_]
+	    = info.objective_->computeResidualErrorMagnitude(null_residual);
+	}
+      }
       
       information.push_back(info);
     }
@@ -119,7 +162,7 @@ namespace kinematic_objectives {
     size_t const buflen(128+namlen);
     char buf[buflen];
     
-    snprintf(buf, buflen, "  [pos/idx] %-*s   have / need (miss)   magnitude\n", namlen, "objective");
+    snprintf(buf, buflen, "  [pos/idx] %-*s   J have/need   Jbar have/need magnitude\n", namlen, "objective");
     os << pfx << "==========================================================\n"
        << pfx << "SUMMARY: dimensions and magnitude of residual error\n"
        << pfx << buf
@@ -138,11 +181,12 @@ namespace kinematic_objectives {
 	  os << pfx << "SOFT_OBJECTIVE\n";
 	}
       }
-      snprintf(buf, buflen, "  [%3zu/%3zu] %-*s   %4zu / %4zu (%4zu)   ", ii, jj, namlen,
+      snprintf(buf, buflen, "  [%3zu/%3zu] %-*s   %3zu / %3zu  %3zu / %3zu   ", ii, jj, namlen,
 	       information[ii].objective_->name_.c_str(),
-	       (size_t) 42, //// information[ii].available_dimension_,
-	       (size_t) 17, //// information[ii].required_dimension_,
-	       (size_t) 22);//// information[ii].required_dimension_ - information[ii].available_dimension_);
+	       information[ii].regularized_j_dimension_,
+	       information[ii].original_j_dimension_,
+	       information[ii].regularized_jbar_dimension_,
+	       information[ii].original_jbar_dimension_);
       os << pfx << buf << pstring(information[ii].residual_error_magnitude_) << "\n";
     }
     
@@ -158,17 +202,41 @@ namespace kinematic_objectives {
       os << pfx << buf << pstring(information[ii].residual_error_) << "\n";
     }
     
-    //rfct// os << pfx << "----------------------------------------------------------\n"
-    //    << pfx << "error magnitudes of nullspace basis vectors\n"
-    //    << pfx << "----------------------------------------------------------\n";
+    os << pfx << "----------------------------------------------------------\n"
+       << pfx << "error magnitudes of Jacobian nullspace basis vectors\n"
+       << pfx << "----------------------------------------------------------\n";
     
-    // for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
-    //   if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
-    // 	jj = 0;
-    //   }
-    //   snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
-    //   os << pfx << buf << pstring(information[ii].nullspace_residuals_) << "\n";
-    // }
+    for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
+      if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
+    	jj = 0;
+      }
+      snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
+      os << pfx << buf << pstring(information[ii].j_nullspace_residuals_) << "\n";
+    }
+    
+    os << pfx << "----------------------------------------------------------\n"
+       << pfx << "error magnitudes of J_bar nullspace basis vectors\n"
+       << pfx << "----------------------------------------------------------\n";
+    
+    for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
+      if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
+    	jj = 0;
+      }
+      snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
+      os << pfx << buf << pstring(information[ii].jbar_nullspace_residuals_) << "\n";
+    }
+    
+    os << pfx << "----------------------------------------------------------\n"
+       << pfx << "magnitudes of J_bar nullspace vectors mapped through J\n"
+       << pfx << "----------------------------------------------------------\n";
+    
+    for (size_t ii(0), jj(0); ii < information.size(); ++ii, ++jj) {
+      if ((0 == ii) || information[ii].tag_ != information[ii-1].tag_) {
+    	jj = 0;
+      }
+      snprintf(buf, buflen, "  [%3zu/%3zu] ", ii, jj);
+      os << pfx << buf << pstring(information[ii].cross_nullspace_residuals_) << "\n";
+    }
     
     os << pfx << "==========================================================\n";
   }
