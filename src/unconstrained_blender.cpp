@@ -47,9 +47,8 @@ namespace kinematic_objectives {
   
   
   UnconstrainedBlender::
-  UnconstrainedBlender(double timestep)
-    : Blender("UnconstrainedBlender"),
-      timestep_(timestep)
+  UnconstrainedBlender(double stepsize, ostream * dbgos, string const & dbgpre)
+    : Blender("UnconstrainedBlender", stepsize, dbgos, dbgpre)
   {
   }
   
@@ -65,28 +64,27 @@ namespace kinematic_objectives {
     }
     
     ssize_t const ndof(model.getJointPosition().size());
-    Vector & qdd_t(wpt->fb_.hard_objective_bias_);
+    Vector & qd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
     prioritization_.projectObjectives(Matrix::Identity(ndof, ndof),
 				      Vector::Zero(ndof),
 				      wpt->hard_objectives_,
-				      qdd_t,
+				      qd_t,
 				      N_t);
     
-    Vector & qdd_o(wpt->fb_.soft_objective_bias_);
-    qdd_o = Vector::Zero(model.getJointPosition().size());
+    Vector & qd_o(wpt->fb_.soft_objective_bias_);
+    qd_o = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
 	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->getJacobian(), Jinv);
-	qdd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
+	qd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
       }
     }
-    qdd_o = N_t * qdd_o;
+    qd_o = N_t * qd_o;
     
-    Vector qdd_res(qdd_t + qdd_o);
-    Vector qd_res(model.getJointVelocity() + timestep_ * qdd_res);
-    Vector q_res(model.getJointPosition() + timestep_ * qd_res);
+    Vector qd_res(qd_t + qd_o);
+    Vector q_res(model.getJointPosition() + stepsize_ * qd_res);
     
     model.update(q_res, qd_res);
     

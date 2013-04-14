@@ -85,8 +85,10 @@ namespace kinematic_objectives {
   void PointAttractionObjective::
   init(KinematicModel const & model)
   {
-    gpoint_.resize(point_.size());
-    update(model);
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
+    attractor_ = gpoint_;
+    bias_ = Vector::Zero(3);
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }
   
   

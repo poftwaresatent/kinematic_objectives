@@ -47,11 +47,8 @@ namespace kinematic_objectives {
   
   
   ConstraintBouncingBlender::
-  ConstraintBouncingBlender(double timestep,
-			    double constraint_displacement_weight)
-    : Blender("ConstraintBouncingBlender"),
-      timestep_(timestep),
-      constraint_displacement_weight_(constraint_displacement_weight)
+  ConstraintBouncingBlender(double stepsize, ostream * dbgos, string const & dbgpre)
+    : Blender("ConstraintBouncingBlender", stepsize, dbgos, dbgpre)
   {
   }
   
@@ -62,19 +59,6 @@ namespace kinematic_objectives {
     for (size_t ii(0); ii < wpt->unilateral_constraints_.size(); ++ii) {
       wpt->unilateral_constraints_[ii]->update(model);
     }
-    
-    ssize_t const ndof(model.getJointPosition().size());
-    Vector & dq_c(wpt->fb_.constraint_bias_);
-    Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
-    prioritization_.projectObjectives(Matrix::Identity(ndof, ndof),
-				      Vector::Zero(ndof),
-				      wpt->unilateral_constraints_,
-				      dq_c,
-				      N_c);
-    
-    model.update(constraint_displacement_weight_ * dq_c + model.getJointPosition(),
-		       N_c * model.getJointVelocity());
-    
     for (size_t ii(0); ii < wpt->hard_objectives_.size(); ++ii) {
       wpt->hard_objectives_[ii]->update(model);
     }
@@ -82,28 +66,36 @@ namespace kinematic_objectives {
       wpt->soft_objectives_[ii]->update(model);
     }
     
-    Vector & qdd_t(wpt->fb_.hard_objective_bias_);
+    ssize_t const ndof(model.getJointPosition().size());
+    Vector & qd_c(wpt->fb_.constraint_bias_);
+    Matrix & N_c(wpt->fb_.constraint_nullspace_projector_);
+    prioritization_.projectObjectives(Matrix::Identity(ndof, ndof),
+				      Vector::Zero(ndof),
+				      wpt->unilateral_constraints_,
+				      qd_c,
+				      N_c);
+    
+    Vector & qd_t(wpt->fb_.hard_objective_bias_);
     Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
     prioritization_.projectObjectives(N_c,
 				      Vector::Zero(ndof), // XXXX likewise wrong, but try to not change everything at the same time...
 				      wpt->hard_objectives_,
-				      qdd_t,
+				      qd_t,
 				      N_t);
     
-    Vector & qdd_o(wpt->fb_.soft_objective_bias_);
-    qdd_o = Vector::Zero(model.getJointPosition().size());
+    Vector & qd_o(wpt->fb_.soft_objective_bias_);
+    qd_o = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
 	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->getJacobian(), Jinv);
-	qdd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
+	qd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
       }
     }
-    qdd_o = N_t * qdd_o;
+    qd_o = N_t * qd_o;
     
-    Vector qdd_res(qdd_t + qdd_o);
-    Vector qd_res(model.getJointVelocity() + timestep_ * qdd_res);
-    Vector q_res(model.getJointPosition() + timestep_ * qd_res);
+    Vector qd_res(qd_c + qd_t + qd_o);
+    Vector q_res(model.getJointPosition() + stepsize_ * qd_res);
     
     model.update(q_res, qd_res);
   }

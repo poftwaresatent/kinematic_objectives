@@ -52,9 +52,7 @@ namespace kinematic_objectives {
     : public Blender
   {
   public:
-    double const timestep_;
-    
-    explicit UnconstrainedBlender(double timestep);
+    explicit UnconstrainedBlender(double stepsize, ostream * dbgos, string const & dbgpre);
     
     virtual void update(KinematicModel & model, CompoundObjective * wpt);
   };

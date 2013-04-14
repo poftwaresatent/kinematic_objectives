@@ -85,8 +85,10 @@ namespace kinematic_objectives {
   void PointRepulsionObjective::
   init(KinematicModel const & model)
   {
-    gpoint_.resize(point_.size());
-    update(model);
+    gpoint_ = model.getLinkFrame(node_) * point_.homogeneous();
+    repulsor_ = gpoint_ + 100.0 * distance_ * Vector::Ones(3);
+    bias_ = Vector::Zero(3);
+    jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }
   
   

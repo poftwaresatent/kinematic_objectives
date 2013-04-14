@@ -297,12 +297,12 @@ void parse_options(int argc, char ** argv)
   
   string opt_blender("teleporting");
   string opt_compound("eegoal");
-  double opt_timestep(10.0);	// milliseconds
+  double opt_stepsize(0.01);
   
   for (int iopt(1); iopt < argc; ++iopt) {
     
     if (0 == strcmp("-h", argv[iopt])) {
-      printf("usage [-vh] [-b blender] [-c compound] [-t milliseconds]\n"
+      printf("usage [-vh] [-b blender] [-c compound] [-s stepsize]\n"
 	     "\n"
 	     "  -h             print this message\n"
 	     "  -v             enable verbose messages\n"
@@ -310,10 +310,10 @@ void parse_options(int argc, char ** argv)
 	     "                 specify an invalid name to obtain a list\n"
 	     "  -c  compound   name of the objectives compound to run (default '%s')\n"
 	     "                 specify an invalid name to obtain a list\n"
-	     "  -t  ms         blender integration timestep in milliseconds (default %3g)\n"
+	     "  -s  fraction   blender integration stepsize (default %3g)\n"
 	     // "  -x  dimx              x-dimension of the world, in meters (default 10)\n"
 	     // "  -y  dimy              y-dimension of the world, in meters (default 8)\n"
-	     , opt_blender.c_str(), opt_compound.c_str(), opt_timestep);
+	     , opt_blender.c_str(), opt_compound.c_str(), opt_stepsize);
       exit(EXIT_SUCCESS);
     }
     
@@ -335,11 +335,11 @@ void parse_options(int argc, char ** argv)
       opt_compound = argv[iopt];
     }
     
-    else if (0 == strcmp("-t", argv[iopt])) {
+    else if (0 == strcmp("-s", argv[iopt])) {
       if (++iopt >= argc) {
 	errx(EXIT_FAILURE, "%s requires an argument (use -h for help)", argv[iopt-1]);
       }
-      if (1 != sscanf(argv[iopt], "%lf", &opt_timestep)) {
+      if (1 != sscanf(argv[iopt], "%lf", &opt_stepsize)) {
 	err(EXIT_FAILURE, "sscanf('%s'...)", argv[iopt]);
       }
     }
@@ -351,13 +351,13 @@ void parse_options(int argc, char ** argv)
   }
   
   if ("teleporting" == opt_blender) {
-    blender = new ConstraintTeleportingBlender(opt_timestep * 1e-3, verbose ? &cout : 0, "ctb  ");
+    blender = new ConstraintTeleportingBlender(opt_stepsize, verbose ? &cout : 0, "  ");
   }
   else if ("unconstrained" == opt_blender) {
-    blender = new UnconstrainedBlender(opt_timestep * 1e-3);
+    blender = new UnconstrainedBlender(opt_stepsize, verbose ? &cout : 0, "  ");
   }
   else if ("bouncing" == opt_blender) {
-    blender = new ConstraintBouncingBlender(opt_timestep * 1e-3, 1e-2);
+    blender = new ConstraintBouncingBlender(opt_stepsize, verbose ? &cout : 0, "  ");
   }
   else {
     errx(EXIT_FAILURE, "invalid blender '%s' (have: teleporting, unconstrained, bouncing)", opt_blender.c_str());

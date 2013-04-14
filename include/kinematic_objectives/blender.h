@@ -65,8 +65,8 @@ namespace kinematic_objectives {
   public:
     string const name_;
     
-    explicit Blender(string const & name)
-      : name_(name) { }
+    Blender(string const & name, double stepsize, ostream * dbgos, string const & dbgpre)
+      : name_(name), stepsize_(stepsize), dbgos_(dbgos), dbgpre_(dbgpre)  { }
     
     virtual ~Blender()
     { /* nop */ }
@@ -74,6 +74,9 @@ namespace kinematic_objectives {
     virtual void update(KinematicModel & model, CompoundObjective * wpt) = 0;
     
   protected:
+    double stepsize_;
+    ostream * dbgos_;
+    string dbgpre_;
     Prioritization prioritization_; // XXXX rfct
   };
   

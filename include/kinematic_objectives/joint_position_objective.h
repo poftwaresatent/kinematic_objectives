@@ -44,24 +44,24 @@
 namespace kinematic_objectives {
   
   /**
-     Classically called "posture controller," this objective drives
-     the joint configuration to some goal_ based on PD control.
-     
-     \todo [medium] make the attributes protected or private.
-   */
+     Drives the joint configuration to some goal_ based on
+     proportional control.
+  */
   class JointPositionObjective
     : public Objective
   {
   public:
-    JointPositionObjective(string const & name);
+    JointPositionObjective(string const & name, double gain);
     
     virtual void init(KinematicModel const & model);
     virtual void update(KinematicModel const & model);
     virtual double computeResidualErrorMagnitude(Vector const & ee) const;
     
-    PDController ctrl_;
+  protected:
+    Vector goal_;
+    double gain_; // XXXX BTW the gain should be kept separately, e.g. in CompoundObjective
   };
-
+  
 }
 
 #endif // KINEMATIC_OBJECTIVES_JOINT_POSITION_OBJECTIVE_HPP

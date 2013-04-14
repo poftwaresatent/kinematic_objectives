@@ -40,10 +40,8 @@
 #include <kinematic_objectives/compound_objective.h>
 #include <kinematic_objectives/joint_limit_objective.h>
 #include <kinematic_objectives/obstacle_objective.h>
-#include <kinematic_objectives/link_position_objective.h>
 #include <kinematic_objectives/point_attraction_objective.h>
 #include <kinematic_objectives/point_repulsion_objective.h>
-#include <kinematic_objectives/joint_damping_objective.h>
 #include "planar_orientation_objective.h"
 #include "planar_robot.h"
 #include "planar_distance.h"
@@ -95,8 +93,6 @@ namespace kinematic_objectives {
       PointRepulsionObjective repulse_ellbow_;
       PointRepulsionObjective repulse_wrist_;
       PointRepulsionObjective repulse_ee_;
-    
-      JointDampingObjective joint_damping_;
     };
     
     
@@ -146,7 +142,7 @@ namespace kinematic_objectives {
       
       virtual void update();
 
-      LinkPositionObjective eeobjective_;
+      PointAttractionObjective attract_ee_;
       PointAttractionObjective attract_base_;
     };
     

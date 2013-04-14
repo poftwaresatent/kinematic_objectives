@@ -47,11 +47,9 @@ namespace kinematic_objectives {
     PlanarOrientationObjective::
     PlanarOrientationObjective(string const & name,
 			       size_t node,
-			       double kp,
-			       double kd)
+			       double gain)
       : Objective(name),
-	kp_(kp),
-	kd_(kd),
+	gain_(gain),
 	node_(node)
     {
     }
@@ -74,8 +72,7 @@ namespace kinematic_objectives {
       Vector const ex(model.getLinkFrame(node_).linear().block(0, 0, 3, 1));
       angle_ = atan2(ex[1], ex[0]);
       jacobian_ = model.getLinkJacobian(node_, Vector::Zero(3)).block(5, 0, 1, model.getJointPosition().size());
-      bias_[0] = kp_ * (goal_ - angle_);
-      bias_ -= kd_ * jacobian_ * model.getJointVelocity();
+      bias_[0] = gain_ * (goal_ - angle_);
     }
     
     

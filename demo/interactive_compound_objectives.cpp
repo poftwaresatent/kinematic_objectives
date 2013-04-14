@@ -60,12 +60,11 @@ namespace kinematic_objectives {
 	avoid_ellbow_  ("avoid_ellbow", distance_api_, 1, 0.0),
 	avoid_wrist_   ("avoid_wrist",  distance_api_, 2, 0.0),
 	avoid_ee_      ("avoid_ee",     distance_api_, 3, 0.0),
-	orient_ee_     ("orient_ee", 3, 100.0, 20.0),
-	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, 100.0, h_repulsor_.radius_),
-	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, 100.0, h_repulsor_.radius_),
-	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, 100.0, h_repulsor_.radius_),
-	repulse_ee_    ("repulse_ee",     3,   robot_.len_c_, 0.0, 0.0, 100.0, h_repulsor_.radius_),
-	joint_damping_ ("joint_damping", 10.0)
+	orient_ee_     ("orient_ee", 3, 1.0),
+	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, 1.0, h_repulsor_.radius_),
+	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, 1.0, h_repulsor_.radius_),
+	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, 1.0, h_repulsor_.radius_),
+	repulse_ee_    ("repulse_ee",     3,   robot_.len_c_, 0.0, 0.0, 1.0, h_repulsor_.radius_)
     {
       handles_.push_back(&h_ee_);
       handles_.push_back(&h_ee_ori_);
@@ -95,7 +94,6 @@ namespace kinematic_objectives {
       compound_objective_.soft_objectives_.push_back(&repulse_ellbow_);
       compound_objective_.soft_objectives_.push_back(&repulse_wrist_);
       compound_objective_.soft_objectives_.push_back(&repulse_ee_);
-      compound_objective_.soft_objectives_.push_back(&joint_damping_);
     }
   
   
@@ -258,14 +256,14 @@ namespace kinematic_objectives {
 	h1_ellbow_(0.2, 0.0, 0.8, 0.8, 0.5),
 	h2_ellbow_(0.2, 0.0, 0.4, 0.4, 0.5),
 	h2_base_  (0.2, 0.0, 0.6, 0.3, 0.5),
-	ee_left_     ("ee_left",      3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0),
-	ee_right_    ("ee_right",     3, robot_.len_c_, 0.0, 0.0, 500.0, -10.0),
-	wrist_left_  ("wrist_left",   2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0),
-	wrist_right_ ("wrist_right",  2, robot_.len_b_, 0.0, 0.0, 500.0, -10.0),
-	ellbow_left_ ("ellbow_left",  1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0),
-	ellbow_right_("ellbow_right", 1, robot_.len_a_, 0.0, 0.0, 500.0, -10.0),
-	base_left_   ("base_left",    0,           0.0, 0.0, 0.0, 500.0, -10.0),
-	base_right_  ("base_right",   0,           0.0, 0.0, 0.0, 500.0, -10.0)
+	ee_left_     ("ee_left",      3, robot_.len_c_, 0.0, 0.0, 1.0, -10.0),
+	ee_right_    ("ee_right",     3, robot_.len_c_, 0.0, 0.0, 1.0, -10.0),
+	wrist_left_  ("wrist_left",   2, robot_.len_b_, 0.0, 0.0, 1.0, -10.0),
+	wrist_right_ ("wrist_right",  2, robot_.len_b_, 0.0, 0.0, 1.0, -10.0),
+	ellbow_left_ ("ellbow_left",  1, robot_.len_a_, 0.0, 0.0, 1.0, -10.0),
+	ellbow_right_("ellbow_right", 1, robot_.len_a_, 0.0, 0.0, 1.0, -10.0),
+	base_left_   ("base_left",    0,           0.0, 0.0, 0.0, 1.0, -10.0),
+	base_right_  ("base_right",   0,           0.0, 0.0, 0.0, 1.0, -10.0)
     {
       handles_.push_back(&h2_ee_);
       handles_.push_back(&h1_wrist_);
@@ -363,10 +361,10 @@ namespace kinematic_objectives {
     EEGoalCompoundObjective::
     EEGoalCompoundObjective(PlanarRobot & robot)
       : InteractiveCompoundObjective(robot),
-	eeobjective_      ("end_effector", 3, robot_.len_c_, 0.0, 0.0, 100.0, 20.0),
-	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 100.0,  2.0)
+	attract_ee_       ("attract_ee",   3, robot_.len_c_, 0.0, 0.0, 1.0, -1.0),
+	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 1.0, -1.0)
     {
-      compound_objective_.hard_objectives_.push_back(&eeobjective_);
+      compound_objective_.hard_objectives_.push_back(&attract_ee_);
       compound_objective_.soft_objectives_.push_back(&attract_base_);
     }
     
@@ -380,8 +378,8 @@ namespace kinematic_objectives {
       // thin line for end effector objective
       cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
       cairo_set_line_width(cr, weight * 1.0 / pixelsize);
-      cairo_move_to(cr, eeobjective_.gpoint_[0], eeobjective_.gpoint_[1]);
-      cairo_line_to(cr, eeobjective_.ctrl_.goal_[0], eeobjective_.ctrl_.goal_[1]);
+      cairo_move_to(cr, attract_ee_.gpoint_[0], attract_ee_.gpoint_[1]);
+      cairo_line_to(cr, attract_ee_.attractor_[0], attract_ee_.attractor_[1]);
       cairo_stroke(cr);
       
       // base attraction
@@ -400,7 +398,7 @@ namespace kinematic_objectives {
     void EEGoalCompoundObjective::
     update()
     {
-      eeobjective_.ctrl_.goal_ = h_ee_.point_;
+      attract_ee_.attractor_ = h_ee_.point_;
       attract_base_.attractor_ = h_base_.point_;
       InteractiveCompoundObjective::update();
     }

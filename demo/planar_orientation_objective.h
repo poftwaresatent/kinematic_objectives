@@ -52,15 +52,13 @@ namespace kinematic_objectives {
     public:
       PlanarOrientationObjective(string const & name,
 				 size_t node,
-				 double kp,
-				 double kd);
+				 double gain);
       
       virtual void init(KinematicModel const & model);
       virtual void update(KinematicModel const & model);
       virtual double computeResidualErrorMagnitude(Vector const & ee) const;
       
-      double kp_;
-      double kd_;
+      double gain_;
       size_t node_;
       double angle_;
       double goal_;

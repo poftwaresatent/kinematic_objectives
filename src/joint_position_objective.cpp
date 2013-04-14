@@ -43,9 +43,9 @@ namespace kinematic_objectives {
   
   
   JointPositionObjective::
-  JointPositionObjective(string const & name)
+  JointPositionObjective(string const & name, double gain)
     : Objective(name),
-      ctrl_(25.0, 10.0)
+      gain_(gain)
   {
   }
   
@@ -53,16 +53,16 @@ namespace kinematic_objectives {
   void JointPositionObjective::
   init(KinematicModel const & model)
   {
-    ctrl_.goal_ = model.getJointPosition();
-    bias_ = Vector::Zero(ctrl_.goal_.size());
-    jacobian_ = Matrix::Identity(ctrl_.goal_.size(), ctrl_.goal_.size());
+    goal_ = model.getJointPosition();
+    bias_ = Vector::Zero(goal_.size());
+    jacobian_ = Matrix::Identity(goal_.size(), goal_.size());
   }
   
   
   void JointPositionObjective::
   update(KinematicModel const & model)
   {
-    bias_ = ctrl_.compute(model.getJointPosition(), model.getJointVelocity());
+    bias_ = gain_ * (goal_ - model.getJointPosition());
   }
   
   

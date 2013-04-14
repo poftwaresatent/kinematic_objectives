@@ -50,7 +50,7 @@ namespace kinematic_objectives {
     : public Blender
   {
   public:
-    ConstraintTeleportingBlender(double timestep, ostream * dbgos, string const & dbgpre);
+    ConstraintTeleportingBlender(double stepsize, ostream * dbgos, string const & dbgpre);
     
     /**
        \note This is still somewhat experimental. See
@@ -63,12 +63,6 @@ namespace kinematic_objectives {
        implementation is rather more convoluted than hoped.
     */
     virtual void update(KinematicModel & model, CompoundObjective * wpt);
-    
-    ostream * dbgos_;
-    string dbgpre_;
-    string dbgpre2_;
-    
-    double timestep_;
   };
   
 }

@@ -61,15 +61,7 @@ namespace kinematic_objectives {
     : public Blender
   {
   public:
-    double const timestep_;
-    double const constraint_displacement_weight_;
-    
-    explicit ConstraintBouncingBlender(double timestep,
-				       /** A value of 1e-2 seems to
-					   work reasonably, at least
-					   when timestep is also
-					   1e-2. */
-				       double constraint_displacement_weight);
+    explicit ConstraintBouncingBlender(double stepsize, ostream * dbgos, string const & dbgpre);
     
     virtual void update(KinematicModel & model, CompoundObjective * wpt);
   };
