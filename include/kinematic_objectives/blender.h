@@ -43,6 +43,7 @@
 
 namespace kinematic_objectives {
   
+  class Integrator;
   class KinematicModel;
   class CompoundObjective;
   
@@ -65,19 +66,16 @@ namespace kinematic_objectives {
   public:
     string const name_;
     
-    Blender(string const & name, double stepsize, ostream * dbgos, string const & dbgpre)
-      : name_(name), stepsize_(stepsize), dbgos_(dbgos), dbgpre_(dbgpre)  { }
+    Blender(string const & name, Integrator const * integrator);
     
-    virtual ~Blender()
-    { /* nop */ }
+    virtual ~Blender();
     
     virtual void update(KinematicModel & model, CompoundObjective * wpt) = 0;
     
-  protected:
-    double stepsize_;
     ostream * dbgos_;
     string dbgpre_;
     Prioritization prioritization_; // XXXX rfct
+    Integrator const * integrator_;
   };
   
 }

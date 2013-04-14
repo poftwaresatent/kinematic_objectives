@@ -34,38 +34,24 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP
-
 #include <kinematic_objectives/blender.h>
 
 
 namespace kinematic_objectives {
   
-  /**
-     A blender based on the "classical" approach [Siciliano:1991]
-     which handles unilateral constraints in a straightforward manner:
-     it computes their desired displacement, then updates the
-     kinematic model by weighting that displacement and projecting the
-     current velocities into the constraint nullspace. The effect is
-     that unlateral constraints do get switched on, by they typically
-     stay that way because the constraint nullspace keeps the
-     objectives from pulling the state away from the violation. Also,
-     it has a tendency to bounce off of constraints, due to (as far as
-     I can tell at this moment) a combination of linearization and
-     discretization errors inherent in the approach.  Thus it should
-     be clear that this blender is useful mostly for development and
-     testing.
-  */
-  class ConstraintBouncingBlender
-    : public Blender
+  
+  Blender::
+  Blender(string const & name, Integrator const * integrator)
+    : name_(name),
+      dbgos_(0),
+      integrator_(integrator)
   {
-  public:
-    explicit ConstraintBouncingBlender(Integrator const * integrator);
-    
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
-  };
+  }
+  
+  
+  Blender::
+  ~Blender()
+  {
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP

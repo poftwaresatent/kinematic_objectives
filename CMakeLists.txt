@@ -96,6 +96,8 @@ list (APPEND SRCS
   src/pseudo_inverse.cpp
   src/print.cpp
   src/achievability.cpp
+  src/integrator.cpp
+  src/blender.cpp
   )
 
 add_library (kinematic_objectives SHARED ${SRCS})

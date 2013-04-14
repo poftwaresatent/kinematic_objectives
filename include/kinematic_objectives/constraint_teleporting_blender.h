@@ -50,7 +50,7 @@ namespace kinematic_objectives {
     : public Blender
   {
   public:
-    ConstraintTeleportingBlender(double stepsize, ostream * dbgos, string const & dbgpre);
+    ConstraintTeleportingBlender(Integrator const * integrator);
     
     /**
        \note This is still somewhat experimental. See

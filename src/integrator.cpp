@@ -34,38 +34,45 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP
-
-#include <kinematic_objectives/blender.h>
-
+#include <kinematic_objectives/integrator.h>
 
 namespace kinematic_objectives {
   
-  /**
-     A blender based on the "classical" approach [Siciliano:1991]
-     which handles unilateral constraints in a straightforward manner:
-     it computes their desired displacement, then updates the
-     kinematic model by weighting that displacement and projecting the
-     current velocities into the constraint nullspace. The effect is
-     that unlateral constraints do get switched on, by they typically
-     stay that way because the constraint nullspace keeps the
-     objectives from pulling the state away from the violation. Also,
-     it has a tendency to bounce off of constraints, due to (as far as
-     I can tell at this moment) a combination of linearization and
-     discretization errors inherent in the approach.  Thus it should
-     be clear that this blender is useful mostly for development and
-     testing.
-  */
-  class ConstraintBouncingBlender
-    : public Blender
+  Integrator::
+  Integrator(double stepsize, Vector const & qd_max)
+    : stepsize_(stepsize),
+      qd_max_(qd_max)
   {
-  public:
-    explicit ConstraintBouncingBlender(Integrator const * integrator);
+  }
+  
+  
+  void Integrator::
+  compute(Vector const & bias,
+	  Vector const & q_in,
+	  Vector const & qd_in,
+	  Vector & q_out,
+	  Vector & qd_out) const
+  {
+    static double const kp(100.0);
+    static double const kd(20.0);
     
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
-  };
+    Vector qdd(kp * bias);
+    
+    double saturation(0.0);
+    for (Vector::Index ii(0); ii < qdd.size(); ++ii) {
+      double const si(fabs((qdd[ii] / qd_max_[ii]) / kd));
+      if (si > saturation) {
+	saturation = si;
+      }
+    }
+    if (saturation > 1.0) {
+      qdd /= saturation;
+    }
+    
+    qdd -= kd * qd_in;
+    
+    qd_out = qd_in + stepsize_ * qdd;
+    q_out = q_in + stepsize_ * qd_out;
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP

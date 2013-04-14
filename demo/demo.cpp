@@ -41,6 +41,7 @@
 #include <kinematic_objectives/constraint_teleporting_blender.h>
 #include <kinematic_objectives/constraint_bouncing_blender.h>
 #include <kinematic_objectives/achievability.h>
+#include <kinematic_objectives/integrator.h>
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -62,6 +63,7 @@ static gint gw_sx, gw_sy, gw_x0, gw_y0;
 static bool verbose(false);
 static int play(0);
 
+static Integrator * integrator(0);
 static PlanarRobot planar_robot;
 static InteractiveCompoundObjective * interactive_compound(0);
 static Blender * blender(0);
@@ -350,17 +352,28 @@ void parse_options(int argc, char ** argv)
     
   }
   
+  Vector qd_max(5);
+  qd_max << 1.0, 1.0, 45 * deg, 45 * deg, 45 * deg;
+  integrator = new Integrator(opt_stepsize, qd_max);
+  
   if ("teleporting" == opt_blender) {
-    blender = new ConstraintTeleportingBlender(opt_stepsize, verbose ? &cout : 0, "  ");
+    blender = new ConstraintTeleportingBlender(integrator);
   }
   else if ("unconstrained" == opt_blender) {
-    blender = new UnconstrainedBlender(opt_stepsize, verbose ? &cout : 0, "  ");
+    blender = new UnconstrainedBlender(integrator);
   }
   else if ("bouncing" == opt_blender) {
-    blender = new ConstraintBouncingBlender(opt_stepsize, verbose ? &cout : 0, "  ");
+    blender = new ConstraintBouncingBlender(integrator);
   }
   else {
     errx(EXIT_FAILURE, "invalid blender '%s' (have: teleporting, unconstrained, bouncing)", opt_blender.c_str());
+  }
+  
+  if (verbose) {
+    blender->dbgos_ = &cout;
+    blender->dbgpre_ = "  ";
+    blender->prioritization_.dbgos_ = &cout;
+    blender->prioritization_.dbgpre_ = "    ";
   }
   
   if ("eegoal" == opt_compound) {
@@ -380,6 +393,7 @@ void cleanup()
 {
   delete interactive_compound;
   delete blender;
+  delete integrator;
 }
 
 

@@ -34,38 +34,28 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP
+#ifndef KINEMATIC_OBJECTIVES_INTEGRATOR_HPP
+#define KINEMATIC_OBJECTIVES_INTEGRATOR_HPP
 
-#include <kinematic_objectives/blender.h>
-
+#include <kinematic_objectives/types.h>
 
 namespace kinematic_objectives {
   
-  /**
-     A blender based on the "classical" approach [Siciliano:1991]
-     which handles unilateral constraints in a straightforward manner:
-     it computes their desired displacement, then updates the
-     kinematic model by weighting that displacement and projecting the
-     current velocities into the constraint nullspace. The effect is
-     that unlateral constraints do get switched on, by they typically
-     stay that way because the constraint nullspace keeps the
-     objectives from pulling the state away from the violation. Also,
-     it has a tendency to bounce off of constraints, due to (as far as
-     I can tell at this moment) a combination of linearization and
-     discretization errors inherent in the approach.  Thus it should
-     be clear that this blender is useful mostly for development and
-     testing.
-  */
-  class ConstraintBouncingBlender
-    : public Blender
+  class Integrator
   {
   public:
-    explicit ConstraintBouncingBlender(Integrator const * integrator);
+    Integrator(double stepsize, Vector const & qd_max);
     
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
+    void compute(Vector const & bias,
+		 Vector const & q_in,
+		 Vector const & qd_in,
+		 Vector & q_out,
+		 Vector & qd_out) const;
+    
+    double stepsize_;
+    Vector qd_max_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_BOUNCING_BLENDER_HPP
+#endif // KINEMATIC_OBJECTIVES_INTEGRATOR_HPP

@@ -52,7 +52,7 @@ namespace kinematic_objectives {
     : public Blender
   {
   public:
-    explicit UnconstrainedBlender(double stepsize, ostream * dbgos, string const & dbgpre);
+    explicit UnconstrainedBlender(Integrator const * integrator);
     
     virtual void update(KinematicModel & model, CompoundObjective * wpt);
   };

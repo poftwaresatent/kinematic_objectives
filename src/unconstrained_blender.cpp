@@ -41,14 +41,15 @@
 #include <kinematic_objectives/pseudo_inverse.h>
 #include <kinematic_objectives/print.h>
 #include <kinematic_objectives/objective.h>
+#include <kinematic_objectives/integrator.h>
 
 
 namespace kinematic_objectives {
   
   
   UnconstrainedBlender::
-  UnconstrainedBlender(double stepsize, ostream * dbgos, string const & dbgpre)
-    : Blender("UnconstrainedBlender", stepsize, dbgos, dbgpre)
+  UnconstrainedBlender(Integrator const * integrator)
+    : Blender("UnconstrainedBlender", integrator)
   {
   }
   
@@ -64,29 +65,33 @@ namespace kinematic_objectives {
     }
     
     ssize_t const ndof(model.getJointPosition().size());
-    Vector & qd_t(wpt->fb_.hard_objective_bias_);
-    Matrix & N_t(wpt->fb_.hard_objective_nullspace_projector_);
+    Vector & bias_hard(wpt->fb_.hard_objective_bias_);
+    Matrix & N_hard(wpt->fb_.hard_objective_nullspace_projector_);
     prioritization_.projectObjectives(Matrix::Identity(ndof, ndof),
 				      Vector::Zero(ndof),
 				      wpt->hard_objectives_,
-				      qd_t,
-				      N_t);
+				      bias_hard,
+				      N_hard);
     
-    Vector & qd_o(wpt->fb_.soft_objective_bias_);
-    qd_o = Vector::Zero(model.getJointPosition().size());
+    Vector & bias_soft(wpt->fb_.soft_objective_bias_);
+    bias_soft = Vector::Zero(model.getJointPosition().size());
     for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
       if (wpt->soft_objectives_[ii]->isActive()) {
 	Matrix Jinv;
 	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->getJacobian(), Jinv);
-	qd_o += Jinv * wpt->soft_objectives_[ii]->getBias();
+	bias_soft += Jinv * wpt->soft_objectives_[ii]->getBias();
       }
     }
-    qd_o = N_t * qd_o;
+    bias_soft = N_hard * bias_soft;
     
-    Vector qd_res(qd_t + qd_o);
-    Vector q_res(model.getJointPosition() + stepsize_ * qd_res);
+    Vector q_next, qd_next;
+    integrator_->compute(bias_hard + bias_soft,
+			 model.getJointPosition(),
+			 model.getJointVelocity(),
+			 q_next,
+			 qd_next);
     
-    model.update(q_res, qd_res);
+    model.update(q_next, qd_next);
     
     wpt->fb_.constraint_bias_.resize(0);
     wpt->fb_.constraint_nullspace_projector_.resize(0, 0);
