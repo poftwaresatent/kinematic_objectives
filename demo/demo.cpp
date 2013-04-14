@@ -37,6 +37,7 @@
 #include "interactive_compounds.h"
 #include <kinematic_objectives/util.h>
 #include <kinematic_objectives/print.h>
+#include <kinematic_objectives/task_blender.h>
 #include <kinematic_objectives/unconstrained_blender.h>
 #include <kinematic_objectives/constraint_teleporting_blender.h>
 #include <kinematic_objectives/constraint_bouncing_blender.h>
@@ -365,8 +366,11 @@ void parse_options(int argc, char ** argv)
   else if ("bouncing" == opt_blender) {
     blender = new ConstraintBouncingBlender(integrator);
   }
+  else if ("task" == opt_blender) {
+    blender = new TaskBlender(integrator);
+  }
   else {
-    errx(EXIT_FAILURE, "invalid blender '%s' (have: teleporting, unconstrained, bouncing)", opt_blender.c_str());
+    errx(EXIT_FAILURE, "invalid blender '%s' (have: teleporting, unconstrained, bouncing, task)", opt_blender.c_str());
   }
   
   if (verbose) {

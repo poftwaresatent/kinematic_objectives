@@ -87,6 +87,7 @@ list (APPEND SRCS
   src/constraint_teleporting_blender.cpp
   src/unconstrained_blender.cpp
   src/constraint_bouncing_blender.cpp
+  src/task_blender.cpp
   src/prioritization.cpp
   src/joint_limit_objective.cpp
   src/obstacle_objective.cpp
