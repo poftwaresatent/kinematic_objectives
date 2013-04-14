@@ -53,6 +53,102 @@ namespace kinematic_objectives {
     }
     
     
+    TestOne::
+    TestOne(PlanarRobot & robot)
+      : InteractiveCompound(robot),
+	h_ee_        (0.2, 0.0, 1.0, 0.0, 0.5),
+	h_ee_ori_    (0.1, 0.0, 1.0, 0.0, 0.3),
+	h_base_      (0.2, 0.0, 1.0, 0.5, 0.5),
+	orient_ee_   ("orient_ee",    3),
+	attract_ee_  ("attract_ee",   3, robot_.len_c_, 0.0, 0.0, -1.0),
+	attract_base_("attract_base", 0,           0.0, 0.0, 0.0, -1.0)
+    {
+      handles_.push_back(&h_ee_);
+      handles_.push_back(&h_ee_ori_);
+      handles_.push_back(&h_base_);
+      
+      compound_objective_.hard_objectives_.push_back(&orient_ee_);
+      compound_objective_.hard_objectives_.push_back(&attract_ee_);
+      compound_objective_.hard_objectives_.push_back(&attract_base_);
+    }
+    
+    
+    void TestOne::
+    init(double gui_dimx, double gui_dimy)
+    {
+      h_ee_.point_     << gui_dimx / 2.0 - 1.0, gui_dimy / 2.0      ,     0.0;
+      h_ee_ori_.point_ << gui_dimx / 2.0 + 1.0, gui_dimy / 2.0 + 1.0,     0.0;
+      h_base_.point_   << gui_dimx / 2.0      ,                  1.0,     0.0;
+      
+      Vector posture(5);
+      posture <<
+	gui_dimx / 2.0,
+	gui_dimy / 2.0,
+	80.0 * deg,
+	- 40.0 * deg,
+	25.0 * deg;
+      robot_.update(posture, Vector::Zero(posture.size()));
+      compound_objective_.init(robot_);
+    }
+    
+    
+    void TestOne::
+    draw(cairo_t * cr, double weight, double pixelsize) const
+    {
+      cairo_save(cr);
+      
+      // handles
+      
+      for (size_t ii(0); ii < handles_.size(); ++ii) {
+	handles_[ii]->draw(cr, weight, pixelsize);
+      }
+      
+      cairo_set_source_rgba(cr, 0.0, 1.0, 0.0, 0.5);
+      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
+      cairo_move_to(cr, h_ee_.point_[0], h_ee_.point_[1]);
+      cairo_line_to(cr, h_ee_ori_.point_[0], h_ee_ori_.point_[1]);
+      cairo_stroke(cr);
+      
+      // orientation objective
+    
+      cairo_set_source_rgba(cr, 0.0, 1.0, 0.5, 0.3);
+      cairo_set_line_width(cr, weight * 6.0 / pixelsize);
+      static double const len(0.5);
+      double const dx(len * cos(orient_ee_.goal_));
+      double const dy(len * sin(orient_ee_.goal_));
+      cairo_move_to(cr, robot_.pos_b_[0], robot_.pos_b_[1]);
+      cairo_line_to(cr, robot_.pos_b_[0] + dx, robot_.pos_b_[1] + dy);
+      cairo_stroke(cr);
+      
+      // thin line for end effector objective
+      cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
+      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
+      cairo_move_to(cr, attract_ee_.gpoint_[0], attract_ee_.gpoint_[1]);
+      cairo_line_to(cr, attract_ee_.attractor_[0], attract_ee_.attractor_[1]);
+      cairo_stroke(cr);
+      
+      // base attraction
+      cairo_set_source_rgb(cr, 0.4, 1.0, 0.4);
+      cairo_set_line_width(cr, weight * 1.0 / pixelsize);
+      cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
+      cairo_line_to(cr,
+		    attract_base_.gpoint_[0] + attract_base_.getBias()[0],
+		    attract_base_.gpoint_[1] + attract_base_.getBias()[1]);
+      cairo_stroke(cr);
+      
+      cairo_restore(cr);
+    }
+    
+    
+    void TestOne::
+    update()
+    {
+      orient_ee_.goal_ = atan2(h_ee_ori_.point_[1] - h_ee_.point_[1], h_ee_ori_.point_[0] - h_ee_.point_[0]);
+      attract_ee_.attractor_ = h_ee_.point_;
+      attract_base_.attractor_ = h_base_.point_;
+    }
+    
+    
     FirstInteractiveCompound::
     FirstInteractiveCompound(PlanarRobot & robot)
       : InteractiveCompound(robot),
@@ -67,7 +163,7 @@ namespace kinematic_objectives {
 	avoid_ellbow_  ("avoid_ellbow", distance_api_, 1, 0.0),
 	avoid_wrist_   ("avoid_wrist",  distance_api_, 2, 0.0),
 	avoid_ee_      ("avoid_ee",     distance_api_, 3, 0.0),
-	orient_ee_     ("orient_ee", 3, 1.0),
+	orient_ee_     ("orient_ee", 3),
 	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, h_repulsor_.radius_),
 	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, h_repulsor_.radius_),
 	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, h_repulsor_.radius_),

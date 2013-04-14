@@ -72,6 +72,28 @@ namespace kinematic_objectives {
     };
     
     
+    class TestOne
+      : public InteractiveCompound
+    {
+    public:
+      explicit TestOne(PlanarRobot & robot);
+
+      virtual void init(double gui_dimx, double gui_dimy);
+
+      virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
+
+      virtual void update();
+      
+      InteractionHandle h_ee_;
+      InteractionHandle h_ee_ori_;
+      InteractionHandle h_base_;
+
+      PlanarOrientationObjective orient_ee_;
+      PointAttractionObjective attract_ee_;
+      PointAttractionObjective attract_base_;
+    };
+    
+    
     class FirstInteractiveCompound
       : public InteractiveCompound
     {

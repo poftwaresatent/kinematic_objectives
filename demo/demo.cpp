@@ -386,8 +386,11 @@ void parse_options(int argc, char ** argv)
   else if ("elastic" == opt_compound) {
     interactive_compound = new ElasticLinksCompound(planar_robot);
   }
+  else if ("t1" == opt_compound) {
+    interactive_compound = new TestOne(planar_robot);
+  }
   else {
-    errx(EXIT_FAILURE, "invalid compound '%s' (use 'eegoal' or 'elastic')", opt_compound.c_str());
+    errx(EXIT_FAILURE, "invalid compound '%s' (have: eegoal, elastic, t1)", opt_compound.c_str());
   }
   interactive_compound->init(dimx, dimy);
 }
