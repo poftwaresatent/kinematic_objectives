@@ -53,14 +53,30 @@ namespace kinematic_objectives {
   namespace demo {
     
     
-    /**
-       \todo [low] attributes should be protected or private
-    */
     class InteractiveCompound
       : public CairoDrawable
     {
     public:
       explicit InteractiveCompound(PlanarRobot & robot);
+    
+      virtual void init(double gui_dimx, double gui_dimy) = 0;
+      
+      virtual void draw(cairo_t * cr, double weight, double pixelsize) const = 0;
+      
+      virtual void update() = 0;
+      
+      vector<InteractionHandle*> handles_;
+      
+      PlanarRobot & robot_;
+      CompoundObjective compound_objective_;
+    };
+    
+    
+    class FirstInteractiveCompound
+      : public InteractiveCompound
+    {
+    public:
+      explicit FirstInteractiveCompound(PlanarRobot & robot);
     
       virtual void init(double gui_dimx, double gui_dimy);
       
@@ -74,11 +90,7 @@ namespace kinematic_objectives {
       InteractionHandle h_repulsor_;
       InteractionHandle h_obstacle_;
       
-      vector<InteractionHandle*> handles_;
-      
-      PlanarRobot & robot_;
       PlanarDistance distance_api_;
-      CompoundObjective compound_objective_;
       
       JointLimitObjective joint_limits_;
     
@@ -100,7 +112,7 @@ namespace kinematic_objectives {
        \todo [low] attributes should be protected or private
     */
     class ElasticLinksCompound
-      : public InteractiveCompound
+      : public FirstInteractiveCompound
     {
     public:
       explicit ElasticLinksCompound(PlanarRobot & robot);
@@ -133,7 +145,7 @@ namespace kinematic_objectives {
        \todo [low] attributes should be protected or private
     */
     class EEGoalCompound
-      : public InteractiveCompound
+      : public FirstInteractiveCompound
     {
     public:
       explicit EEGoalCompound(PlanarRobot & robot);
