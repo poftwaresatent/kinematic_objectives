@@ -34,40 +34,34 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
+#ifndef KINEMATIC_OBJECTIVES_PD_INTEGRATOR_HPP
+#define KINEMATIC_OBJECTIVES_PD_INTEGRATOR_HPP
 
-#include <kinematic_objectives/blender.h>
-
+#include <kinematic_objectives/integrator.h>
 
 namespace kinematic_objectives {
   
   /**
-     An experimental (but working) implementation of the Blender
-     interface.
-  */  
-  class ConstraintTeleportingBlender
-    : public Blender
+     Interprets all biases as error signals for a PD controller that
+     produces accelerations, then integrates twice to compute the
+     resulting velocities and positions.
+  */
+  class PDIntegrator
+    : public Integrator
   {
   public:
-    ConstraintTeleportingBlender(Integrator const * integrator, double integrator_stepsize);
+    PDIntegrator(double stepsize, Vector const & qd_max);
     
-    /**
-       \note This is still somewhat experimental. See
-       comments in the implementation. Inspired by a combination of
-       Chiaverini:1997 and Baerlocher:2001 with the aim of achieving
-       proper decoupling between priority levels while also switching
-       unilateral constraints (e.g. joint limits and obstacle
-       avoidance) on and off based on the current joint positions and
-       velocities. The latter is an important feature, but the
-       implementation is rather more convoluted than hoped.
-    */
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
+    virtual void compute(Vector const & bias,
+			 Vector const & q_in,
+			 Vector const & qd_in,
+			 Vector & q_out,
+			 Vector & qd_out) const;
     
-  protected:
-    double integrator_stepsize_;
+    double stepsize_;
+    Vector qd_max_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
+#endif // KINEMATIC_OBJECTIVES_PD_INTEGRATOR_HPP

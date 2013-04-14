@@ -42,7 +42,8 @@
 #include <kinematic_objectives/constraint_teleporting_blender.h>
 #include <kinematic_objectives/constraint_bouncing_blender.h>
 #include <kinematic_objectives/achievability.h>
-#include <kinematic_objectives/integrator.h>
+#include <kinematic_objectives/pd_integrator.h>
+#include <kinematic_objectives/e2_integrator.h>
 #include <gtk/gtk.h>
 #include <cmath>
 #include <iostream>
@@ -301,6 +302,7 @@ void parse_options(int argc, char ** argv)
   string opt_blender("teleporting");
   string opt_compound("eegoal");
   double opt_stepsize(0.01);
+  string opt_integrator("pd");
   
   for (int iopt(1); iopt < argc; ++iopt) {
     
@@ -314,9 +316,8 @@ void parse_options(int argc, char ** argv)
 	     "  -c  compound   name of the objectives compound to run (default '%s')\n"
 	     "                 specify an invalid name to obtain a list\n"
 	     "  -s  fraction   blender integration stepsize (default %3g)\n"
-	     // "  -x  dimx              x-dimension of the world, in meters (default 10)\n"
-	     // "  -y  dimy              y-dimension of the world, in meters (default 8)\n"
-	     , opt_blender.c_str(), opt_compound.c_str(), opt_stepsize);
+	     "  -i  integrator integrator type (default %s)\n"
+	     , opt_blender.c_str(), opt_compound.c_str(), opt_stepsize, opt_integrator.c_str());
       exit(EXIT_SUCCESS);
     }
     
@@ -347,18 +348,33 @@ void parse_options(int argc, char ** argv)
       }
     }
     
+    else if (0 == strcmp("-i", argv[iopt])) {
+      if (++iopt >= argc) {
+	errx(EXIT_FAILURE, "%s requires an argument (use -h for help)", argv[iopt-1]);
+      }
+      opt_integrator = argv[iopt];
+    }
+    
     else {
       errx(EXIT_FAILURE, "invalid option %s (use -h for help)", argv[iopt]);
     }
     
   }
   
-  Vector qd_max(5);
-  qd_max << 1.0, 1.0, 45 * deg, 45 * deg, 45 * deg;
-  integrator = new Integrator(opt_stepsize, 1e9 * qd_max);
+  if ("pd" == opt_integrator) {
+    Vector qd_max(5);
+    qd_max << 1.0, 1.0, 45 * deg, 45 * deg, 45 * deg;
+    integrator = new PDIntegrator(opt_stepsize, 1e9 * qd_max);
+  }
+  else if ("e2" == opt_integrator) {
+    integrator = new E2Integrator(opt_stepsize);
+  }
+  else {
+    errx(EXIT_FAILURE, "invalid integrator '%s' (have: pd, e2)", opt_integrator.c_str());
+  }
   
   if ("teleporting" == opt_blender) {
-    blender = new ConstraintTeleportingBlender(integrator);
+    blender = new ConstraintTeleportingBlender(integrator, opt_stepsize);
   }
   else if ("unconstrained" == opt_blender) {
     blender = new UnconstrainedBlender(integrator);

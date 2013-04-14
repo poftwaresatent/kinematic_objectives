@@ -48,8 +48,9 @@ namespace kinematic_objectives {
   
   
   ConstraintTeleportingBlender::
-  ConstraintTeleportingBlender(Integrator const * integrator)
-    : Blender("ConstraintTeleportingBlender", integrator)
+  ConstraintTeleportingBlender(Integrator const * integrator, double integrator_stepsize)
+    : Blender("ConstraintTeleportingBlender", integrator),
+      integrator_stepsize_(integrator_stepsize)
   {
   }
   
@@ -158,7 +159,7 @@ namespace kinematic_objectives {
     // to add it.
     //
     model.update(q_next + bias_cstr,
-		 N_cstr * (q_next - oldpos) / integrator_->stepsize_);
+		 N_cstr * (q_next - oldpos) / integrator_stepsize_);
     
     if (dbgos_) {
       print(bias_cstr, *dbgos_, "constraint bias", dbgpre_ + "  ");

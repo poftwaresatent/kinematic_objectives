@@ -34,40 +34,46 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-
-#include <kinematic_objectives/blender.h>
-
+#include <kinematic_objectives/pd_integrator.h>
 
 namespace kinematic_objectives {
   
-  /**
-     An experimental (but working) implementation of the Blender
-     interface.
-  */  
-  class ConstraintTeleportingBlender
-    : public Blender
+  
+  PDIntegrator::
+  PDIntegrator(double stepsize, Vector const & qd_max)
+    : stepsize_(stepsize),
+      qd_max_(qd_max)
   {
-  public:
-    ConstraintTeleportingBlender(Integrator const * integrator, double integrator_stepsize);
+  }
+  
+  
+  void PDIntegrator::
+  compute(Vector const & bias,
+	  Vector const & q_in,
+	  Vector const & qd_in,
+	  Vector & q_out,
+	  Vector & qd_out) const
+  {
+    static double const kp(100.0);
+    static double const kd(20.0);
     
-    /**
-       \note This is still somewhat experimental. See
-       comments in the implementation. Inspired by a combination of
-       Chiaverini:1997 and Baerlocher:2001 with the aim of achieving
-       proper decoupling between priority levels while also switching
-       unilateral constraints (e.g. joint limits and obstacle
-       avoidance) on and off based on the current joint positions and
-       velocities. The latter is an important feature, but the
-       implementation is rather more convoluted than hoped.
-    */
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
+    Vector qdd(kp * bias);
     
-  protected:
-    double integrator_stepsize_;
-  };
+    double saturation(0.0);
+    for (Vector::Index ii(0); ii < qdd.size(); ++ii) {
+      double const si(fabs((qdd[ii] / qd_max_[ii]) / kd));
+      if (si > saturation) {
+	saturation = si;
+      }
+    }
+    if (saturation > 1.0) {
+      qdd /= saturation;
+    }
+    
+    qdd -= kd * qd_in;
+    
+    qd_out = qd_in + stepsize_ * qdd;
+    q_out = q_in + stepsize_ * qd_out;
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP

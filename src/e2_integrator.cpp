@@ -34,40 +34,27 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-
-#include <kinematic_objectives/blender.h>
-
+#include <kinematic_objectives/e2_integrator.h>
 
 namespace kinematic_objectives {
   
-  /**
-     An experimental (but working) implementation of the Blender
-     interface.
-  */  
-  class ConstraintTeleportingBlender
-    : public Blender
+  
+  E2Integrator::
+  E2Integrator(double stepsize)
+    : stepsize_(stepsize)
   {
-  public:
-    ConstraintTeleportingBlender(Integrator const * integrator, double integrator_stepsize);
-    
-    /**
-       \note This is still somewhat experimental. See
-       comments in the implementation. Inspired by a combination of
-       Chiaverini:1997 and Baerlocher:2001 with the aim of achieving
-       proper decoupling between priority levels while also switching
-       unilateral constraints (e.g. joint limits and obstacle
-       avoidance) on and off based on the current joint positions and
-       velocities. The latter is an important feature, but the
-       implementation is rather more convoluted than hoped.
-    */
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
-    
-  protected:
-    double integrator_stepsize_;
-  };
+  }
+  
+  
+  void E2Integrator::
+  compute(Vector const & bias,
+	  Vector const & q_in,
+	  Vector const & qd_in,
+	  Vector & q_out,
+	  Vector & qd_out) const
+  {
+    qd_out = qd_in + stepsize_ * bias;
+    q_out = q_in + stepsize_ * qd_out;
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP

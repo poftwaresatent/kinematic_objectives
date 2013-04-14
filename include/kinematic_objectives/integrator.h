@@ -44,16 +44,13 @@ namespace kinematic_objectives {
   class Integrator
   {
   public:
-    Integrator(double stepsize, Vector const & qd_max);
+    virtual ~Integrator();
     
-    void compute(Vector const & bias,
-		 Vector const & q_in,
-		 Vector const & qd_in,
-		 Vector & q_out,
-		 Vector & qd_out) const;
-    
-    double stepsize_;
-    Vector qd_max_;
+    virtual void compute(Vector const & bias,
+			 Vector const & q_in,
+			 Vector const & qd_in,
+			 Vector & q_out,
+			 Vector & qd_out) const = 0;
   };
   
 }

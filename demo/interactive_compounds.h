@@ -42,6 +42,7 @@
 #include <kinematic_objectives/obstacle_objective.h>
 #include <kinematic_objectives/point_attraction_objective.h>
 #include <kinematic_objectives/point_repulsion_objective.h>
+#include <kinematic_objectives/pd_objective.h>
 #include "planar_orientation_objective.h"
 #include "planar_robot.h"
 #include "planar_distance.h"
@@ -87,10 +88,14 @@ namespace kinematic_objectives {
       InteractionHandle h_ee_;
       InteractionHandle h_ee_ori_;
       InteractionHandle h_base_;
-
+      
       PlanarOrientationObjective orient_ee_;
       PointAttractionObjective attract_ee_;
       PointAttractionObjective attract_base_;
+      
+      PDObjective pd_orient_ee_;
+      PDObjective pd_attract_ee_;
+      PDObjective pd_attract_base_;
     };
     
     

@@ -34,40 +34,35 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
+#ifndef KINEMATIC_OBJECTIVES_PD_OBJECTIVE_HPP
+#define KINEMATIC_OBJECTIVES_PD_OBJECTIVE_HPP
 
-#include <kinematic_objectives/blender.h>
-
+#include <kinematic_objectives/objective.h>
 
 namespace kinematic_objectives {
   
-  /**
-     An experimental (but working) implementation of the Blender
-     interface.
-  */  
-  class ConstraintTeleportingBlender
-    : public Blender
+  class PDObjective
+    : public Objective
   {
   public:
-    ConstraintTeleportingBlender(Integrator const * integrator, double integrator_stepsize);
+    PDObjective(string const & name, Objective * src, bool own_src, double kp, double kd);
     
-    /**
-       \note This is still somewhat experimental. See
-       comments in the implementation. Inspired by a combination of
-       Chiaverini:1997 and Baerlocher:2001 with the aim of achieving
-       proper decoupling between priority levels while also switching
-       unilateral constraints (e.g. joint limits and obstacle
-       avoidance) on and off based on the current joint positions and
-       velocities. The latter is an important feature, but the
-       implementation is rather more convoluted than hoped.
-    */
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
+    virtual ~PDObjective();
+    
+    virtual void init(KinematicModel const & model);
+
+    virtual bool isActive() const;
+    
+    virtual void update(KinematicModel const & model);
+    
+    virtual double computeResidualErrorMagnitude(Vector const & ee) const;
     
   protected:
-    double integrator_stepsize_;
+    Objective * src_;
+    bool own_src_;
+    double kp_, kd_;
   };
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
+#endif // KINEMATIC_OBJECTIVES_PD_OBJECTIVE_HPP

@@ -59,17 +59,20 @@ namespace kinematic_objectives {
 	h_ee_        (0.2, 0.0, 1.0, 0.0, 0.5),
 	h_ee_ori_    (0.1, 0.0, 1.0, 0.0, 0.3),
 	h_base_      (0.2, 0.0, 1.0, 0.5, 0.5),
-	orient_ee_   ("orient_ee",    3),
-	attract_ee_  ("attract_ee",   3, robot_.len_c_, 0.0, 0.0, -1.0),
-	attract_base_("attract_base", 0,           0.0, 0.0, 0.0, -1.0)
+	orient_ee_      ("orient_ee",    3),
+	attract_ee_     ("attract_ee",   3, robot_.len_c_, 0.0, 0.0, -1.0),
+	attract_base_   ("attract_base", 0,           0.0, 0.0, 0.0, -1.0),
+	pd_orient_ee_   ("pd_orient_ee",    &orient_ee_,    false, 100.0, 20.0),
+	pd_attract_ee_  ("pd_attract_ee",   &attract_ee_,   false, 100.0, 20.0),
+	pd_attract_base_("pd_attract_base", &attract_base_, false, 100.0, 20.0)
     {
       handles_.push_back(&h_ee_);
       handles_.push_back(&h_ee_ori_);
       handles_.push_back(&h_base_);
       
-      compound_objective_.hard_objectives_.push_back(&orient_ee_);
-      compound_objective_.hard_objectives_.push_back(&attract_ee_);
-      compound_objective_.hard_objectives_.push_back(&attract_base_);
+      compound_objective_.hard_objectives_.push_back(&pd_orient_ee_);
+      compound_objective_.hard_objectives_.push_back(&pd_attract_ee_);
+      compound_objective_.hard_objectives_.push_back(&pd_attract_base_);
     }
     
     

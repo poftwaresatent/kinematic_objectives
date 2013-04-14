@@ -83,6 +83,7 @@ endif (HAVE_EIGEN3)
 list (APPEND SRCS
   src/util.cpp
   src/objective.cpp
+  src/pd_objective.cpp
   src/compound_objective.cpp
   src/constraint_teleporting_blender.cpp
   src/unconstrained_blender.cpp
@@ -98,6 +99,8 @@ list (APPEND SRCS
   src/print.cpp
   src/achievability.cpp
   src/integrator.cpp
+  src/e2_integrator.cpp
+  src/pd_integrator.cpp
   src/blender.cpp
   )
 

@@ -34,40 +34,61 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-#define KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP
-
-#include <kinematic_objectives/blender.h>
-
+#include <kinematic_objectives/pd_objective.h>
+#include <kinematic_objectives/kinematic_model.h>
 
 namespace kinematic_objectives {
   
-  /**
-     An experimental (but working) implementation of the Blender
-     interface.
-  */  
-  class ConstraintTeleportingBlender
-    : public Blender
+  
+  PDObjective::
+  PDObjective(string const & name, Objective * src, bool own_src, double kp, double kd)
+    : Objective(name),
+      src_(src),
+      own_src_(own_src),
+      kp_(kp),
+      kd_(kd)
   {
-  public:
-    ConstraintTeleportingBlender(Integrator const * integrator, double integrator_stepsize);
-    
-    /**
-       \note This is still somewhat experimental. See
-       comments in the implementation. Inspired by a combination of
-       Chiaverini:1997 and Baerlocher:2001 with the aim of achieving
-       proper decoupling between priority levels while also switching
-       unilateral constraints (e.g. joint limits and obstacle
-       avoidance) on and off based on the current joint positions and
-       velocities. The latter is an important feature, but the
-       implementation is rather more convoluted than hoped.
-    */
-    virtual void update(KinematicModel & model, CompoundObjective * wpt);
-    
-  protected:
-    double integrator_stepsize_;
-  };
+  }
+  
+  
+  PDObjective::
+  ~PDObjective()
+  {
+    if (own_src_) {
+      delete src_;
+    }
+  }
+  
+  
+  void PDObjective::
+  init(KinematicModel const & model)
+  {
+    src_->init(model);
+  }
+  
+  
+  bool PDObjective::
+  isActive() const
+  {
+    return src_->isActive();
+  }
+  
+  
+  void PDObjective::
+  update(KinematicModel const & model)
+  {
+    src_->update(model);
+    jacobian_ = src_->getJacobian();
+    if (src_->isActive()) {
+      bias_ = kp_ * src_->getBias() - kd_ * jacobian_ * model.getJointVelocity();
+    }
+  }
+  
+  
+  double PDObjective::
+  computeResidualErrorMagnitude(Vector const & ee) const
+  {
+    return src_->computeResidualErrorMagnitude(ee);
+  }
   
 }
-
-#endif // KINEMATIC_OBJECTIVES_CONSTRAINT_TELEPORTING_BLENDER_HPP

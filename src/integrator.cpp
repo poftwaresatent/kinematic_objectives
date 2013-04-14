@@ -39,40 +39,8 @@
 namespace kinematic_objectives {
   
   Integrator::
-  Integrator(double stepsize, Vector const & qd_max)
-    : stepsize_(stepsize),
-      qd_max_(qd_max)
+  ~Integrator()
   {
-  }
-  
-  
-  void Integrator::
-  compute(Vector const & bias,
-	  Vector const & q_in,
-	  Vector const & qd_in,
-	  Vector & q_out,
-	  Vector & qd_out) const
-  {
-    static double const kp(100.0);
-    static double const kd(20.0);
-    
-    Vector qdd(kp * bias);
-    
-    double saturation(0.0);
-    for (Vector::Index ii(0); ii < qdd.size(); ++ii) {
-      double const si(fabs((qdd[ii] / qd_max_[ii]) / kd));
-      if (si > saturation) {
-	saturation = si;
-      }
-    }
-    if (saturation > 1.0) {
-      qdd /= saturation;
-    }
-    
-    qdd -= kd * qd_in;
-    
-    qd_out = qd_in + stepsize_ * qdd;
-    q_out = q_in + stepsize_ * qd_out;
   }
   
 }
