@@ -61,10 +61,10 @@ namespace kinematic_objectives {
 	avoid_wrist_   ("avoid_wrist",  distance_api_, 2, 0.0),
 	avoid_ee_      ("avoid_ee",     distance_api_, 3, 0.0),
 	orient_ee_     ("orient_ee", 3, 1.0),
-	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, 1.0, h_repulsor_.radius_),
-	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, 1.0, h_repulsor_.radius_),
-	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, 1.0, h_repulsor_.radius_),
-	repulse_ee_    ("repulse_ee",     3,   robot_.len_c_, 0.0, 0.0, 1.0, h_repulsor_.radius_)
+	repulse_base_  ("repulse_base",   0,             0.0, 0.0, 0.0, h_repulsor_.radius_),
+	repulse_ellbow_("repulse_ellbow", 1,   robot_.len_a_, 0.0, 0.0, h_repulsor_.radius_),
+	repulse_wrist_ ("repulse_wrist",  2,   robot_.len_b_, 0.0, 0.0, h_repulsor_.radius_),
+	repulse_ee_    ("repulse_ee",     3,   robot_.len_c_, 0.0, 0.0, h_repulsor_.radius_)
     {
       handles_.push_back(&h_ee_);
       handles_.push_back(&h_ee_ori_);
@@ -205,29 +205,29 @@ namespace kinematic_objectives {
       if (repulse_base_.isActive()) {
 	cairo_move_to(cr, repulse_base_.gpoint_[0], repulse_base_.gpoint_[1]);
 	cairo_line_to(cr,
-		      repulse_base_.gpoint_[0] + repulse_base_.getBias()[0] / repulse_base_.gain_,
-		      repulse_base_.gpoint_[1] + repulse_base_.getBias()[1] / repulse_base_.gain_);
+		      repulse_base_.gpoint_[0] + repulse_base_.getBias()[0],
+		      repulse_base_.gpoint_[1] + repulse_base_.getBias()[1]);
 	cairo_stroke(cr);
       }
       if (repulse_ellbow_.isActive()) {
 	cairo_move_to(cr, repulse_ellbow_.gpoint_[0], repulse_ellbow_.gpoint_[1]);
 	cairo_line_to(cr,
-		      repulse_ellbow_.gpoint_[0] + repulse_ellbow_.getBias()[0] / repulse_ellbow_.gain_,
-		      repulse_ellbow_.gpoint_[1] + repulse_ellbow_.getBias()[1] / repulse_ellbow_.gain_);
+		      repulse_ellbow_.gpoint_[0] + repulse_ellbow_.getBias()[0],
+		      repulse_ellbow_.gpoint_[1] + repulse_ellbow_.getBias()[1]);
 	cairo_stroke(cr);
       }
       if (repulse_wrist_.isActive()) {
 	cairo_move_to(cr, repulse_wrist_.gpoint_[0], repulse_wrist_.gpoint_[1]);
 	cairo_line_to(cr,
-		      repulse_wrist_.gpoint_[0] + repulse_wrist_.getBias()[0] / repulse_wrist_.gain_,
-		      repulse_wrist_.gpoint_[1] + repulse_wrist_.getBias()[1] / repulse_wrist_.gain_);
+		      repulse_wrist_.gpoint_[0] + repulse_wrist_.getBias()[0],
+		      repulse_wrist_.gpoint_[1] + repulse_wrist_.getBias()[1]);
 	cairo_stroke(cr);
       }
       if (repulse_ee_.isActive()) {
 	cairo_move_to(cr, repulse_ee_.gpoint_[0], repulse_ee_.gpoint_[1]);
 	cairo_line_to(cr,
-		      repulse_ee_.gpoint_[0] + repulse_ee_.getBias()[0] / repulse_ee_.gain_,
-		      repulse_ee_.gpoint_[1] + repulse_ee_.getBias()[1] / repulse_ee_.gain_);
+		      repulse_ee_.gpoint_[0] + repulse_ee_.getBias()[0],
+		      repulse_ee_.gpoint_[1] + repulse_ee_.getBias()[1]);
 	cairo_stroke(cr);
       }
     
@@ -256,14 +256,14 @@ namespace kinematic_objectives {
 	h1_ellbow_(0.2, 0.0, 0.8, 0.8, 0.5),
 	h2_ellbow_(0.2, 0.0, 0.4, 0.4, 0.5),
 	h2_base_  (0.2, 0.0, 0.6, 0.3, 0.5),
-	ee_left_     ("ee_left",      3, robot_.len_c_, 0.0, 0.0, 1.0, -10.0),
-	ee_right_    ("ee_right",     3, robot_.len_c_, 0.0, 0.0, 1.0, -10.0),
-	wrist_left_  ("wrist_left",   2, robot_.len_b_, 0.0, 0.0, 1.0, -10.0),
-	wrist_right_ ("wrist_right",  2, robot_.len_b_, 0.0, 0.0, 1.0, -10.0),
-	ellbow_left_ ("ellbow_left",  1, robot_.len_a_, 0.0, 0.0, 1.0, -10.0),
-	ellbow_right_("ellbow_right", 1, robot_.len_a_, 0.0, 0.0, 1.0, -10.0),
-	base_left_   ("base_left",    0,           0.0, 0.0, 0.0, 1.0, -10.0),
-	base_right_  ("base_right",   0,           0.0, 0.0, 0.0, 1.0, -10.0)
+	ee_left_     ("ee_left",      3, robot_.len_c_, 0.0, 0.0, -10.0),
+	ee_right_    ("ee_right",     3, robot_.len_c_, 0.0, 0.0, -10.0),
+	wrist_left_  ("wrist_left",   2, robot_.len_b_, 0.0, 0.0, -10.0),
+	wrist_right_ ("wrist_right",  2, robot_.len_b_, 0.0, 0.0, -10.0),
+	ellbow_left_ ("ellbow_left",  1, robot_.len_a_, 0.0, 0.0, -10.0),
+	ellbow_right_("ellbow_right", 1, robot_.len_a_, 0.0, 0.0, -10.0),
+	base_left_   ("base_left",    0,           0.0, 0.0, 0.0, -10.0),
+	base_right_  ("base_right",   0,           0.0, 0.0, 0.0, -10.0)
     {
       handles_.push_back(&h2_ee_);
       handles_.push_back(&h1_wrist_);
@@ -318,8 +318,8 @@ namespace kinematic_objectives {
 		      objective.gpoint_[0],
 		      objective.gpoint_[1]);
 	cairo_line_to(cr,
-		      objective.gpoint_[0] + objective.getBias()[0] / objective.gain_,
-		      objective.gpoint_[1] + objective.getBias()[1] / objective.gain_);
+		      objective.gpoint_[0] + objective.getBias()[0],
+		      objective.gpoint_[1] + objective.getBias()[1]);
 	cairo_stroke(cr);
       }
     }
@@ -361,8 +361,8 @@ namespace kinematic_objectives {
     EEGoalCompoundObjective::
     EEGoalCompoundObjective(PlanarRobot & robot)
       : InteractiveCompoundObjective(robot),
-	attract_ee_       ("attract_ee",   3, robot_.len_c_, 0.0, 0.0, 1.0, -1.0),
-	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, 1.0, -1.0)
+	attract_ee_       ("attract_ee",   3, robot_.len_c_, 0.0, 0.0, -1.0),
+	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, -1.0)
     {
       compound_objective_.hard_objectives_.push_back(&attract_ee_);
       compound_objective_.soft_objectives_.push_back(&attract_base_);
@@ -388,8 +388,8 @@ namespace kinematic_objectives {
 	cairo_set_line_width(cr, weight * 1.0 / pixelsize);
 	cairo_move_to(cr, attract_base_.gpoint_[0], attract_base_.gpoint_[1]);
 	cairo_line_to(cr,
-		      attract_base_.gpoint_[0] + attract_base_.getBias()[0] / attract_base_.gain_,
-		      attract_base_.gpoint_[1] + attract_base_.getBias()[1] / attract_base_.gain_);
+		      attract_base_.gpoint_[0] + attract_base_.getBias()[0],
+		      attract_base_.gpoint_[1] + attract_base_.getBias()[1]);
 	cairo_stroke(cr);
       }
     }

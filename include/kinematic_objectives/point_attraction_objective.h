@@ -56,13 +56,11 @@ namespace kinematic_objectives {
   protected:
     void construct(size_t node,
 		   Vector const & point,
-		   double gain,
 		   double distance);
     
   public:
     PointAttractionObjective(string const & name,
 			     size_t node,
-			     double gain,
 			     double distance);
     
     PointAttractionObjective(string const & name,
@@ -70,7 +68,6 @@ namespace kinematic_objectives {
 			     double px,
 			     double py,
 			     double pz,
-			     double gain,
 			     double distance);
     
     virtual void init(KinematicModel const & model);
@@ -81,7 +78,6 @@ namespace kinematic_objectives {
 
     virtual double computeResidualErrorMagnitude(Vector const & ee) const;
     
-    double gain_;
     double distance_;
     size_t node_;
     Vector point_;

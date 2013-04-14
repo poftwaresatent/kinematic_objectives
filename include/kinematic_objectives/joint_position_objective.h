@@ -50,7 +50,7 @@ namespace kinematic_objectives {
     : public Objective
   {
   public:
-    JointPositionObjective(string const & name, double gain);
+    explicit JointPositionObjective(string const & name);
     
     virtual void init(KinematicModel const & model);
     virtual void update(KinematicModel const & model);
@@ -58,7 +58,6 @@ namespace kinematic_objectives {
     
   protected:
     Vector goal_;
-    double gain_; // XXXX BTW the gain should be kept separately, e.g. in CompoundObjective
   };
   
 }

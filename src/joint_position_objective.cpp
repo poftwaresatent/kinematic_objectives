@@ -43,9 +43,8 @@ namespace kinematic_objectives {
   
   
   JointPositionObjective::
-  JointPositionObjective(string const & name, double gain)
-    : Objective(name),
-      gain_(gain)
+  JointPositionObjective(string const & name)
+    : Objective(name)
   {
   }
   
@@ -62,7 +61,6 @@ namespace kinematic_objectives {
   void JointPositionObjective::
   update(KinematicModel const & model)
   {
-    ////    bias_ = gain_ * (goal_ - model.getJointPosition());
     bias_ = goal_ - model.getJointPosition();
   }
   

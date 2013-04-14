@@ -44,11 +44,10 @@ namespace kinematic_objectives {
   PointRepulsionObjective::
   PointRepulsionObjective(string const & name,
 			  size_t node,
-			  double gain,
 			  double distance)
     : Objective(name)
   {
-    construct(node, Vector::Zero(3), gain, distance);
+    construct(node, Vector::Zero(3), distance);
   }
   
   
@@ -58,23 +57,20 @@ namespace kinematic_objectives {
 			  double px,
 			  double py,
 			  double pz,
-			  double gain,
 			  double distance)
     : Objective(name)
   {
     Vector silly(3);
     silly << px, py, pz;
-    construct(node, silly, gain, distance);
+    construct(node, silly, distance);
   }
   
   
   void PointRepulsionObjective::
   construct(size_t node,
 	    Vector const & point,
-	    double gain,
 	    double distance)
   {
-    gain_ = gain;
     distance_ = distance;
     node_ = node;
     point_ = point;
@@ -106,7 +102,6 @@ namespace kinematic_objectives {
       jacobian_.resize(0, 0);
       return;
     }
-    ////    bias_ *= gain_ * pow(1.0 - dist / distance_, 2.0) / dist;
     bias_ *= pow(1.0 - dist / distance_, 2.0) / dist;
     jacobian_ = model.getLinkJacobian(node_, gpoint_).block(0, 0, 3, model.getJointPosition().size());
   }

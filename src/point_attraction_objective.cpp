@@ -44,11 +44,10 @@ namespace kinematic_objectives {
   PointAttractionObjective::
   PointAttractionObjective(string const & name,
 			   size_t node,
-			   double gain,
 			   double distance)
     : Objective(name)
   {
-    construct(node, Vector::Zero(3), gain, distance);
+    construct(node, Vector::Zero(3), distance);
   }
   
   
@@ -58,23 +57,20 @@ namespace kinematic_objectives {
 			   double px,
 			   double py,
 			   double pz,
-			   double gain,
 			   double distance)
     : Objective(name)
   {
     Vector silly(3);
     silly << px, py, pz;
-    construct(node, silly, gain, distance);
+    construct(node, silly, distance);
   }
   
   
   void PointAttractionObjective::
   construct(size_t node,
 	    Vector const & point,
-	    double gain,
 	    double distance)
   {
-    gain_ = gain;
     distance_ = distance;
     node_ = node;
     point_ = point;
@@ -109,17 +105,14 @@ namespace kinematic_objectives {
     }
     if (distance_ < 0.0) {
       // no saturation
-      ////      bias_ *= - gain_ / distance_;
       bias_ /= - distance_;
     }
     else {
       // saturate at the given distance
       if (dist < distance_) {
-	////	bias_ *= gain_ / distance_;
 	bias_ /= distance_;
       }
       else {
-	////	bias_ *= gain_ / dist;
 	bias_ /= dist;
       }
     }
