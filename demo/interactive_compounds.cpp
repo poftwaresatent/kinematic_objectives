@@ -36,7 +36,7 @@
 
 #include <kinematic_objectives/print.h>
 #include <kinematic_objectives/util.h>
-#include "interactive_compound_objectives.h"
+#include "interactive_compounds.h"
 
 #include <err.h>
 
@@ -46,8 +46,8 @@ namespace kinematic_objectives {
   namespace demo {
     
     
-    InteractiveCompoundObjective::
-    InteractiveCompoundObjective(PlanarRobot & robot)
+    InteractiveCompound::
+    InteractiveCompound(PlanarRobot & robot)
       : h_ee_      (0.2, 0.0, 1.0, 0.0, 0.5),
 	h_ee_ori_  (0.1, 0.0, 1.0, 0.0, 0.3),
 	h_base_    (0.2, 0.0, 1.0, 0.5, 0.5),
@@ -97,7 +97,7 @@ namespace kinematic_objectives {
     }
   
   
-    void InteractiveCompoundObjective::
+    void InteractiveCompound::
     init(double gui_dimx, double gui_dimy)
     {
       h_ee_.point_         <<             1.0, gui_dimy / 2.0      ,     0.0;
@@ -118,7 +118,7 @@ namespace kinematic_objectives {
     }
     
     
-    void InteractiveCompoundObjective::
+    void InteractiveCompound::
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
@@ -235,7 +235,7 @@ namespace kinematic_objectives {
     }
   
   
-    void InteractiveCompoundObjective::
+    void InteractiveCompound::
     update()
     {
       orient_ee_.goal_ = atan2(h_ee_ori_.point_[1] - h_ee_.point_[1], h_ee_ori_.point_[0] - h_ee_.point_[0]);
@@ -247,9 +247,9 @@ namespace kinematic_objectives {
     }
     
     
-    ElasticLinksCompoundObjective::
-    ElasticLinksCompoundObjective(PlanarRobot & robot)
-      : InteractiveCompoundObjective(robot),
+    ElasticLinksCompound::
+    ElasticLinksCompound(PlanarRobot & robot)
+      : InteractiveCompound(robot),
 	h2_ee_    (0.2, 0.0, 0.6, 0.0, 0.5),
 	h1_wrist_ (0.2, 0.0, 0.5, 0.5, 0.5),
 	h2_wrist_ (0.2, 0.0, 0.3, 0.3, 0.5),
@@ -283,7 +283,7 @@ namespace kinematic_objectives {
     }
     
     
-    void ElasticLinksCompoundObjective::
+    void ElasticLinksCompound::
     init(double gui_dimx, double gui_dimy)
     {
       h2_ee_.point_     <<             3.0, gui_dimy / 2.0      ,     0.0;
@@ -293,7 +293,7 @@ namespace kinematic_objectives {
       h2_ellbow_.point_ <<             3.0, gui_dimy / 2.0 - 1.0,     0.0;
       h2_base_.point_   <<             3.0,                  1.0,     0.0;
       
-      InteractiveCompoundObjective::init(gui_dimx, gui_dimy);
+      InteractiveCompound::init(gui_dimx, gui_dimy);
     }
     
     
@@ -325,11 +325,11 @@ namespace kinematic_objectives {
     }
     
     
-    void ElasticLinksCompoundObjective::
+    void ElasticLinksCompound::
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
-      InteractiveCompoundObjective::draw(cr, weight, pixelsize);
+      InteractiveCompound::draw(cr, weight, pixelsize);
       
       draw_elastic(cr, weight, pixelsize,  h_ee_,     ee_left_);
       draw_elastic(cr, weight, pixelsize, h2_ee_,     ee_right_);
@@ -342,7 +342,7 @@ namespace kinematic_objectives {
     }
     
     
-    void ElasticLinksCompoundObjective::
+    void ElasticLinksCompound::
     update()
     {
       ee_left_.attractor_ =       h_ee_.point_;
@@ -354,13 +354,13 @@ namespace kinematic_objectives {
       base_left_.attractor_ =     h_base_.point_;
       base_right_.attractor_ =   h2_base_.point_;
       
-      InteractiveCompoundObjective::update();
+      InteractiveCompound::update();
     }
     
     
-    EEGoalCompoundObjective::
-    EEGoalCompoundObjective(PlanarRobot & robot)
-      : InteractiveCompoundObjective(robot),
+    EEGoalCompound::
+    EEGoalCompound(PlanarRobot & robot)
+      : InteractiveCompound(robot),
 	attract_ee_       ("attract_ee",   3, robot_.len_c_, 0.0, 0.0, -1.0),
 	attract_base_     ("attract_base", 0,           0.0, 0.0, 0.0, -1.0)
     {
@@ -369,11 +369,11 @@ namespace kinematic_objectives {
     }
     
     
-    void EEGoalCompoundObjective::
+    void EEGoalCompound::
     draw(cairo_t * cr, double weight, double pixelsize)
       const
     {
-      InteractiveCompoundObjective::draw(cr, weight, pixelsize);
+      InteractiveCompound::draw(cr, weight, pixelsize);
       
       // thin line for end effector objective
       cairo_set_source_rgb(cr, 1.0, 0.4, 0.4);
@@ -395,12 +395,12 @@ namespace kinematic_objectives {
     }
     
     
-    void EEGoalCompoundObjective::
+    void EEGoalCompound::
     update()
     {
       attract_ee_.attractor_ = h_ee_.point_;
       attract_base_.attractor_ = h_base_.point_;
-      InteractiveCompoundObjective::update();
+      InteractiveCompound::update();
     }
     
   }

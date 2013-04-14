@@ -34,8 +34,8 @@
 
 /* Author: Roland Philippsen */
 
-#ifndef KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUND_OBJECTIVES_HPP
-#define KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUND_OBJECTIVES_HPP
+#ifndef KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUNDS_HPP
+#define KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUNDS_HPP
 
 #include <kinematic_objectives/compound_objective.h>
 #include <kinematic_objectives/joint_limit_objective.h>
@@ -56,11 +56,11 @@ namespace kinematic_objectives {
     /**
        \todo [low] attributes should be protected or private
     */
-    class InteractiveCompoundObjective
+    class InteractiveCompound
       : public CairoDrawable
     {
     public:
-      explicit InteractiveCompoundObjective(PlanarRobot & robot);
+      explicit InteractiveCompound(PlanarRobot & robot);
     
       virtual void init(double gui_dimx, double gui_dimy);
       
@@ -99,11 +99,11 @@ namespace kinematic_objectives {
     /**
        \todo [low] attributes should be protected or private
     */
-    class ElasticLinksCompoundObjective
-      : public InteractiveCompoundObjective
+    class ElasticLinksCompound
+      : public InteractiveCompound
     {
     public:
-      explicit ElasticLinksCompoundObjective(PlanarRobot & robot);
+      explicit ElasticLinksCompound(PlanarRobot & robot);
       
       virtual void init(double gui_dimx, double gui_dimy);
       
@@ -132,11 +132,11 @@ namespace kinematic_objectives {
     /**
        \todo [low] attributes should be protected or private
     */
-    class EEGoalCompoundObjective
-      : public InteractiveCompoundObjective
+    class EEGoalCompound
+      : public InteractiveCompound
     {
     public:
-      explicit EEGoalCompoundObjective(PlanarRobot & robot);
+      explicit EEGoalCompound(PlanarRobot & robot);
       
       virtual void draw(cairo_t * cr, double weight, double pixelsize) const;
       
@@ -150,4 +150,4 @@ namespace kinematic_objectives {
   
 }
 
-#endif // KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUND_OBJECTIVES_HPP
+#endif // KINEMATIC_OBJECTIVES_DEMO_INTERACTIVE_COMPOUNDS_HPP

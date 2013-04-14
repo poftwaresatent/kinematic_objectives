@@ -34,7 +34,7 @@
 
 /* Author: Roland Philippsen */
 
-#include "interactive_compound_objectives.h"
+#include "interactive_compounds.h"
 #include <kinematic_objectives/util.h>
 #include <kinematic_objectives/print.h>
 #include <kinematic_objectives/unconstrained_blender.h>
@@ -65,7 +65,7 @@ static int play(0);
 
 static Integrator * integrator(0);
 static PlanarRobot planar_robot;
-static InteractiveCompoundObjective * interactive_compound(0);
+static InteractiveCompound * interactive_compound(0);
 static Blender * blender(0);
 static InteractionHandle * grabbed(0);
 static Vector grab_offset(3);
@@ -377,10 +377,10 @@ void parse_options(int argc, char ** argv)
   }
   
   if ("eegoal" == opt_compound) {
-    interactive_compound = new EEGoalCompoundObjective(planar_robot);
+    interactive_compound = new EEGoalCompound(planar_robot);
   }
   else if ("elastic" == opt_compound) {
-    interactive_compound = new ElasticLinksCompoundObjective(planar_robot);
+    interactive_compound = new ElasticLinksCompound(planar_robot);
   }
   else {
     errx(EXIT_FAILURE, "invalid compound '%s' (use 'eegoal' or 'elastic')", opt_compound.c_str());

@@ -5,7 +5,7 @@ if (GTK2_FOUND)
   add_executable (demo
     demo.cpp
     interaction_handle.cpp
-    interactive_compound_objectives.cpp
+    interactive_compounds.cpp
     planar_distance.cpp
     planar_orientation_objective.cpp
     planar_robot.cpp
