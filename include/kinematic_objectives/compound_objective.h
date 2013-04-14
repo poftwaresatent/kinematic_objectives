@@ -47,55 +47,6 @@ namespace kinematic_objectives {
   
   
   /**
-     IDEAS for feedback info about objectives and their blending... so
-     this is just a working title. Name and contents will depend on
-     what turns out to actually work. Could also be termed a
-     ProgressMonitor or BlenderFeedback or something along those
-     lines.
-     
-     Potenital (other) things to store here:
-     
-     From blender.cpp perform_prioritization() and Blender::updateCompoundObjective():
-     - J_bar = J * N
-     - J_inv (can be pseudo inverse of J or J_bar, depending on context)
-     - N_up (nullspace updater: N -= N_up at each hierarchy level)
-     - sigma (eigenvalues of J_bar, might be interesting to
-       distinguish before / after regularization)
-     - maybe eigenvalues of J
-     - maybe eigenvalues of nullspace
-     - probably input / output spaces of J_bar SVD (or some data
-       derived from them)
-     - maybe the same for the non-projected J (or something derived)
-     - maybe compensated bias, or conversely the amount to which
-       higher levels "help" achieving this one
-     - biased and unbiased "objective update" (this is the gist behind
-       Chiaverini's reconstruction error I think)
-     - number of dimensions left after the objective
-     - current position in objective space (not explicitly required
-       from Objective API for now)
-     - current velocity in objective space (trivial to compute from J
-       and qdot)
-       
-     Another description of desirables: for example, which unilateral
-     constraints were activated, the resulting constraint nullspace,
-     whether that created any conflicts with hard objectives, whether
-     there were any algorithmic singularities between constraints and
-     hard objectives. For soft objectives, it should at least be
-     possible to specify the remaining space of motion freedom they
-     had available collectively.
-  */
-  struct BlenderFeedback {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    
-    Vector constraint_bias_;
-    Matrix constraint_nullspace_projector_;
-    Vector hard_objective_bias_;
-    Matrix hard_objective_nullspace_projector_;
-    Vector soft_objective_bias_;
-  };
-  
-  
-  /**
      A collection of objectives that can be turned into a prioritized
      and/or summed overall update using a blender. Currently hardcodes
      the notion of "constraint" (delta-position-based update with
@@ -122,8 +73,6 @@ namespace kinematic_objectives {
     vector<Objective *> unilateral_constraints_;
     vector<Objective *> hard_objectives_;
     vector<Objective *> soft_objectives_;
-    
-    BlenderFeedback fb_;
   };  
   
 }

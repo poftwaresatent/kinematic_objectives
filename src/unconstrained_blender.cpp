@@ -65,36 +65,19 @@ namespace kinematic_objectives {
     }
     
     ssize_t const ndof(model.getJointPosition().size());
-    Vector & bias_hard(wpt->fb_.hard_objective_bias_);
-    Matrix & N_hard(wpt->fb_.hard_objective_nullspace_projector_);
-    prioritization_.projectObjectives(Matrix::Identity(ndof, ndof),
-				      Vector::Zero(ndof),
-				      wpt->hard_objectives_,
-				      bias_hard,
-				      N_hard);
-    
-    Vector & bias_soft(wpt->fb_.soft_objective_bias_);
-    bias_soft = Vector::Zero(model.getJointPosition().size());
-    for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
-      if (wpt->soft_objectives_[ii]->isActive()) {
-	Matrix Jinv;
-	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->getJacobian(), Jinv);
-	bias_soft += Jinv * wpt->soft_objectives_[ii]->getBias();
-      }
-    }
-    bias_soft = N_hard * bias_soft;
+    Vector bias = Vector::Zero(ndof);
+    Matrix np = Matrix::Identity(ndof, ndof);
+    prioritization_.projectObjectives(np, bias, wpt->hard_objectives_, bias, np);
+    prioritization_.addUpObjectives(np, bias, wpt->soft_objectives_, bias);
     
     Vector q_next, qd_next;
-    integrator_->compute(bias_hard + bias_soft,
+    integrator_->compute(bias,
 			 model.getJointPosition(),
 			 model.getJointVelocity(),
 			 q_next,
 			 qd_next);
     
     model.update(q_next, qd_next);
-    
-    wpt->fb_.constraint_bias_.resize(0);
-    wpt->fb_.constraint_nullspace_projector_.resize(0, 0);
   }
   
 }

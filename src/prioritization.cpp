@@ -99,8 +99,12 @@ namespace kinematic_objectives {
 		    Vector & bias_out,
 		    Matrix & N_out)
   {
-    bias_out = bias_in;
-    N_out = N_in;
+    if (&bias_in != &bias_out) {
+      bias_out = bias_in;
+    }
+    if (&N_out != &N_in) {
+      N_out = N_in;
+    }
     
     Vector bias_up;
     Matrix N_up;
@@ -140,17 +144,32 @@ namespace kinematic_objectives {
 		  vector<Objective*> const & objectives,
 		  Vector & bias_out)
   {
-    bias_out = bias_in;////Vector::Zero(Noverall.rows());
-    Vector bias_up;
+    Vector accu = Vector::Zero(bias_in.size());
     for (size_t ii(0); ii < objectives.size(); ++ii) {
       Objective const * obj(objectives[ii]);
+      obj->clearFeedback();
       if ( ! obj->isActive()) {
-	obj->clearFeedback();
         continue;
       }
-      process(N_in, bias_in, obj, 0, bias_up);
-      bias_out += bias_up;
+      Matrix Jinv;
+      pseudo_inverse_moore_penrose(obj->getJacobian(), Jinv);
+      accu += Jinv * obj->getBias();
     }
+    bias_out = N_in * accu;
+    //
+    //
+    // Vector accu(bias_in);	// needed in case &bias_in == &bias_out
+    // Vector bias_up;
+    // for (size_t ii(0); ii < objectives.size(); ++ii) {
+    //   Objective const * obj(objectives[ii]);
+    //   if ( ! obj->isActive()) {
+    // 	obj->clearFeedback();
+    //     continue;
+    //   }
+    //   process(N_in, bias_in, obj, 0, bias_up);
+    //   accu += bias_up;
+    // }
+    // bias_out = accu;
   }
   
 }

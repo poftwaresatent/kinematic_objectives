@@ -47,6 +47,32 @@ namespace kinematic_objectives {
   class KinematicModel;
   
   
+  /**
+     \note
+     IDEAS for feedback info about objectives and their blending... so
+     this is just a working title. Name and contents will depend on
+     what turns out to actually work. Could also be termed a
+     ProgressMonitor or BlenderFeedback or something along those
+     lines.
+     
+     Potenital (other) things to store somewhere:
+     - N_up (nullspace updater: N -= N_up at each hierarchy level)
+     - biased and unbiased "objective update" (this is the gist behind
+       Chiaverini's reconstruction error I think)
+     - number of dimensions left after the objective
+     - current position in objective space (not explicitly required
+       from Objective API for now)
+     - current velocity in objective space (trivial to compute from J
+       and qdot)
+       
+     Another description of desirables: for example, which unilateral
+     constraints were activated, the resulting constraint nullspace,
+     whether that created any conflicts with hard objectives, whether
+     there were any algorithmic singularities between constraints and
+     hard objectives. For soft objectives, it should at least be
+     possible to specify the remaining space of motion freedom they
+     had available collectively.
+  */
   class Objective
   {
   public:

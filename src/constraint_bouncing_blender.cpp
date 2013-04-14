@@ -68,35 +68,30 @@ namespace kinematic_objectives {
     }
     
     ssize_t const ndof(model.getJointPosition().size());
-    Vector & bias_cstr(wpt->fb_.constraint_bias_);
-    Matrix & N_cstr(wpt->fb_.constraint_nullspace_projector_);
+    Vector bias_c;
+    Matrix np_c;
     prioritization_.projectObjectives(Matrix::Identity(ndof, ndof),
 				      Vector::Zero(ndof),
 				      wpt->unilateral_constraints_,
-				      bias_cstr,
-				      N_cstr);
+				      bias_c,
+				      np_c);
     
-    Vector & bias_hard(wpt->fb_.hard_objective_bias_);
-    Matrix & N_hard(wpt->fb_.hard_objective_nullspace_projector_);
-    prioritization_.projectObjectives(N_cstr,
-				      Vector::Zero(ndof), // XXXX likewise wrong, but try to not change everything at the same time...
+    Vector bias_h;
+    Matrix np_h;
+    prioritization_.projectObjectives(np_c,
+				      Vector::Zero(ndof),
 				      wpt->hard_objectives_,
-				      bias_hard,
-				      N_hard);
+				      bias_h,
+				      np_h);
     
-    Vector & bias_soft(wpt->fb_.soft_objective_bias_);
-    bias_soft = Vector::Zero(model.getJointPosition().size());
-    for (size_t ii(0); ii < wpt->soft_objectives_.size(); ++ii) {
-      if (wpt->soft_objectives_[ii]->isActive()) {
-	Matrix Jinv;
-	pseudo_inverse_moore_penrose(wpt->soft_objectives_[ii]->getJacobian(), Jinv);
-	bias_soft += Jinv * wpt->soft_objectives_[ii]->getBias();
-      }
-    }
-    bias_soft = N_hard * bias_soft;
+    Vector bias_s;
+    prioritization_.addUpObjectives(np_h,
+				    Vector::Zero(ndof),
+				    wpt->soft_objectives_,
+				    bias_s);
     
     Vector q_next, qd_next;
-    integrator_->compute(bias_cstr + bias_hard + bias_soft,
+    integrator_->compute(bias_c + bias_h + bias_s,
 			 model.getJointPosition(),
 			 model.getJointVelocity(),
 			 q_next,

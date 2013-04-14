@@ -92,27 +92,6 @@ namespace kinematic_objectives {
 	  CompoundObjective const & co,
 	  vector<Achievability> & information)
   {
-    // Compute some soft-objective data that does not get computed by
-    // blender (because it is not required).
-    
-    Matrix Nct;
-    if (co.hard_objectives_.empty()) {
-      Nct = Matrix::Identity(model.getJointPosition().size(), model.getJointPosition().size());
-    }
-    else {
-      Nct = co.fb_.hard_objective_nullspace_projector_;
-    }
-    Matrix Jbinv;
-    for (size_t ii(0); ii < co.soft_objectives_.size(); ++ii) {
-      if ( ! co.soft_objectives_[ii]->isActive()) {
-	continue;
-      }
-      pseudo_inverse_moore_penrose(co.soft_objectives_[ii]->getJacobian() * Nct, Jbinv, 0,
-				   &co.soft_objectives_[ii]->jbar_svd_);
-    }
-    
-    // OK now we can compute all the achievability information...
-    
     information.clear();
     
     helper(UNILATERAL_CONSTRAINT, co.unilateral_constraints_, model.getJointVelocity(), information);
